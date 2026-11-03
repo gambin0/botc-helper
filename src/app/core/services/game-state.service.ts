@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Script, Player, GameEvent, RolePossibility, DeductionResult } from '../models/game';
+import { Script, Player, GameEvent, RolePossibility, DeductionResult, ClaimTrust } from '../models/game';
 import { BotcSolver } from '../solver/solver';
 import { DatabaseService } from '../storage/database.service';
 import { ScriptImportService } from '../script/script-import.service';
@@ -12,6 +12,7 @@ export class GameStateService {
   private currentPlayers: Player[] = [];
   private currentEvents: GameEvent[] = [];
   private solver = new BotcSolver();
+  private currentGameId: string | null = null;
 
   constructor(
     private db: DatabaseService,
@@ -36,7 +37,7 @@ export class GameStateService {
       throw new Error('No script loaded');
     }
 
-    const gameId = crypto.randomUUID();
+    this.currentGameId = crypto.randomUUID();
     this.currentPlayers = [];
     this.currentEvents = [];
 
@@ -44,7 +45,7 @@ export class GameStateService {
     for (let i = 0; i < playerCount; i++) {
       const player: Player = {
         id: crypto.randomUUID(),
-        gameId,
+        gameId: this.currentGameId,
         name: `Player ${i + 1}`,
         seat: i + 1,
         alive: true
@@ -57,6 +58,10 @@ export class GameStateService {
   }
 
   addPlayer(player: Player) {
+    if (!this.currentGameId) {
+      throw new Error('No game created');
+    }
+    player.gameId = this.currentGameId;
     this.currentPlayers.push(player);
     this.db.savePlayer(player);
   }
@@ -74,9 +79,67 @@ export class GameStateService {
   }
 
   addEvent(event: GameEvent) {
+    if (!this.currentGameId) {
+      throw new Error('No game created');
+    }
+    event.gameId = this.currentGameId;
     this.currentEvents.push(event);
     this.solver.addEvent(event);
     this.db.saveEvent(event);
+  }
+
+  addClaim(playerId: string, claimedRole: string, trust: ClaimTrust = 'asserted') {
+    const event: GameEvent = {
+      id: crypto.randomUUID(),
+      gameId: this.currentGameId!,
+      night: 0,
+      phase: 'day',
+      actorId: playerId,
+      kind: 'claim',
+      payload: { claimedRole },
+      trust,
+      createdAt: new Date().toISOString()
+    };
+    this.addEvent(event);
+  }
+
+  addDeath(playerId: string, night: number) {
+    const event: GameEvent = {
+      id: crypto.randomUUID(),
+      gameId: this.currentGameId!,
+      night,
+      phase: 'day',
+      kind: 'death',
+      payload: { playerId },
+      trust: 'confirmed',
+      createdAt: new Date().toISOString()
+    };
+    this.addEvent(event);
+
+    // Mark player as dead
+    const player = this.currentPlayers.find(p => p.id === playerId);
+    if (player) {
+      player.alive = false;
+      this.updatePlayer(player);
+    }
+  }
+
+  addExecution(playerId: string, revealedRole?: string) {
+    const event: GameEvent = {
+      id: crypto.randomUUID(),
+      gameId: this.currentGameId!,
+      night: 0,
+      phase: 'execution',
+      kind: 'execution',
+      payload: { executedPlayerId: playerId, revealedRole },
+      trust: 'confirmed',
+      createdAt: new Date().toISOString()
+    };
+    this.addEvent(event);
+  }
+
+  addInfo(event: GameEvent) {
+    this.addEvent(event);
   }
 
   getDeductions(): DeductionResult {
@@ -98,5 +161,9 @@ export class GameStateService {
 
   getEvents() {
     return this.currentEvents;
+  }
+
+  hasGame() {
+    return this.currentGameId !== null;
   }
 }

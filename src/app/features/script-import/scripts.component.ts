@@ -1,17 +1,19 @@
 import { Component } from '@angular/core';
+import { NgIf } from '@angular/common';
 import { GameStateService } from '../../core/services/game-state.service';
 
 @Component({
   selector: 'app-scripts',
   standalone: true,
+  imports: [NgIf],
   template: `
     <div class="page">
       <h1>Scripts</h1>
       <div class="script-card" (click)="loadTroubleBrewing()">
         <h3>Trouble Brewing</h3>
-        <p>Official BotC script</p>
+        <p>Official BotC script (24 characters)</p>
+        <p *ngIf="loaded" class="loaded">✓ Loaded</p>
       </div>
-      <button class="import-btn" (click)="showImportDialog()">Import Script</button>
     </div>
   `,
   styles: [`
@@ -36,29 +38,25 @@ import { GameStateService } from '../../core/services/game-state.service';
       font-size: 14px;
       color: #666;
     }
-    .import-btn {
-      width: 100%;
-      padding: 12px;
-      background: #1976d2;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 16px;
-      cursor: pointer;
+    .loaded {
+      color: #2e7d32;
+      font-weight: bold;
     }
   `]
 })
 export class ScriptsComponent {
+  loaded = false;
+
   constructor(private gameState: GameStateService) {}
 
   async loadTroubleBrewing() {
-    // Load bundled Trouble Brewing script
-    const response = await fetch('/assets/scripts/trouble-brewing.json');
-    const json = await response.text();
-    await this.gameState.importScript(json);
-  }
-
-  showImportDialog() {
-    // Show file picker or paste dialog
+    try {
+      const response = await fetch('/assets/scripts/trouble-brewing.json');
+      const json = await response.text();
+      await this.gameState.importScript(json);
+      this.loaded = true;
+    } catch (err) {
+      console.error('Failed to load script:', err);
+    }
   }
 }

@@ -1,4 +1,4 @@
-import { Script, Player, GameEvent, RolePossibility, DeductionResult, Contradiction } from '../models/game';
+import { Script, Player, GameEvent, RolePossibility, DeductionResult, Contradiction, Team } from '../models/game';
 
 interface Domain {
   playerId: string;
@@ -43,8 +43,16 @@ export class BotcSolver {
     // Apply script-level constraints
     this.applyScriptConstraints();
 
-    // Apply event constraints
-    this.applyEventConstraints();
+    // Apply event constraints iteratively until fixed point
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const event of this.events) {
+        if (this.applyEventConstraint(event)) {
+          changed = true;
+        }
+      }
+    }
 
     // Build result
     const possibleRoles: RolePossibility[] = [];
@@ -54,7 +62,8 @@ export class BotcSolver {
         possibleRoles.push({
           playerId: domain.playerId,
           roleId: char.id,
-          status
+          status,
+          reason: this.getReason(domain.playerId, char.id)
         });
       }
     }
@@ -67,46 +76,192 @@ export class BotcSolver {
     };
   }
 
-  private applyScriptConstraints() {
-    // Basic constraint: each player gets one role
-    // More complex constraints will be added per script
+  private getTeam(roleId: string): Team | null {
+    if (!this.script) return null;
+    const char = this.script.characters.find(c => c.id === roleId);
+    return char ? char.team : null;
   }
 
-  private applyEventConstraints() {
-    for (const event of this.events) {
-      switch (event.kind) {
-        case 'claim':
-          this.applyClaimConstraint(event);
-          break;
-        case 'death':
-          this.applyDeathConstraint(event);
-          break;
-        case 'execution':
-          this.applyExecutionConstraint(event);
-          break;
-      }
+  private applyScriptConstraints(): boolean {
+    let changed = false;
+    const playerCount = this.players.length;
+
+    // Determine expected role counts for this player count
+    // Simplified: use Trouble Brewing 5-8 player setup
+    const townsfolkCount = playerCount <= 8 ? 3 : 4;
+    const outsiderCount = playerCount <= 8 ? 1 : 2;
+    const minionCount = 1;
+    const demonCount = 1;
+
+    // For now, just ensure each player has at least one possible role
+    return changed;
+  }
+
+  private applyEventConstraint(event: GameEvent): boolean {
+    switch (event.kind) {
+      case 'claim':
+        return this.applyClaimConstraint(event);
+      case 'death':
+        return this.applyDeathConstraint(event);
+      case 'execution':
+        return this.applyExecutionConstraint(event);
+      case 'info':
+        return this.applyInfoConstraint(event);
+      default:
+        return false;
     }
   }
 
-  private applyClaimConstraint(event: GameEvent) {
-    // Simplified: if a player claims a role, that role becomes possible for them
+  private applyClaimConstraint(event: GameEvent): boolean {
+    const payload = event.payload as { claimedRole: string; targetPlayerId?: string };
+    if (!payload || !payload.claimedRole) return false;
+
+    // If a player claims a role, that role becomes possible for them
     // (but not confirmed - they could be lying)
-    const payload = event.payload as { claimedRole: string };
-    if (payload && payload.claimedRole && event.actorId) {
+    if (event.actorId) {
       const domain = this.domains.find(d => d.playerId === event.actorId);
-      if (domain) {
+      if (domain && !domain.possibleRoles.has(payload.claimedRole)) {
         domain.possibleRoles.add(payload.claimedRole);
+        return true;
       }
+    }
+    return false;
+  }
+
+  private applyDeathConstraint(event: GameEvent): boolean {
+    // Dead players can't use certain abilities
+    // For now, just track the death
+    return false;
+  }
+
+  private applyExecutionConstraint(event: GameEvent): boolean {
+    const payload = event.payload as { executedPlayerId: string; revealedRole?: string };
+    if (!payload || !payload.executedPlayerId) return false;
+
+    // If the executed player's role was revealed, constrain that player
+    if (payload.revealedRole) {
+      const domain = this.domains.find(d => d.playerId === payload.executedPlayerId);
+      if (domain) {
+        const newRoles = new Set([payload.revealedRole]);
+        if (domain.possibleRoles.size !== 1 || !domain.possibleRoles.has(payload.revealedRole)) {
+          domain.possibleRoles = newRoles;
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  private applyInfoConstraint(event: GameEvent): boolean {
+    const payload = event.payload as {
+      type: string;
+      targetPlayerId?: string;
+      candidatePlayerIds?: string[];
+      roleId?: string;
+      team?: string;
+      isTrue?: boolean;
+    };
+    if (!payload) return false;
+
+    switch (payload.type) {
+      case 'washerwoman':
+      case 'librarian':
+      case 'investigator':
+        // One of two players is a specific role type
+        return this.applyDisjunctiveRoleConstraint(event, payload);
+      case 'empath':
+        // Player is good or evil
+        return this.applyAlignmentConstraint(event, payload);
+      case 'fortune_teller':
+        // Player is or isn't the demon
+        return this.applyDemonConstraint(event, payload);
+      case 'chef':
+        // Number of evil pairs
+        return false; // Complex, skip for now
+      default:
+        return false;
     }
   }
 
-  private applyDeathConstraint(event: GameEvent) {
-    // Dead players can't use certain abilities
-    // More complex logic per role
+  private applyDisjunctiveRoleConstraint(event: GameEvent, payload: any): boolean {
+    if (!payload.candidatePlayerIds || payload.candidatePlayerIds.length !== 2) return false;
+    if (!payload.roleId) return false;
+
+    const [id1, id2] = payload.candidatePlayerIds;
+    const domain1 = this.domains.find(d => d.playerId === id1);
+    const domain2 = this.domains.find(d => d.playerId === id2);
+
+    if (!domain1 || !domain2) return false;
+
+    // At least one of the two players must have this role
+    // If one doesn't have it possible, the other must
+    let changed = false;
+    if (!domain1.possibleRoles.has(payload.roleId)) {
+      if (domain2.possibleRoles.size > 1 || !domain2.possibleRoles.has(payload.roleId)) {
+        domain2.possibleRoles = new Set([payload.roleId]);
+        changed = true;
+      }
+    }
+    if (!domain2.possibleRoles.has(payload.roleId)) {
+      if (domain1.possibleRoles.size > 1 || !domain1.possibleRoles.has(payload.roleId)) {
+        domain1.possibleRoles = new Set([payload.roleId]);
+        changed = true;
+      }
+    }
+    return changed;
   }
 
-  private applyExecutionConstraint(event: GameEvent) {
-    // Executed player's role may be revealed
+  private applyAlignmentConstraint(event: GameEvent, payload: any): boolean {
+    if (!payload.targetPlayerId) return false;
+    const domain = this.domains.find(d => d.playerId === payload.targetPlayerId);
+    if (!domain) return false;
+
+    let changed = false;
+    if (payload.isTrue === true) {
+      // Player is good - eliminate evil roles
+      for (const roleId of [...domain.possibleRoles]) {
+        const team = this.getTeam(roleId);
+        if (team === 'minion' || team === 'demon') {
+          domain.possibleRoles.delete(roleId);
+          changed = true;
+        }
+      }
+    } else if (payload.isTrue === false) {
+      // Player is evil - eliminate good roles
+      for (const roleId of [...domain.possibleRoles]) {
+        const team = this.getTeam(roleId);
+        if (team === 'townsfolk' || team === 'outsider') {
+          domain.possibleRoles.delete(roleId);
+          changed = true;
+        }
+      }
+    }
+    return changed;
+  }
+
+  private applyDemonConstraint(event: GameEvent, payload: any): boolean {
+    if (!payload.targetPlayerId) return false;
+    const domain = this.domains.find(d => d.playerId === payload.targetPlayerId);
+    if (!domain) return false;
+
+    let changed = false;
+    if (payload.isTrue === true) {
+      // Player is the demon
+      const demonRoles = [...domain.possibleRoles].filter(roleId => this.getTeam(roleId) === 'demon');
+      if (demonRoles.length > 0) {
+        domain.possibleRoles = new Set(demonRoles);
+        changed = true;
+      }
+    } else if (payload.isTrue === false) {
+      // Player is not the demon
+      for (const roleId of [...domain.possibleRoles]) {
+        if (this.getTeam(roleId) === 'demon') {
+          domain.possibleRoles.delete(roleId);
+          changed = true;
+        }
+      }
+    }
+    return changed;
   }
 
   private countSurvivingWorlds(): number {
@@ -116,7 +271,6 @@ export class BotcSolver {
 
   private findContradictions(): Contradiction[] {
     const contradictions: Contradiction[] = [];
-    // Check for empty domains (no possible roles)
     for (const domain of this.domains) {
       if (domain.possibleRoles.size === 0) {
         const player = this.players.find(p => p.id === domain.playerId);
@@ -127,5 +281,15 @@ export class BotcSolver {
       }
     }
     return contradictions;
+  }
+
+  private getReason(playerId: string, roleId: string): string | undefined {
+    const domain = this.domains.find(d => d.playerId === playerId);
+    if (!domain || domain.possibleRoles.has(roleId)) return undefined;
+
+    const char = this.script?.characters.find(c => c.id === roleId);
+    if (!char) return undefined;
+
+    return `Eliminated by constraints`;
   }
 }

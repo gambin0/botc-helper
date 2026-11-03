@@ -1,26 +1,35 @@
 import { Component, OnInit } from '@angular/core';
-import { NgFor, NgClass } from '@angular/common';
+import { NgFor, NgClass, NgIf } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { GameStateService } from '../../core/services/game-state.service';
 
 @Component({
   selector: 'app-players',
   standalone: true,
-  imports: [NgFor, NgClass],
+  imports: [NgFor, NgClass, NgIf, FormsModule],
   template: `
     <div class="page">
       <h1>Players</h1>
+      <div *ngIf="players.length === 0" class="empty">
+        <p>No players. Create a game first.</p>
+      </div>
       <div *ngFor="let player of players" class="player-card">
         <div class="player-header">
           <span class="seat">#{{ player.seat }}</span>
-          <span class="name">{{ player.name }}</span>
-          <span class="status" [class.alive]="player.alive" [class.dead]="!player.alive">
+          <input class="name" [(ngModel)]="player.name" (change)="updatePlayer(player)">
+          <button class="alive-btn" (click)="toggleAlive(player)"
+                  [class.alive]="player.alive" [class.dead]="!player.alive">
             {{ player.alive ? 'Alive' : 'Dead' }}
-          </span>
+          </button>
         </div>
         <div class="player-roles">
           <div *ngFor="let role of getPossibleRoles(player.id)" class="role">
-            <span [class.possible]="role.status === 'possible'" [class.impossible]="role.status === 'impossible'">
+            <span [class.possible]="role.status === 'possible'"
+                  [class.impossible]="role.status === 'impossible'">
               {{ getRoleName(role.roleId) }}
+            </span>
+            <span *ngIf="role.status === 'impossible' && role.reason" class="reason">
+              ({{ role.reason }})
             </span>
           </div>
         </div>
@@ -42,9 +51,9 @@ import { GameStateService } from '../../core/services/game-state.service';
     }
     .player-header {
       display: flex;
-      justify-content: space-between;
       align-items: center;
       margin-bottom: 8px;
+      gap: 8px;
     }
     .seat {
       background: #1976d2;
@@ -56,22 +65,26 @@ import { GameStateService } from '../../core/services/game-state.service';
       align-items: center;
       justify-content: center;
       font-size: 12px;
+      flex-shrink: 0;
     }
     .name {
-      font-weight: bold;
       flex: 1;
-      margin-left: 8px;
+      padding: 4px 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
     }
-    .status {
-      font-size: 12px;
-      padding: 2px 8px;
+    .alive-btn {
+      padding: 4px 8px;
+      border: none;
       border-radius: 12px;
+      font-size: 12px;
+      cursor: pointer;
     }
-    .status.alive {
+    .alive-btn.alive {
       background: #c8e6c9;
       color: #2e7d32;
     }
-    .status.dead {
+    .alive-btn.dead {
       background: #ffcdd2;
       color: #c62828;
     }
@@ -86,6 +99,10 @@ import { GameStateService } from '../../core/services/game-state.service';
       color: #999;
       text-decoration: line-through;
     }
+    .reason {
+      font-size: 12px;
+      color: #666;
+    }
   `]
 })
 export class PlayersComponent implements OnInit {
@@ -95,6 +112,15 @@ export class PlayersComponent implements OnInit {
 
   ngOnInit() {
     this.players = this.gameState.getPlayers();
+  }
+
+  updatePlayer(player: any) {
+    this.gameState.updatePlayer(player);
+  }
+
+  toggleAlive(player: any) {
+    player.alive = !player.alive;
+    this.updatePlayer(player);
   }
 
   getPossibleRoles(playerId: string) {
