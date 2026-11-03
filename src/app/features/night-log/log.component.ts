@@ -1,60 +1,78 @@
 import { Component, OnInit } from '@angular/core';
 import { NgIf, NgFor } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { MatCardModule } from '@angular/material/card';
+import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatSelectModule } from '@angular/material/select';
+import { MatIconModule } from '@angular/material/icon';
+import { MatListModule } from '@angular/material/list';
 import { GameStateService } from '../../core/services/game-state.service';
 
 @Component({
   selector: 'app-log',
   standalone: true,
-  imports: [NgIf, NgFor, FormsModule],
+  imports: [NgIf, NgFor, FormsModule, MatCardModule, MatButtonModule, MatFormFieldModule, MatSelectModule, MatIconModule, MatListModule],
   template: `
     <div class="page">
-      <h1>Event Log</h1>
+      <h1 mat-title>Event Log</h1>
+      <mat-list *ngIf="events.length > 0">
+        <mat-list-item *ngFor="let event of events" class="event-item">
+          <mat-icon mat-list-icon>{{ getEventIcon(event.kind) }}</mat-icon>
+          <div mat-line>{{ getEventDescription(event) }}</div>
+          <div mat-line class="event-meta">
+            Night {{ event.night }} • {{ event.phase }}
+          </div>
+        </mat-list-item>
+      </mat-list>
       <div *ngIf="events.length === 0" class="empty">
         <p>No events recorded yet.</p>
       </div>
-      <div *ngFor="let event of events" class="event-card">
-        <div class="event-header">
-          <span class="night">Night {{ event.night }}</span>
-          <span class="phase">{{ event.phase }}</span>
-        </div>
-        <div class="event-body">
-          <p>{{ getEventDescription(event) }}</p>
-        </div>
-      </div>
 
-      <div class="add-event">
-        <h3>Add Event</h3>
-        <select [(ngModel)]="eventKind">
-          <option value="claim">Claim</option>
-          <option value="death">Death</option>
-          <option value="execution">Execution</option>
-        </select>
+      <mat-card class="add-event-card">
+        <mat-card-header>
+          <mat-card-title>Add Event</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Event type</mat-label>
+            <mat-select [(ngModel)]="eventKind">
+              <mat-option value="claim">Claim</mat-option>
+              <mat-option value="death">Death</mat-option>
+              <mat-option value="execution">Execution</mat-option>
+            </mat-select>
+          </mat-form-field>
 
-        <div *ngIf="eventKind === 'claim'">
-          <select [(ngModel)]="claimPlayerId">
-            <option *ngFor="let p of players" [value]="p.id">{{ p.name }}</option>
-          </select>
-          <select [(ngModel)]="claimRole">
-            <option *ngFor="let role of roles" [value]="role.id">{{ role.name }}</option>
-          </select>
-          <button (click)="addClaim()">Add Claim</button>
-        </div>
+          <div *ngIf="eventKind === 'claim'">
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Player</mat-label>
+              <mat-select [(ngModel)]="claimPlayerId">
+                <mat-option *ngFor="let p of players" [value]="p.id">{{ p.name }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Role</mat-label>
+              <mat-select [(ngModel)]="claimRole">
+                <mat-option *ngFor="let role of roles" [value]="role.id">{{ role.name }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+          </div>
 
-        <div *ngIf="eventKind === 'death'">
-          <select [(ngModel)]="deathPlayerId">
-            <option *ngFor="let p of players" [value]="p.id">{{ p.name }}</option>
-          </select>
-          <button (click)="addDeath()">Add Death</button>
-        </div>
-
-        <div *ngIf="eventKind === 'execution'">
-          <select [(ngModel)]="execPlayerId">
-            <option *ngFor="let p of players" [value]="p.id">{{ p.name }}</option>
-          </select>
-          <button (click)="addExecution()">Add Execution</button>
-        </div>
-      </div>
+          <div *ngIf="eventKind === 'death' || eventKind === 'execution'">
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Player</mat-label>
+              <mat-select [(ngModel)]="deathPlayerId">
+                <mat-option *ngFor="let p of players" [value]="p.id">{{ p.name }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+          </div>
+        </mat-card-content>
+        <mat-card-actions>
+          <button mat-raised-button color="primary" (click)="addEvent()">
+            <mat-icon>add</mat-icon> Add Event
+          </button>
+        </mat-card-actions>
+      </mat-card>
     </div>
   `,
   styles: [`
@@ -64,41 +82,19 @@ import { GameStateService } from '../../core/services/game-state.service';
     h1 {
       margin-top: 0;
     }
-    .event-card {
-      border: 1px solid #e0e0e0;
-      border-radius: 8px;
-      padding: 12px;
-      margin-bottom: 12px;
+    .event-item {
+      border-bottom: 1px solid #e0e0e0;
     }
-    .event-header {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 8px;
+    .event-meta {
       font-size: 12px;
       color: #666;
     }
-    .add-event {
+    .add-event-card {
       margin-top: 24px;
-      padding: 16px;
-      border: 1px solid #e0e0e0;
-      border-radius: 8px;
     }
-    select {
+    .full-width {
       width: 100%;
-      padding: 8px;
       margin-bottom: 8px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-    }
-    button {
-      width: 100%;
-      padding: 12px;
-      background: #1976d2;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 16px;
-      cursor: pointer;
     }
   `]
 })
@@ -110,7 +106,6 @@ export class LogComponent implements OnInit {
   claimPlayerId = '';
   claimRole = '';
   deathPlayerId = '';
-  execPlayerId = '';
 
   constructor(private gameState: GameStateService) {}
 
@@ -122,10 +117,18 @@ export class LogComponent implements OnInit {
     if (this.players.length > 0) {
       this.claimPlayerId = this.players[0].id;
       this.deathPlayerId = this.players[0].id;
-      this.execPlayerId = this.players[0].id;
     }
     if (this.roles.length > 0) {
       this.claimRole = this.roles[0].id;
+    }
+  }
+
+  getEventIcon(kind: string): string {
+    switch (kind) {
+      case 'claim': return 'chat';
+      case 'death': return 'skull';
+      case 'execution': return 'gavel';
+      default: return 'event';
     }
   }
 
@@ -142,23 +145,23 @@ export class LogComponent implements OnInit {
         const execPlayer = this.players.find(p => p.id === event.payload.executedPlayerId);
         return `${execPlayer?.name || 'Player'} was executed`;
       default:
-        return `${event.kind}: ${JSON.stringify(event.payload)}`;
+        return `${event.kind}`;
     }
   }
 
-  addClaim() {
-    this.gameState.addClaim(this.claimPlayerId, this.claimRole);
-    this.events = this.gameState.getEvents();
-  }
-
-  addDeath() {
-    this.gameState.addDeath(this.deathPlayerId, 1);
+  addEvent() {
+    switch (this.eventKind) {
+      case 'claim':
+        this.gameState.addClaim(this.claimPlayerId, this.claimRole);
+        break;
+      case 'death':
+        this.gameState.addDeath(this.deathPlayerId, 1);
+        break;
+      case 'execution':
+        this.gameState.addExecution(this.deathPlayerId);
+        break;
+    }
     this.events = this.gameState.getEvents();
     this.players = this.gameState.getPlayers();
-  }
-
-  addExecution() {
-    this.gameState.addExecution(this.execPlayerId);
-    this.events = this.gameState.getEvents();
   }
 }

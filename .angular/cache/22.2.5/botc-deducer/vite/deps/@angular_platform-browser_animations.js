@@ -1,5 +1,5 @@
-import { Al as ɵɵdefineInjectable, Ei as performanceMarkFeature, Fn as Injectable, Kc as RuntimeError, Pl as ɵɵinject, Pn as Inject, Rc as NgZone, Wi as setClassMetadata, _c as DOCUMENT, ao as ɵɵdefineNgModule, ar as RendererFactory2, dl as inject, fc as ANIMATION_MODULE_TYPE, jl as ɵɵdefineInjector, qn as NgModule } from "./core-RGofNjFx.js";
-import { d as DomRendererFactory2, r as BrowserModule } from "./_browser-chunk-U1T84XM7.js";
+import { Al as ɵɵdefineInjectable, Ei as performanceMarkFeature, Fn as Injectable, Kc as RuntimeError, Pl as ɵɵinject, Pn as Inject, Rc as NgZone, Wi as setClassMetadata, _c as DOCUMENT, ao as ɵɵdefineNgModule, ar as RendererFactory2, dl as inject, fc as ANIMATION_MODULE_TYPE, jl as ɵɵdefineInjector, qn as NgModule } from "./core-DUwRcsgK.js";
+import { d as DomRendererFactory2, r as BrowserModule } from "./_browser-chunk-k7lgApVZ.js";
 // node_modules/@angular/animations/fesm2022/_private_export-chunk.mjs
 /**
 * @license Angular v22.2.4

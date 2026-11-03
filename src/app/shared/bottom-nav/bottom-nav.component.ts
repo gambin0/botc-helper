@@ -1,30 +1,33 @@
 import { Component } from '@angular/core';
-import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { RouterLink, RouterLinkActive } from '@angular/router';
+import { MatBottomSheet } from '@angular/material/bottom-sheet';
+import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
 
 @Component({
   selector: 'app-bottom-nav',
   standalone: true,
-  imports: [RouterLink, RouterLinkActive],
+  imports: [RouterLink, RouterLinkActive, MatIconModule, MatButtonModule],
   template: `
     <nav class="bottom-nav">
-      <a routerLink="/game" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">
-        <span class="icon">🎮</span>
+      <a routerLink="/game" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-item">
+        <mat-icon>gamepad</mat-icon>
         <span>Game</span>
       </a>
-      <a routerLink="/players" routerLinkActive="active">
-        <span class="icon">👥</span>
+      <a routerLink="/players" routerLinkActive="active" class="nav-item">
+        <mat-icon>people</mat-icon>
         <span>Players</span>
       </a>
-      <a routerLink="/log" routerLinkActive="active">
-        <span class="icon">📝</span>
+      <a routerLink="/log" routerLinkActive="active" class="nav-item">
+        <mat-icon>history</mat-icon>
         <span>Log</span>
       </a>
-      <a routerLink="/deduce" routerLinkActive="active">
-        <span class="icon">🔍</span>
+      <a routerLink="/deduce" routerLinkActive="active" class="nav-item">
+        <mat-icon>insights</mat-icon>
         <span>Deduce</span>
       </a>
-      <a routerLink="/scripts" routerLinkActive="active">
-        <span class="icon">📜</span>
+      <a routerLink="/scripts" routerLinkActive="active" class="nav-item">
+        <mat-icon>menu_book</mat-icon>
         <span>Scripts</span>
       </a>
     </nav>
@@ -42,8 +45,9 @@ import { Router, RouterLink, RouterLinkActive } from '@angular/router';
       border-top: 1px solid #e0e0e0;
       padding: 8px 0;
       z-index: 100;
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
     }
-    .bottom-nav a {
+    .nav-item {
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -51,12 +55,19 @@ import { Router, RouterLink, RouterLinkActive } from '@angular/router';
       color: #666;
       font-size: 12px;
       padding: 4px 8px;
+      transition: color 0.2s;
     }
-    .bottom-nav a.active {
-      color: #1976d2;
+    .nav-item:hover {
+      color: #3f51b5;
     }
-    .bottom-nav .icon {
+    .nav-item.active {
+      color: #3f51b5;
+      font-weight: bold;
+    }
+    .nav-item mat-icon {
       font-size: 24px;
+      width: 24px;
+      height: 24px;
       margin-bottom: 2px;
     }
   `]

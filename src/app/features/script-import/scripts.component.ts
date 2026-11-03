@@ -1,19 +1,32 @@
 import { Component } from '@angular/core';
 import { NgIf } from '@angular/common';
+import { MatCardModule } from '@angular/material/card';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 import { GameStateService } from '../../core/services/game-state.service';
 
 @Component({
   selector: 'app-scripts',
   standalone: true,
-  imports: [NgIf],
+  imports: [NgIf, MatCardModule, MatButtonModule, MatIconModule],
   template: `
     <div class="page">
-      <h1>Scripts</h1>
-      <div class="script-card" (click)="loadTroubleBrewing()">
-        <h3>Trouble Brewing</h3>
-        <p>Official BotC script (24 characters)</p>
-        <p *ngIf="loaded" class="loaded">✓ Loaded</p>
-      </div>
+      <h1 mat-title>Scripts</h1>
+      <mat-card class="script-card" (click)="loadTroubleBrewing()">
+        <mat-card-header>
+          <mat-icon mat-card-avatar>menu_book</mat-icon>
+          <mat-card-title>Trouble Brewing</mat-card-title>
+          <mat-card-subtitle>Official BotC script</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <p>24 characters including all Townsfolk, Outsiders, Minions, and the Ogre Demon.</p>
+        </mat-card-content>
+        <mat-card-actions *ngIf="loaded">
+          <button mat-button color="primary" disabled>
+            <mat-icon>check_circle</mat-icon> Loaded
+          </button>
+        </mat-card-actions>
+      </mat-card>
     </div>
   `,
   styles: [`
@@ -24,23 +37,11 @@ import { GameStateService } from '../../core/services/game-state.service';
       margin-top: 0;
     }
     .script-card {
-      border: 1px solid #e0e0e0;
-      border-radius: 8px;
-      padding: 16px;
-      margin-bottom: 16px;
       cursor: pointer;
+      transition: box-shadow 0.2s;
     }
-    .script-card h3 {
-      margin: 0 0 4px 0;
-    }
-    .script-card p {
-      margin: 0;
-      font-size: 14px;
-      color: #666;
-    }
-    .loaded {
-      color: #2e7d32;
-      font-weight: bold;
+    .script-card:hover {
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
     }
   `]
 })

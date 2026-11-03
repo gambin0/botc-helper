@@ -1,36 +1,52 @@
 import { Component, OnInit } from '@angular/core';
-import { NgIf, NgFor, NgClass } from '@angular/common';
+import { NgIf, NgFor } from '@angular/common';
+import { MatCardModule } from '@angular/material/card';
+import { MatIconModule } from '@angular/material/icon';
+import { MatChipsModule } from '@angular/material/chips';
 import { GameStateService } from '../../core/services/game-state.service';
 
 @Component({
   selector: 'app-deduce',
   standalone: true,
-  imports: [NgIf, NgFor, NgClass],
+  imports: [NgIf, NgFor, MatCardModule, MatIconModule, MatChipsModule],
   template: `
     <div class="page">
-      <h1>Deduction Board</h1>
-      <p class="summary">
-        {{ result.survivingWorldCount }} possible world(s) remaining
-      </p>
-      <div *ngIf="result.contradictions.length > 0" class="contradictions">
-        <h3>Contradictions</h3>
-        <div *ngFor="let c of result.contradictions" class="contradiction">
-          {{ c.description }}
-        </div>
-      </div>
-      <div class="matrix">
-        <div class="matrix-header">
-          <span></span>
-          <span *ngFor="let role of roles">{{ role.name }}</span>
-        </div>
-        <div *ngFor="let player of players" class="matrix-row">
-          <span class="player-name">{{ player.name }}</span>
-          <span *ngFor="let role of roles" class="cell"
-                [class.possible]="isPossible(player.id, role.id)"
-                [class.impossible]="isImpossible(player.id, role.id)">
-            {{ isPossible(player.id, role.id) ? '✓' : '✗' }}
-          </span>
-        </div>
+      <h1 mat-title>Deduction Board</h1>
+      <mat-card *ngIf="result">
+        <mat-card-header>
+          <mat-icon mat-card-avatar>insights</mat-icon>
+          <mat-card-title>Analysis</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <p>{{ result.survivingWorldCount }} possible world(s) remaining</p>
+          <div *ngIf="result.contradictions.length > 0" class="contradictions">
+            <h3>Contradictions</h3>
+            <mat-chip *ngFor="let c of result.contradictions" color="warn" class="contradiction-chip">
+              {{ c.description }}
+            </mat-chip>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <div *ngFor="let player of players" class="player-deduction">
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title>{{ player.name }}</mat-card-title>
+            <mat-card-subtitle>Seat {{ player.seat }}</mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="roles-container">
+              <mat-chip *ngFor="let role of getPossibleRoles(player.id)"
+                        [color]="role.status === 'possible' ? 'primary' : 'warn'"
+                        [disabled]="role.status === 'impossible'"
+                        class="role-chip">
+                <mat-icon *ngIf="role.status === 'possible'">check</mat-icon>
+                <mat-icon *ngIf="role.status === 'impossible'">close</mat-icon>
+                {{ getRoleName(role.roleId) }}
+              </mat-chip>
+            </div>
+          </mat-card-content>
+        </mat-card>
       </div>
     </div>
   `,
@@ -41,52 +57,31 @@ import { GameStateService } from '../../core/services/game-state.service';
     h1 {
       margin-top: 0;
     }
-    .summary {
-      font-size: 14px;
-      color: #666;
+    mat-card {
       margin-bottom: 16px;
     }
     .contradictions {
-      background: #fff3e0;
-      border: 1px solid #ffb74d;
-      border-radius: 8px;
-      padding: 12px;
-      margin-bottom: 16px;
+      margin-top: 16px;
     }
-    .contradiction {
-      font-size: 14px;
-      margin: 4px 0;
+    .contradiction-chip {
+      margin: 4px;
     }
-    .matrix {
-      overflow-x: auto;
+    .player-deduction mat-card-title {
+      font-size: 18px;
     }
-    .matrix-header, .matrix-row {
+    .roles-container {
       display: flex;
-      border-bottom: 1px solid #e0e0e0;
+      flex-wrap: wrap;
+      gap: 4px;
     }
-    .matrix-header span {
-      padding: 8px;
-      font-weight: bold;
+    .role-chip {
       font-size: 12px;
-      min-width: 60px;
-      text-align: center;
     }
-    .player-name {
-      padding: 8px;
-      font-weight: bold;
-      min-width: 80px;
-    }
-    .cell {
-      padding: 8px;
-      min-width: 60px;
-      text-align: center;
+    .role-chip mat-icon {
       font-size: 16px;
-    }
-    .possible {
-      color: #2e7d32;
-    }
-    .impossible {
-      color: #c62828;
+      width: 16px;
+      height: 16px;
+      margin-right: 2px;
     }
   `]
 })
@@ -104,19 +99,14 @@ export class DeduceComponent implements OnInit {
     this.result = this.gameState.getDeductions();
   }
 
-  isPossible(playerId: string, roleId: string): boolean {
-    if (!this.result) return false;
-    const possibility = this.result.possibleRoles.find(
-      (r: any) => r.playerId === playerId && r.roleId === roleId
-    );
-    return possibility?.status === 'possible';
+  getPossibleRoles(playerId: string) {
+    return this.gameState.getPossibleRoles(playerId);
   }
 
-  isImpossible(playerId: string, roleId: string): boolean {
-    if (!this.result) return false;
-    const possibility = this.result.possibleRoles.find(
-      (r: any) => r.playerId === playerId && r.roleId === roleId
-    );
-    return possibility?.status === 'impossible';
+  getRoleName(roleId: string): string {
+    const script = this.gameState.getScript();
+    if (!script) return roleId;
+    const char = script.characters.find(c => c.id === roleId);
+    return char ? char.name : roleId;
   }
 }

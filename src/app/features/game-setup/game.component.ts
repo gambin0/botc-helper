@@ -1,33 +1,62 @@
 import { Component, OnInit } from '@angular/core';
 import { NgIf } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatIconModule } from '@angular/material/icon';
 import { GameStateService } from '../../core/services/game-state.service';
 
 @Component({
   selector: 'app-game',
   standalone: true,
-  imports: [NgIf, FormsModule],
+  imports: [NgIf, FormsModule, MatButtonModule, MatCardModule, MatFormFieldModule, MatInputModule, MatIconModule],
   template: `
     <div class="page">
-      <h1>Game</h1>
-      <div *ngIf="script">
-        <p><strong>Script:</strong> {{ script.name }}</p>
-        <p><strong>Players:</strong> {{ players.length }}</p>
-      </div>
-      <div *ngIf="!script">
-        <p>No script loaded. Go to Scripts tab to import one.</p>
-      </div>
-      <div *ngIf="script && !hasGame">
-        <h3>Create Game</h3>
-        <label>Number of players:</label>
-        <input type="number" [(ngModel)]="playerCount" min="5" max="15" value="8">
-        <button (click)="createGame()">Create</button>
-      </div>
-      <div *ngIf="hasGame">
-        <h3>Quick Actions</h3>
-        <button (click)="addRandomClaim()">Add Test Claim</button>
-        <button (click)="addRandomDeath()">Add Test Death</button>
-      </div>
+      <h1 mat-title>Game</h1>
+      <mat-card *ngIf="script">
+        <mat-card-header>
+          <mat-card-title>{{ script.name }}</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <p><strong>Players:</strong> {{ players.length }}</p>
+        </mat-card-content>
+      </mat-card>
+      <mat-card *ngIf="!script">
+        <mat-card-content>
+          <p>No script loaded. Go to Scripts tab to import one.</p>
+        </mat-card-content>
+      </mat-card>
+      <mat-card *ngIf="script && !hasGame">
+        <mat-card-header>
+          <mat-card-title>Create Game</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Number of players</mat-label>
+            <input matInput type="number" [(ngModel)]="playerCount" min="5" max="15" value="8">
+          </mat-form-field>
+        </mat-card-content>
+        <mat-card-actions>
+          <button mat-raised-button color="primary" (click)="createGame()">
+            <mat-icon>add</mat-icon> Create
+          </button>
+        </mat-card-actions>
+      </mat-card>
+      <mat-card *ngIf="hasGame">
+        <mat-card-header>
+          <mat-card-title>Quick Actions</mat-card-title>
+        </mat-card-header>
+        <mat-card-actions>
+          <button mat-button color="primary" (click)="addRandomClaim()">
+            <mat-icon>chat</mat-icon> Add Test Claim
+          </button>
+          <button mat-button color="warn" (click)="addRandomDeath()">
+            <mat-icon>skull</mat-icon> Add Test Death
+          </button>
+        </mat-card-actions>
+      </mat-card>
     </div>
   `,
   styles: [`
@@ -37,26 +66,14 @@ import { GameStateService } from '../../core/services/game-state.service';
     h1 {
       margin-top: 0;
     }
-    label {
-      display: block;
-      margin: 8px 0 4px 0;
+    mat-card {
+      margin-bottom: 16px;
     }
-    input {
+    .full-width {
       width: 100%;
-      padding: 8px;
-      margin-bottom: 8px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
     }
-    button {
-      padding: 8px 16px;
-      background: #1976d2;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      margin-right: 8px;
-      margin-bottom: 8px;
+    mat-card-actions {
+      justify-content: center;
     }
   `]
 })
