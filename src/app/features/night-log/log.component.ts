@@ -15,13 +15,15 @@ import { GameStateService } from '../../core/services/game-state.service';
   imports: [NgIf, NgFor, FormsModule, MatCardModule, MatButtonModule, MatFormFieldModule, MatSelectModule, MatIconModule, MatListModule],
   template: `
     <div class="page">
-      <h1 mat-title>Event Log</h1>
-      <mat-list *ngIf="events.length > 0">
+      <h1>Event Log</h1>
+      <mat-list *ngIf="events.length > 0" class="event-list">
         <mat-list-item *ngFor="let event of events" class="event-item">
           <mat-icon mat-list-icon>{{ getEventIcon(event.kind) }}</mat-icon>
-          <div mat-line>{{ getEventDescription(event) }}</div>
-          <div mat-line class="event-meta">
-            Night {{ event.night }} • {{ event.phase }}
+          <div class="event-content">
+            <div mat-line class="event-description">{{ getEventDescription(event) }}</div>
+            <div mat-line class="event-meta">
+              Night {{ event.night }} • {{ event.phase }}
+            </div>
           </div>
         </mat-list-item>
       </mat-list>
@@ -82,12 +84,29 @@ import { GameStateService } from '../../core/services/game-state.service';
     h1 {
       margin-top: 0;
     }
+    .event-list {
+      width: 100%;
+    }
     .event-item {
       border-bottom: 1px solid #e0e0e0;
+      display: flex;
+      align-items: flex-start;
+    }
+    .event-content {
+      flex: 1;
+      min-width: 0;
+      margin-left: 16px;
+    }
+    .event-description {
+      font-size: 14px;
+      line-height: 1.4;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
     }
     .event-meta {
       font-size: 12px;
       color: #666;
+      margin-top: 4px;
     }
     .add-event-card {
       margin-top: 24px;
