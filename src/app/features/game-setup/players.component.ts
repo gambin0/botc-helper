@@ -13,25 +13,23 @@ import { GameStateService } from '../../core/services/game-state.service';
   imports: [NgFor, NgIf, FormsModule, MatCardModule, MatButtonModule, MatIconModule, MatChipsModule],
   template: `
     <div class="page">
-      <h1 mat-title>Players</h1>
+      <h1>Players</h1>
       <div *ngIf="players.length === 0" class="empty">
         <p>No players. Create a game first.</p>
       </div>
       <mat-card *ngFor="let player of players" class="player-card">
         <mat-card-header>
           <div mat-card-avatar class="seat-avatar">{{ player.seat }}</div>
-          <mat-card-title>
+          <mat-card-title class="player-title">
             <input [(ngModel)]="player.name" (change)="updatePlayer(player)" class="player-name-input">
           </mat-card-title>
-          <mat-card-subtitle>
-            <button mat-stroked-button color="{{ player.alive ? 'primary' : 'warn' }}"
-                    (click)="toggleAlive(player)" class="alive-btn">
-              <mat-icon>{{ player.alive ? 'check_circle' : 'cancel' }}</mat-icon>
-              {{ player.alive ? 'Alive' : 'Dead' }}
-            </button>
-          </mat-card-subtitle>
         </mat-card-header>
         <mat-card-content>
+          <button mat-stroked-button color="{{ player.alive ? 'primary' : 'warn' }}"
+                  (click)="toggleAlive(player)" class="alive-btn">
+            <mat-icon>{{ player.alive ? 'check_circle' : 'cancel' }}</mat-icon>
+            {{ player.alive ? 'Alive' : 'Dead' }}
+          </button>
           <div class="roles-container">
             <mat-chip *ngFor="let role of getPossibleRoles(player.id)"
                       [color]="role.status === 'possible' ? 'primary' : ''"
@@ -61,6 +59,12 @@ import { GameStateService } from '../../core/services/game-state.service';
       align-items: center;
       justify-content: center;
       font-weight: bold;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+    }
+    .player-title {
+      margin-left: 12px;
     }
     .player-name-input {
       border: none;
@@ -76,7 +80,7 @@ import { GameStateService } from '../../core/services/game-state.service';
       border-bottom-color: #3f51b5;
     }
     .alive-btn {
-      margin-top: 8px;
+      margin-bottom: 12px;
     }
     .roles-container {
       display: flex;

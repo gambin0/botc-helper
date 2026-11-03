@@ -1,13 +1,11 @@
 import { Component } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
-import { MatBottomSheet } from '@angular/material/bottom-sheet';
 import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
 
 @Component({
   selector: 'app-bottom-nav',
   standalone: true,
-  imports: [RouterLink, RouterLinkActive, MatIconModule, MatButtonModule],
+  imports: [RouterLink, RouterLinkActive, MatIconModule],
   template: `
     <nav class="bottom-nav">
       <a routerLink="/game" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-item">
@@ -56,6 +54,7 @@ import { MatButtonModule } from '@angular/material/button';
       font-size: 12px;
       padding: 4px 8px;
       transition: color 0.2s;
+      min-width: 0;
     }
     .nav-item:hover {
       color: #3f51b5;
@@ -69,6 +68,9 @@ import { MatButtonModule } from '@angular/material/button';
       width: 24px;
       height: 24px;
       margin-bottom: 2px;
+    }
+    .nav-item span {
+      white-space: nowrap;
     }
   `]
 })

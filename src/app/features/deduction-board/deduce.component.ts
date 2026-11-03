@@ -11,7 +11,7 @@ import { GameStateService } from '../../core/services/game-state.service';
   imports: [NgIf, NgFor, MatCardModule, MatIconModule, MatChipsModule],
   template: `
     <div class="page">
-      <h1 mat-title>Deduction Board</h1>
+      <h1>Deduction Board</h1>
       <mat-card *ngIf="result">
         <mat-card-header>
           <mat-icon mat-card-avatar>insights</mat-icon>
@@ -40,8 +40,8 @@ import { GameStateService } from '../../core/services/game-state.service';
                         [color]="role.status === 'possible' ? 'primary' : 'warn'"
                         [disabled]="role.status === 'impossible'"
                         class="role-chip">
-                <mat-icon *ngIf="role.status === 'possible'">check</mat-icon>
-                <mat-icon *ngIf="role.status === 'impossible'">close</mat-icon>
+                <mat-icon *ngIf="role.status === 'possible'" class="chip-icon">check</mat-icon>
+                <mat-icon *ngIf="role.status === 'impossible'" class="chip-icon">close</mat-icon>
                 {{ getRoleName(role.roleId) }}
               </mat-chip>
             </div>
@@ -77,7 +77,7 @@ import { GameStateService } from '../../core/services/game-state.service';
     .role-chip {
       font-size: 12px;
     }
-    .role-chip mat-icon {
+    .chip-icon {
       font-size: 16px;
       width: 16px;
       height: 16px;
