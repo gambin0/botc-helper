@@ -51,7 +51,7 @@ export class ScriptsComponent {
 
   async loadTroubleBrewing() {
     try {
-      const response = await fetch('/assets/scripts/trouble-brewing.json');
+      const response = await fetch('/scripts/trouble-brewing.json');
       const json = await response.text();
       await this.gameState.importScript(json);
       this.loaded = true;
