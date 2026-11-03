@@ -1,0 +1,19 @@
+# Angular
+dist/
+node_modules/
+
+# Android
+android/app/build/
+android/.gradle/
+android/local.properties
+android/*.iml
+android/app/*.iml
+android/gradle/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/

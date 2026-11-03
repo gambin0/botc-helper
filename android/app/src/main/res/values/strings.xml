@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">BOTC Deducer</string>
+    <string name="title_activity_main">BOTC Deducer</string>
+    <string name="package_name">com.charlesu.botcdeducer</string>
+    <string name="custom_url_scheme">com.charlesu.botcdeducer</string>
+</resources>

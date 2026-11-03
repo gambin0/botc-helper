@@ -1,0 +1,77 @@
+export type Team = 'townsfolk' | 'outsider' | 'minion' | 'demon' | 'traveller' | 'fabled';
+
+export interface ScriptCharacter {
+  id: string;
+  name: string;
+  team: Team;
+  ability: string;
+  firstNight?: number;
+  otherNight?: number;
+  reminders?: string[];
+  setup?: boolean;
+  jinxes?: unknown[];
+}
+
+export interface Script {
+  id: string;
+  name: string;
+  source: string;
+  characters: ScriptCharacter[];
+}
+
+export interface Player {
+  id: string;
+  gameId: string;
+  name: string;
+  seat: number;
+  alive: boolean;
+  notes?: string;
+}
+
+export type ClaimTrust = 'asserted' | 'confirmed' | 'doubted' | 'false';
+
+export interface GameEvent {
+  id: string;
+  gameId: string;
+  night: number;
+  phase: 'setup' | 'first-night' | 'day' | 'nomination' | 'execution' | 'other-night';
+  actorId?: string;
+  kind: string;
+  payload: unknown;
+  trust: ClaimTrust;
+  createdAt: string;
+}
+
+export interface RolePossibility {
+  playerId: string;
+  roleId: string;
+  status: 'possible' | 'confirmed' | 'impossible';
+  reason?: string;
+  requiredAssumptions?: string[];
+}
+
+export interface PossibleWorld {
+  roleAssignments: Record<string, string | null>;
+  alignment: Record<string, 'good' | 'evil' | 'unknown'>;
+  drunkOrPoisoned: Set<string>;
+  dead: Set<string>;
+  oncePerGameUsed: Record<string, boolean>;
+  status: 'valid' | 'contradicted';
+}
+
+export interface Contradiction {
+  description: string;
+  events: string[];
+}
+
+export interface RequiredAssumption {
+  description: string;
+  affects: string[];
+}
+
+export interface DeductionResult {
+  possibleRoles: RolePossibility[];
+  survivingWorldCount: number;
+  contradictions: Contradiction[];
+  requiredAssumptions: RequiredAssumption[];
+}
