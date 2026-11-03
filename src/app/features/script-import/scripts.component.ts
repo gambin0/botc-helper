@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { NgIf } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -45,10 +45,14 @@ import { GameStateService } from '../../core/services/game-state.service';
     }
   `]
 })
-export class ScriptsComponent {
+export class ScriptsComponent implements OnInit {
   loaded = false;
 
   constructor(private gameState: GameStateService) {}
+
+  ngOnInit() {
+    this.loaded = this.gameState.getScript() !== null;
+  }
 
   async loadTroubleBrewing() {
     try {

@@ -1,6 +1,9 @@
 # Angular
 dist/
 node_modules/
+.angular/
+*.db
+*.db-lock
 
 # Android
 android/app/build/

@@ -24,6 +24,9 @@ import { GameStateService } from '../../core/services/game-state.service';
               Night {{ event.night }} • {{ event.phase }}
             </div>
           </div>
+          <button mat-icon-button color="warn" (click)="removeEvent(event.id)" title="Remove event">
+            <mat-icon>delete</mat-icon>
+          </button>
         </div>
       </div>
       <div *ngIf="events.length === 0" class="empty">
@@ -134,6 +137,10 @@ export class LogComponent implements OnInit {
   constructor(private gameState: GameStateService) {}
 
   ngOnInit() {
+    this.refreshState();
+  }
+
+  refreshState() {
     this.events = this.gameState.getEvents();
     this.players = this.gameState.getPlayers();
     const script = this.gameState.getScript();
@@ -187,5 +194,10 @@ export class LogComponent implements OnInit {
     }
     this.events = this.gameState.getEvents();
     this.players = this.gameState.getPlayers();
+  }
+
+  removeEvent(eventId: string) {
+    this.gameState.removeEvent(eventId);
+    this.events = this.gameState.getEvents();
   }
 }

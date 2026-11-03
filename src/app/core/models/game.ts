@@ -19,6 +19,15 @@ export interface Script {
   characters: ScriptCharacter[];
 }
 
+export interface Game {
+  id: string;
+  name: string;
+  scriptId: string;
+  playerCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Player {
   id: string;
   gameId: string;

@@ -1,6 +1,12 @@
 import { Injectable } from '@angular/core';
 import { Capacitor } from '@capacitor/core';
-import { Script, Player, GameEvent } from '../models/game';
+import { Script, Player, GameEvent, Game } from '../models/game';
+
+export interface GameState {
+  script: Script;
+  players: Player[];
+  events: GameEvent[];
+}
 
 @Injectable({
   providedIn: 'root'
@@ -10,10 +16,8 @@ export class DatabaseService {
 
   async init() {
     if (Capacitor.isNativePlatform()) {
-      // Will use Capacitor SQLite plugin
       console.log('Initializing native SQLite database');
     } else {
-      // Use localStorage for web development
       console.log('Using localStorage for development');
     }
   }
@@ -29,7 +33,6 @@ export class DatabaseService {
 
   async getScript(id: string): Promise<Script | null> {
     if (Capacitor.isNativePlatform()) {
-      // SQLite query
       return null;
     } else {
       const json = localStorage.getItem(`script_${id}`);
@@ -37,66 +40,64 @@ export class DatabaseService {
     }
   }
 
-  async savePlayer(player: Player) {
-    const json = JSON.stringify(player);
+  async saveGame(game: Game) {
+    const json = JSON.stringify(game);
     if (Capacitor.isNativePlatform()) {
       // SQLite insert
     } else {
-      localStorage.setItem(`player_${player.id}`, json);
+      localStorage.setItem(`game_${game.id}`, json);
     }
   }
 
-  async getPlayers(gameId: string): Promise<Player[]> {
+  async getGame(id: string): Promise<Game | null> {
     if (Capacitor.isNativePlatform()) {
-      // SQLite query
-      return [];
+      return null;
     } else {
-      // Get all players for this game from localStorage
-      const players: Player[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key?.startsWith('player_')) {
-          const json = localStorage.getItem(key);
-          if (json) {
-            const player = JSON.parse(json);
-            if (player.gameId === gameId) {
-              players.push(player);
-            }
-          }
-        }
-      }
-      return players;
+      const json = localStorage.getItem(`game_${id}`);
+      return json ? JSON.parse(json) : null;
     }
   }
 
-  async saveEvent(event: GameEvent) {
-    const json = JSON.stringify(event);
+  async saveCurrentGameId(gameId: string) {
     if (Capacitor.isNativePlatform()) {
       // SQLite insert
     } else {
-      localStorage.setItem(`event_${event.id}`, json);
+      localStorage.setItem('current_game_id', gameId);
     }
   }
 
-  async getEvents(gameId: string): Promise<GameEvent[]> {
+  async getCurrentGameId(): Promise<string | null> {
     if (Capacitor.isNativePlatform()) {
-      // SQLite query
-      return [];
+      return null;
     } else {
-      const events: GameEvent[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key?.startsWith('event_')) {
-          const json = localStorage.getItem(key);
-          if (json) {
-            const event = JSON.parse(json);
-            if (event.gameId === gameId) {
-              events.push(event);
-            }
-          }
-        }
-      }
-      return events.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      return localStorage.getItem('current_game_id');
+    }
+  }
+
+  async saveGameState(state: GameState) {
+    const json = JSON.stringify(state);
+    if (Capacitor.isNativePlatform()) {
+      // SQLite insert
+    } else {
+      localStorage.setItem('game_state', json);
+    }
+  }
+
+  async getGameState(): Promise<GameState | null> {
+    if (Capacitor.isNativePlatform()) {
+      return null;
+    } else {
+      const json = localStorage.getItem('game_state');
+      return json ? JSON.parse(json) : null;
+    }
+  }
+
+  async clearGameState() {
+    if (Capacitor.isNativePlatform()) {
+      // SQLite delete
+    } else {
+      localStorage.removeItem('game_state');
+      localStorage.removeItem('current_game_id');
     }
   }
 }

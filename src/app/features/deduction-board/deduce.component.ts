@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, effect } from '@angular/core';
 import { NgIf, NgFor } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -12,7 +12,12 @@ import { GameStateService } from '../../core/services/game-state.service';
   imports: [NgIf, NgFor, MatCardModule, MatIconModule, MatChipsModule, MatExpansionModule],
   template: `
     <div class="page">
-      <h1>Deduction Board</h1>
+      <div class="header-row">
+        <h1>Deduction Board</h1>
+        <button mat-icon-button color="primary" (click)="refreshState()" title="Refresh deductions">
+          <mat-icon>refresh</mat-icon>
+        </button>
+      </div>
       <mat-card *ngIf="result">
         <mat-card-header>
           <mat-icon mat-card-avatar>insights</mat-icon>
@@ -63,8 +68,15 @@ import { GameStateService } from '../../core/services/game-state.service';
     .page {
       padding: 16px;
     }
+    .header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
     h1 {
       margin-top: 0;
+      margin-bottom: 0;
     }
     mat-card {
       margin-bottom: 16px;
@@ -109,9 +121,18 @@ export class DeduceComponent implements OnInit {
   roles: any[] = [];
   result: any = null;
 
-  constructor(private gameState: GameStateService) {}
+  constructor(private gameState: GameStateService) {
+    // Reactively update deductions when events change
+    effect(() => {
+      this.result = this.gameState.deductions();
+    });
+  }
 
   ngOnInit() {
+    this.refreshState();
+  }
+
+  refreshState() {
     this.players = this.gameState.getPlayers();
     const script = this.gameState.getScript();
     this.roles = script ? script.characters : [];
