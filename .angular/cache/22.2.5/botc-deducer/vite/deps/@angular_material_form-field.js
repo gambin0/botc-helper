@@ -1,7 +1,8 @@
 import { Wi as setClassMetadata, ao as ɵɵdefineNgModule, jl as ɵɵdefineInjector, qn as NgModule } from "./core-DUwRcsgK.js";
-import { a as ObserversModule } from "./_animation-chunk-DyZaQbv0.js";
-import { a as MAT_SUFFIX, c as MatFormFieldControl, d as MatPrefix, f as MatSuffix, h as getMatFormFieldPlaceholderConflictError, i as MAT_PREFIX, l as MatHint, m as getMatFormFieldMissingControlError, n as MAT_FORM_FIELD, o as MatError, p as getMatFormFieldDuplicatedHintError, r as MAT_FORM_FIELD_DEFAULT_OPTIONS, s as MatFormField, t as MAT_ERROR, u as MatLabel } from "./_form-field-chunk-tnMqLh25.js";
+import { i as ObserversModule } from "./_animation-chunk-BSRSnsxC.js";
 import { t as BidiModule } from "./bidi-DfOrtKt2.js";
+import "./platform-FcODWz2l.js";
+import { a as MAT_SUFFIX, c as MatFormFieldControl, d as MatPrefix, f as MatSuffix, h as getMatFormFieldPlaceholderConflictError, i as MAT_PREFIX, l as MatHint, m as getMatFormFieldMissingControlError, n as MAT_FORM_FIELD, o as MatError, p as getMatFormFieldDuplicatedHintError, r as MAT_FORM_FIELD_DEFAULT_OPTIONS, s as MatFormField, t as MAT_ERROR, u as MatLabel } from "./_form-field-chunk-CKAZDbTh.js";
 // node_modules/@angular/material/fesm2022/form-field.mjs
 var MatFormFieldModule = class MatFormFieldModule {
 	static ɵfac = function MatFormFieldModule_Factory(__ngFactoryType__) {

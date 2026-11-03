@@ -1,38 +1,17 @@
-import { $o as ɵɵloadQuery, A as contentChild, Ac as Injector, Al as ɵɵdefineInjectable, Bt as computed, Ca as ɵɵclassProp, Co as ɵɵelementStart, Cs as ɵɵreference, Da as ɵɵconditionalCreate, Dr as ViewEncapsulation, En as ElementRef, Fn as Injectable, Gs as ɵɵtemplate, In as Input, Js as ɵɵtextInterpolate, Kc as RuntimeError, Ks as ɵɵtemplateRefExtractor, Oa as ɵɵcontentQuery, Qo as ɵɵlistener, Rc as NgZone, S as ViewChild, So as ɵɵelementEnd, T as afterRenderEffect, Ta as ɵɵconditional, Tl as signal, Ul as Subject, Vl as map, Wi as setClassMetadata, Wt as linkedSignal, X as input, _c as DOCUMENT, a as ContentChildren, aa as ɵɵControlFeature, al as formatRuntimeError, ar as RendererFactory2, bs as ɵɵqueryAdvance, cn as Component, cs as ɵɵprojectionDef, da as ɵɵadvance, dc as ɵɵviewQuerySignal, dl as inject, dr as Service, es as ɵɵnextContext, eu as Subscription, go as ɵɵdomProperty, gt as viewChild, hc as CSP_NONCE, i as ContentChild, il as effect, io as ɵɵdefineDirective, ir as Renderer2, jo as ɵɵgetInheritedFactory, ka as ɵɵcontentQuerySignal, kc as InjectionToken, lo as ɵɵdomElement, ls as ɵɵproperty, ml as isSignal, mo as ɵɵdomElementStart, ol as forwardRef, pc as APP_ID, po as ɵɵdomElementEnd, ql as Observable, qs as ɵɵtext, qt as untracked, r as ChangeDetectorRef, ro as ɵɵdefineComponent, so as ɵɵdefineService, ss as ɵɵprojection, ua as ɵɵProvidersFeature, uc as ɵɵviewQuery, vc as DestroyRef, vo as ɵɵelement, wn as Directive, xs as ɵɵqueryRefresh, ya as ɵɵattribute } from "./core-DUwRcsgK.js";
+import { $o as ɵɵloadQuery, A as contentChild, Ac as Injector, Al as ɵɵdefineInjectable, Bt as computed, Ca as ɵɵclassProp, Co as ɵɵelementStart, Cs as ɵɵreference, Da as ɵɵconditionalCreate, Dr as ViewEncapsulation, En as ElementRef, Fn as Injectable, Gs as ɵɵtemplate, In as Input, Js as ɵɵtextInterpolate, Kc as RuntimeError, Ks as ɵɵtemplateRefExtractor, Oa as ɵɵcontentQuery, Qo as ɵɵlistener, Rc as NgZone, S as ViewChild, So as ɵɵelementEnd, T as afterRenderEffect, Ta as ɵɵconditional, Tl as signal, Ul as Subject, Vl as map, Wi as setClassMetadata, Wt as linkedSignal, X as input, _c as DOCUMENT, a as ContentChildren, aa as ɵɵControlFeature, al as formatRuntimeError, ar as RendererFactory2, bs as ɵɵqueryAdvance, cn as Component, cs as ɵɵprojectionDef, da as ɵɵadvance, dc as ɵɵviewQuerySignal, dl as inject, dr as Service, es as ɵɵnextContext, eu as Subscription, go as ɵɵdomProperty, gt as viewChild, hc as CSP_NONCE, i as ContentChild, il as effect, io as ɵɵdefineDirective, ir as Renderer2, jo as ɵɵgetInheritedFactory, ka as ɵɵcontentQuerySignal, kc as InjectionToken, lo as ɵɵdomElement, ls as ɵɵproperty, ml as isSignal, mo as ɵɵdomElementStart, ol as forwardRef, po as ɵɵdomElementEnd, ql as Observable, qs as ɵɵtext, qt as untracked, r as ChangeDetectorRef, ro as ɵɵdefineComponent, so as ɵɵdefineService, ss as ɵɵprojection, ua as ɵɵProvidersFeature, uc as ɵɵviewQuery, vc as DestroyRef, vo as ɵɵelement, wn as Directive, xs as ɵɵqueryRefresh, ya as ɵɵattribute } from "./core-DUwRcsgK.js";
 import { r as Platform } from "./_element-chunk-CAnu8Tp9.js";
 import { n as pairwise, t as shareReplay } from "./shareReplay-B6ey4Jsf.js";
 import { n as filter } from "./switchMap-BOt59wP1.js";
 import { n as startWith, t as takeUntil } from "./takeUntil-C769UC84.js";
-import { n as merge, t as coerceBooleanProperty } from "./coercion-DjyOFTl5.js";
+import { t as merge } from "./merge-G1CFkgR3.js";
 import "./platform-browser-uXLWW3yx.js";
-import { t as _animationsDisabled } from "./_animation-chunk-DyZaQbv0.js";
+import { t as _animationsDisabled } from "./_animation-chunk-BSRSnsxC.js";
+import { t as _IdGenerator } from "./_id-generator-chunk-CqjeokZS.js";
 import { Z as NgTemplateOutlet } from "./common-DFmsAV2A.js";
 import { i as Directionality } from "./bidi-DfOrtKt2.js";
 import { NG_VALIDATORS, NG_VALUE_ACCESSOR, NgControl, Validators, ɵFORM_CONTROL_INTEGRATION, ɵelementAcceptsMinMax as elementAcceptsMinMax, ɵisNativeFormElement as isNativeFormElement, ɵisTextualFormElement as isTextualFormElement, ɵselectValueAccessor as selectValueAccessor, ɵsetNativeDomProperty as setNativeDomProperty } from "./@angular_forms.js";
-// node_modules/@angular/cdk/fesm2022/_id-generator-chunk.mjs
-var counters = /* @__PURE__ */ new Map();
-var _IdGenerator = class _IdGenerator {
-	_appId = inject(APP_ID);
-	static _infix = `a${Math.floor(Math.random() * 1e5).toString()}`;
-	getId(prefix, randomize = false) {
-		if (this._appId !== "ng") prefix += this._appId;
-		let count = counters.get(prefix);
-		if (count === void 0) count = 0;
-		else count++;
-		counters.set(prefix, count);
-		return `${prefix}${randomize ? _IdGenerator._infix + "-" : ""}${count}`;
-	}
-	static ɵfac = function _IdGenerator_Factory(__ngFactoryType__) {
-		return new (__ngFactoryType__ || _IdGenerator)();
-	};
-	static ɵprov = /*@__PURE__*/ ɵɵdefineService({
-		token: _IdGenerator,
-		factory: _IdGenerator.ɵfac
-	});
-};
-(() => {
-	(typeof ngDevMode === "undefined" || ngDevMode) && setClassMetadata(_IdGenerator, [{ type: Service }], null, null);
-})();
+import "./platform-FcODWz2l.js";
+import { t as coerceBooleanProperty } from "./coercion-jtlG8Yt7.js";
 // node_modules/@angular/forms/fesm2022/_validation_errors-chunk.mjs
 /**
 * @license Angular v22.2.4
@@ -2331,4 +2310,4 @@ var MatFormField = class MatFormField {
 		hintLabel: [{ type: Input }]
 	});
 })();
-export { _IdGenerator as _, MAT_SUFFIX as a, MatFormFieldControl as c, MatPrefix as d, MatSuffix as f, FORM_FIELD as g, getMatFormFieldPlaceholderConflictError as h, MAT_PREFIX as i, MatHint as l, getMatFormFieldMissingControlError as m, MAT_FORM_FIELD as n, MatError as o, getMatFormFieldDuplicatedHintError as p, MAT_FORM_FIELD_DEFAULT_OPTIONS as r, MatFormField as s, MAT_ERROR as t, MatLabel as u };
+export { MAT_SUFFIX as a, MatFormFieldControl as c, MatPrefix as d, MatSuffix as f, FORM_FIELD as g, getMatFormFieldPlaceholderConflictError as h, MAT_PREFIX as i, MatHint as l, getMatFormFieldMissingControlError as m, MAT_FORM_FIELD as n, MatError as o, getMatFormFieldDuplicatedHintError as p, MAT_FORM_FIELD_DEFAULT_OPTIONS as r, MatFormField as s, MAT_ERROR as t, MatLabel as u };

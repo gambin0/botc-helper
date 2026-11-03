@@ -1621,58 +1621,6 @@ var ConfigurableFocusTrapFactory = class ConfigurableFocusTrapFactory {
 (() => {
 	(typeof ngDevMode === "undefined" || ngDevMode) && setClassMetadata(ConfigurableFocusTrapFactory, [{ type: Service }], () => [], null);
 })();
-// node_modules/@angular/cdk/fesm2022/platform.mjs
-var PlatformModule = class PlatformModule {
-	static ɵfac = function PlatformModule_Factory(__ngFactoryType__) {
-		return new (__ngFactoryType__ || PlatformModule)();
-	};
-	static ɵmod = /*@__PURE__*/ ɵɵdefineNgModule({ type: PlatformModule });
-	static ɵinj = /*@__PURE__*/ ɵɵdefineInjector({});
-};
-(() => {
-	(typeof ngDevMode === "undefined" || ngDevMode) && setClassMetadata(PlatformModule, [{
-		type: NgModule,
-		args: [{}]
-	}], null, null);
-})();
-var supportedInputTypes;
-var candidateInputTypes = [
-	"color",
-	"button",
-	"checkbox",
-	"date",
-	"datetime-local",
-	"email",
-	"file",
-	"hidden",
-	"image",
-	"month",
-	"number",
-	"password",
-	"radio",
-	"range",
-	"reset",
-	"search",
-	"submit",
-	"tel",
-	"text",
-	"time",
-	"url",
-	"week"
-];
-function getSupportedInputTypes() {
-	if (supportedInputTypes) return supportedInputTypes;
-	if (typeof document !== "object" || !document) {
-		supportedInputTypes = new Set(candidateInputTypes);
-		return supportedInputTypes;
-	}
-	let featureTestInput = document.createElement("input");
-	supportedInputTypes = new Set(candidateInputTypes.filter((value) => {
-		featureTestInput.setAttribute("type", value);
-		return featureTestInput.type === value;
-	}));
-	return supportedInputTypes;
-}
 // node_modules/@angular/cdk/fesm2022/layout.mjs
 var LayoutModule = class LayoutModule {
 	static ɵfac = function LayoutModule_Factory(__ngFactoryType__) {
@@ -1698,4 +1646,4 @@ function _getAnimationsState() {
 function _animationsDisabled() {
 	return _getAnimationsState() !== "enabled";
 }
-export { ObserversModule as a, normalizePassiveListenerOptions as c, isFakeMousedownFromScreenReader as d, isFakeTouchstartFromScreenReader as f, CdkObserveContent as i, _getEventTarget as l, getSupportedInputTypes as n, coerceArray as o, debounceTime as p, LiveAnnouncer as r, FocusMonitor as s, _animationsDisabled as t, _getFocusedElementPierceShadowDom as u };
+export { coerceArray as a, _getEventTarget as c, isFakeTouchstartFromScreenReader as d, debounceTime as f, ObserversModule as i, _getFocusedElementPierceShadowDom as l, LiveAnnouncer as n, FocusMonitor as o, CdkObserveContent as r, normalizePassiveListenerOptions as s, _animationsDisabled as t, isFakeMousedownFromScreenReader as u };

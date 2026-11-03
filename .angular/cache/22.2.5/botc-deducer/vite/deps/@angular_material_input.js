@@ -1,13 +1,15 @@
 import { Ca as ɵɵclassProp, En as ElementRef, In as Input, O as booleanAttribute, Qo as ɵɵlistener, Rc as NgZone, Ul as Subject, Wi as setClassMetadata, ao as ɵɵdefineNgModule, dl as inject, go as ɵɵdomProperty, il as effect, io as ɵɵdefineDirective, ir as Renderer2, jl as ɵɵdefineInjector, kc as InjectionToken, la as ɵɵNgOnChangesFeature, ml as isSignal, qn as NgModule, ua as ɵɵProvidersFeature, wn as Directive, ya as ɵɵattribute } from "./core-DUwRcsgK.js";
 import { r as Platform } from "./_element-chunk-CAnu8Tp9.js";
-import { t as coerceBooleanProperty } from "./coercion-DjyOFTl5.js";
-import { n as getSupportedInputTypes } from "./_animation-chunk-DyZaQbv0.js";
-import { _ as _IdGenerator, c as MatFormFieldControl, d as MatPrefix, f as MatSuffix, g as FORM_FIELD, l as MatHint, n as MAT_FORM_FIELD, o as MatError, s as MatFormField, u as MatLabel } from "./_form-field-chunk-tnMqLh25.js";
+import "./_animation-chunk-BSRSnsxC.js";
+import { t as _IdGenerator } from "./_id-generator-chunk-CqjeokZS.js";
 import { t as BidiModule } from "./bidi-DfOrtKt2.js";
-import { FormGroupDirective, NgControl, NgForm, Validators } from "./@angular_forms.js";
-import { MatFormFieldModule } from "./@angular_material_form-field.js";
 import { AutofillMonitor, TextFieldModule } from "./@angular_cdk_text-field.js";
+import { FormGroupDirective, NgControl, NgForm, Validators } from "./@angular_forms.js";
+import { t as getSupportedInputTypes } from "./platform-FcODWz2l.js";
+import { t as coerceBooleanProperty } from "./coercion-jtlG8Yt7.js";
+import { c as MatFormFieldControl, d as MatPrefix, f as MatSuffix, g as FORM_FIELD, l as MatHint, n as MAT_FORM_FIELD, o as MatError, s as MatFormField, u as MatLabel } from "./_form-field-chunk-CKAZDbTh.js";
 import { n as ErrorStateMatcher, t as _ErrorStateTracker } from "./_error-state-chunk-CfsEcGic.js";
+import { MatFormFieldModule } from "./@angular_material_form-field.js";
 // node_modules/@angular/material/fesm2022/_input-value-accessor-chunk.mjs
 var MAT_INPUT_VALUE_ACCESSOR = new InjectionToken("MAT_INPUT_VALUE_ACCESSOR");
 // node_modules/@angular/material/fesm2022/input.mjs

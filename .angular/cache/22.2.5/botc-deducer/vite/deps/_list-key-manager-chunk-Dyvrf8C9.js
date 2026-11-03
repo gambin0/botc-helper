@@ -1,6 +1,6 @@
 import { Tl as signal, Ul as Subject, Vl as map, eu as Subscription, il as effect, ml as isSignal, nr as QueryList } from "./core-DUwRcsgK.js";
 import { n as filter } from "./switchMap-BOt59wP1.js";
-import { p as debounceTime } from "./_animation-chunk-DyZaQbv0.js";
+import { f as debounceTime } from "./_animation-chunk-BSRSnsxC.js";
 import { t as tap } from "./tap-DhAqJ4-4.js";
 // node_modules/@angular/cdk/fesm2022/_typeahead-chunk.mjs
 var DEFAULT_TYPEAHEAD_DEBOUNCE_INTERVAL_MS = 200;

@@ -45,8 +45,10 @@ export class BotcSolver {
 
     // Apply event constraints iteratively until fixed point
     let changed = true;
-    while (changed) {
+    let iterations = 0;
+    while (changed && iterations < 100) {
       changed = false;
+      iterations++;
       for (const event of this.events) {
         if (this.applyEventConstraint(event)) {
           changed = true;
@@ -72,7 +74,7 @@ export class BotcSolver {
       possibleRoles,
       survivingWorldCount: this.countSurvivingWorlds(),
       contradictions: this.findContradictions(),
-      requiredAssumptions: []
+      requiredAssumptions: this.findRequiredAssumptions()
     };
   }
 
@@ -82,19 +84,20 @@ export class BotcSolver {
     return char ? char.team : null;
   }
 
+  private getRoleName(roleId: string): string {
+    if (!this.script) return roleId;
+    const char = this.script.characters.find(c => c.id === roleId);
+    return char ? char.name : roleId;
+  }
+
+  private getPlayerName(playerId: string): string {
+    const player = this.players.find(p => p.id === playerId);
+    return player ? player.name : 'Player';
+  }
+
   private applyScriptConstraints(): boolean {
-    let changed = false;
-    const playerCount = this.players.length;
-
-    // Determine expected role counts for this player count
-    // Simplified: use Trouble Brewing 5-8 player setup
-    const townsfolkCount = playerCount <= 8 ? 3 : 4;
-    const outsiderCount = playerCount <= 8 ? 1 : 2;
-    const minionCount = 1;
-    const demonCount = 1;
-
-    // For now, just ensure each player has at least one possible role
-    return changed;
+    // For now, basic constraints only
+    return false;
   }
 
   private applyEventConstraint(event: GameEvent): boolean {
@@ -113,11 +116,10 @@ export class BotcSolver {
   }
 
   private applyClaimConstraint(event: GameEvent): boolean {
-    const payload = event.payload as { claimedRole: string; targetPlayerId?: string };
+    const payload = event.payload as { claimedRole: string };
     if (!payload || !payload.claimedRole) return false;
 
     // If a player claims a role, that role becomes possible for them
-    // (but not confirmed - they could be lying)
     if (event.actorId) {
       const domain = this.domains.find(d => d.playerId === event.actorId);
       if (domain && !domain.possibleRoles.has(payload.claimedRole)) {
@@ -129,9 +131,23 @@ export class BotcSolver {
   }
 
   private applyDeathConstraint(event: GameEvent): boolean {
-    // Dead players can't use certain abilities
-    // For now, just track the death
-    return false;
+    const payload = event.payload as { playerId: string };
+    if (!payload || !payload.playerId) return false;
+
+    // Dead players can't be certain roles that require being alive
+    const domain = this.domains.find(d => d.playerId === payload.playerId);
+    if (!domain) return false;
+
+    let changed = false;
+    // Roles that can't be dead (simplified)
+    const aliveOnlyRoles = ['slayer']; // Slayer needs to be alive to use ability
+    for (const roleId of aliveOnlyRoles) {
+      if (domain.possibleRoles.has(roleId)) {
+        domain.possibleRoles.delete(roleId);
+        changed = true;
+      }
+    }
+    return changed;
   }
 
   private applyExecutionConstraint(event: GameEvent): boolean {
@@ -167,17 +183,11 @@ export class BotcSolver {
       case 'washerwoman':
       case 'librarian':
       case 'investigator':
-        // One of two players is a specific role type
         return this.applyDisjunctiveRoleConstraint(event, payload);
       case 'empath':
-        // Player is good or evil
         return this.applyAlignmentConstraint(event, payload);
       case 'fortune_teller':
-        // Player is or isn't the demon
         return this.applyDemonConstraint(event, payload);
-      case 'chef':
-        // Number of evil pairs
-        return false; // Complex, skip for now
       default:
         return false;
     }
@@ -194,7 +204,6 @@ export class BotcSolver {
     if (!domain1 || !domain2) return false;
 
     // At least one of the two players must have this role
-    // If one doesn't have it possible, the other must
     let changed = false;
     if (!domain1.possibleRoles.has(payload.roleId)) {
       if (domain2.possibleRoles.size > 1 || !domain2.possibleRoles.has(payload.roleId)) {
@@ -283,13 +292,38 @@ export class BotcSolver {
     return contradictions;
   }
 
+  private findRequiredAssumptions(): any[] {
+    // Simplified: no assumptions for now
+    return [];
+  }
+
   private getReason(playerId: string, roleId: string): string | undefined {
     const domain = this.domains.find(d => d.playerId === playerId);
     if (!domain || domain.possibleRoles.has(roleId)) return undefined;
 
-    const char = this.script?.characters.find(c => c.id === roleId);
-    if (!char) return undefined;
+    const team = this.getTeam(roleId);
+    if (!team) return undefined;
 
-    return `Eliminated by constraints`;
+    // Check if eliminated by alignment constraint
+    for (const event of this.events) {
+      if (event.kind === 'info' && event.payload) {
+        const payload = event.payload as any;
+        if (payload.type === 'empath' && payload.targetPlayerId === playerId) {
+          if (payload.isTrue === true && (team === 'minion' || team === 'demon')) {
+            return 'Confirmed good by Empath';
+          }
+          if (payload.isTrue === false && (team === 'townsfolk' || team === 'outsider')) {
+            return 'Confirmed evil by Empath';
+          }
+        }
+        if (payload.type === 'fortune_teller' && payload.targetPlayerId === playerId) {
+          if (payload.isTrue === false && team === 'demon') {
+            return 'Confirmed not Demon by Fortune Teller';
+          }
+        }
+      }
+    }
+
+    return 'Eliminated by constraints';
   }
 }

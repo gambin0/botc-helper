@@ -1,5 +1,5 @@
 import { Ca as ɵɵclassProp, Dr as ViewEncapsulation, In as Input, Ul as Subject, Wi as setClassMetadata, ao as ɵɵdefineNgModule, cn as Component, jl as ɵɵdefineInjector, qn as NgModule, ro as ɵɵdefineComponent } from "./core-DUwRcsgK.js";
-import { t as _animationsDisabled } from "./_animation-chunk-DyZaQbv0.js";
+import { t as _animationsDisabled } from "./_animation-chunk-BSRSnsxC.js";
 import { t as BidiModule } from "./bidi-DfOrtKt2.js";
 // node_modules/@angular/cdk/fesm2022/_selection-model-chunk.mjs
 var SelectionModel = class {

@@ -11,8 +11,4 @@ function merge() {
 	var sources = args;
 	return !sources.length ? EMPTY : sources.length === 1 ? innerFrom(sources[0]) : mergeAll(concurrent)(from(sources, scheduler));
 }
-// node_modules/@angular/cdk/fesm2022/coercion.mjs
-function coerceBooleanProperty(value) {
-	return value != null && `${value}` !== "false";
-}
-export { merge as n, coerceBooleanProperty as t };
+export { merge as t };

@@ -1,10 +1,12 @@
 import { Ca as ɵɵclassProp, Da as ɵɵconditionalCreate, Dr as ViewEncapsulation, En as ElementRef, In as Input, O as booleanAttribute, Rc as NgZone, Sa as ɵɵclassMap, Ta as ɵɵconditional, Wi as setClassMetadata, X as input, ao as ɵɵdefineNgModule, ca as ɵɵInheritDefinitionFeature, cn as Component, cs as ɵɵprojectionDef, da as ɵɵadvance, dl as inject, io as ɵɵdefineDirective, ir as Renderer2, jl as ɵɵdefineInjector, kc as InjectionToken, lo as ɵɵdomElement, mo as ɵɵdomElementStart, po as ɵɵdomElementEnd, qn as NgModule, ro as ɵɵdefineComponent, rt as numberAttribute, ss as ɵɵprojection, wn as Directive, ya as ɵɵattribute } from "./core-DUwRcsgK.js";
-import { s as FocusMonitor, t as _animationsDisabled } from "./_animation-chunk-DyZaQbv0.js";
+import { o as FocusMonitor, t as _animationsDisabled } from "./_animation-chunk-BSRSnsxC.js";
 import { t as _CdkPrivateStyleLoader } from "./_style-loader-chunk-D6_I2ZGG.js";
 import "./private-Co7hmc7I.js";
+import { t as _StructuralStylesLoader } from "./_structural-styles-chunk-B-BmGYV0.js";
 import { t as BidiModule } from "./bidi-DfOrtKt2.js";
-import { n as _StructuralStylesLoader, t as MatRippleModule } from "./_ripple-module-chunk-DMgxw64O.js";
-import { t as MatRippleLoader } from "./_ripple-loader-chunk-Y3mgfgoz.js";
+import "./platform-FcODWz2l.js";
+import { t as MatRippleModule } from "./_ripple-module-chunk-Dq89cFbX.js";
+import { t as MatRippleLoader } from "./_ripple-loader-chunk-C2xC-3uq.js";
 // node_modules/@angular/material/fesm2022/_icon-button-chunk.mjs
 var MAT_BUTTON_CONFIG = new InjectionToken("MAT_BUTTON_CONFIG");
 function transformTabIndex(value) {
