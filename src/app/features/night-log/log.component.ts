@@ -6,27 +6,26 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
-import { MatListModule } from '@angular/material/list';
 import { GameStateService } from '../../core/services/game-state.service';
 
 @Component({
   selector: 'app-log',
   standalone: true,
-  imports: [NgIf, NgFor, FormsModule, MatCardModule, MatButtonModule, MatFormFieldModule, MatSelectModule, MatIconModule, MatListModule],
+  imports: [NgIf, NgFor, FormsModule, MatCardModule, MatButtonModule, MatFormFieldModule, MatSelectModule, MatIconModule],
   template: `
     <div class="page">
       <h1>Event Log</h1>
-      <mat-list *ngIf="events.length > 0" class="event-list">
-        <mat-list-item *ngFor="let event of events" class="event-item">
-          <mat-icon mat-list-icon>{{ getEventIcon(event.kind) }}</mat-icon>
+      <div *ngIf="events.length > 0" class="event-list">
+        <div *ngFor="let event of events" class="event-item">
+          <mat-icon class="event-icon">{{ getEventIcon(event.kind) }}</mat-icon>
           <div class="event-content">
-            <div mat-line class="event-description">{{ getEventDescription(event) }}</div>
-            <div mat-line class="event-meta">
+            <div class="event-description">{{ getEventDescription(event) }}</div>
+            <div class="event-meta">
               Night {{ event.night }} • {{ event.phase }}
             </div>
           </div>
-        </mat-list-item>
-      </mat-list>
+        </div>
+      </div>
       <div *ngIf="events.length === 0" class="empty">
         <p>No events recorded yet.</p>
       </div>
@@ -88,20 +87,26 @@ import { GameStateService } from '../../core/services/game-state.service';
       width: 100%;
     }
     .event-item {
-      border-bottom: 1px solid #e0e0e0;
       display: flex;
       align-items: flex-start;
+      padding: 12px 0;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    .event-icon {
+      margin-right: 12px;
+      margin-top: 2px;
+      flex-shrink: 0;
     }
     .event-content {
       flex: 1;
       min-width: 0;
-      margin-left: 16px;
     }
     .event-description {
       font-size: 14px;
       line-height: 1.4;
       word-wrap: break-word;
       overflow-wrap: break-word;
+      white-space: normal;
     }
     .event-meta {
       font-size: 12px;
