@@ -1,59 +1,77 @@
-# BotcDeducer
+# Blood on the Clocktower Deduction Assistant
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.2.5.
+A mobile-first, offline-first Android app that helps Blood on the Clocktower players record in-game evidence and deduce which character assignments remain logically possible.
 
-## Development server
+## Tech Stack
 
-To start a local development server, run:
+- **Framework:** Angular 22 with standalone components
+- **Language:** TypeScript (strict mode)
+- **Native Shell:** Capacitor for Android
+- **Local Database:** SQLite (via @capacitor-community/sqlite)
+- **Solver:** Custom TypeScript constraint-propagation engine
+
+## Features
+
+- Import and manage official BotC scripts (JSON format)
+- Create games with 5-15 players
+- Record in-game events (claims, deaths, executions, nominations)
+- Constraint-based deduction engine
+- Role possibility matrix with explanations
+- Offline-first architecture
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18+
+- npm or yarn
+- Android Studio (for Android builds)
+
+### Installation
 
 ```bash
+npm install
+```
+
+### Development
+
+```bash
+# Run in browser
 ng serve
+
+# Build for Android
+npm run build
+npx cap sync android
+npx cap open android
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+## Architecture
 
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
+```
+src/
+├── app/
+│   ├── core/
+│   │   ├── models/       # TypeScript interfaces
+│   │   ├── solver/       # Constraint propagation engine
+│   │   ├── rules/        # Role-specific rules
+│   │   ├── script/       # Script import/validation
+│   │   ├── services/     # Game state management
+│   │   └── storage/      # SQLite database service
+│   ├── features/
+│   │   ├── game-setup/   # Game creation and player management
+│   │   ├── script-import/ # Script import UI
+│   │   ├── night-log/    # Event logging
+│   │   ├── deduction-board/ # Role possibility matrix
+│   │   └── explanation/  # Deduction explanations
+│   └── shared/           # Shared UI components
+└── assets/
+    └── scripts/          # Bundled script JSON files
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+## Scripts
 
-```bash
-ng generate --help
-```
+The app supports importing official BotC script JSON files. The bundled "Trouble Brewing" script is included in `src/assets/scripts/`.
 
-## Building
+## License
 
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+MIT
