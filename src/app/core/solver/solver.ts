@@ -664,30 +664,35 @@ export class DeductionEngine {
 
   /** Allowed outsider counts and minion count range given mandatory and optional modifiers. */
   private compositionTargets(complete: boolean): { outsiders: Set<number>; minMinions: number; maxMinions: number } {
-    let outsiders = new Set([this.composition[T_OUTSIDER]]);
+    // Track the unclamped sum of Outsider changes and clamp at zero once at the
+    // end. Clamping after each modifier would depend on pool order: with a base
+    // of 0, Hermit (−1) then Baron (+2) must give 1, not 2.
+    let sums = new Set([0]);
+    let anyCount = false;
     let minMinions = this.composition[T_MINION];
     let maxMinions = minMinions;
-    const apply = (set: Set<number>, rule: RoleRule): Set<number> => {
+    const combine = (set: Set<number>, rule: RoleRule): Set<number> => {
       const next = new Set<number>();
-      if (rule.setup?.anyOutsiderCount) {
-        for (let x = 0; x <= this.n; x++) next.add(x);
-        return next;
-      }
-      const deltas = rule.setup?.outsiderDelta ?? [0];
-      for (const x of set) for (const d of deltas) next.add(Math.max(0, x + d));
+      for (const x of set) for (const d of rule.setup?.outsiderDelta ?? [0]) next.add(x + d);
       return next;
     };
     for (const r of this.setupModifierRoles) {
       const rule = this.roles[r].rule;
       if (this.used[r]) {
-        outsiders = apply(outsiders, rule);
+        if (rule.setup?.anyOutsiderCount) anyCount = true;
+        else sums = combine(sums, rule);
         minMinions += rule.setup?.minionDelta ?? 0;
         maxMinions += rule.setup?.minionDelta ?? 0;
       } else if (!complete && this.placeable(r)) {
-        for (const x of apply(outsiders, rule)) outsiders.add(x);
+        // Might still be placed: widen the targets (a relaxation for pruning).
+        if (rule.setup?.anyOutsiderCount) anyCount = true;
+        else for (const x of combine(sums, rule)) sums.add(x);
         maxMinions += rule.setup?.minionDelta ?? 0;
       }
     }
+    const outsiders = new Set<number>();
+    if (anyCount) for (let x = 0; x <= this.n; x++) outsiders.add(x);
+    else for (const d of sums) outsiders.add(Math.max(0, this.composition[T_OUTSIDER] + d));
     return { outsiders, minMinions, maxMinions };
   }
 
@@ -1100,14 +1105,44 @@ export class DeductionEngine {
         if (this.drunkCopyRole(c, true) >= 0) drunkCopyFails.push(c);
         else add(c.night, c.source);
       }
-      // Only one Village Idiot is the drunk one; any other false Village Idiot needs poisoning.
-      if (new Set(drunkCopyFails.map(c => c.source)).size > 1) {
-        const [first] = drunkCopyFails;
-        for (const c of drunkCopyFails) if (c.source !== first.source) add(c.night, c.source);
-      }
-      if (ok && this.withinCorruption([...failing.values()].map(s => s.size), cap)) return true;
+      if (ok && this.drunkCopyChoiceFits(failing, drunkCopyFails, cap)) return true;
     }
     return false;
+  }
+
+  /**
+   * Village Idiot: with 2+ copies in play, exactly one copy is drunk all game
+   * and its false info is free; false info from any other copy needs
+   * poisoning. Any copy may be the drunk one, so try each copy that gave
+   * false info (per role that has drunk extra copies).
+   */
+  private drunkCopyChoiceFits(
+    failing: Map<number, Set<number>>,
+    drunkCopyFails: InfoConstraint[],
+    cap: number
+  ): boolean {
+    const byRole = new Map<number, number[]>();
+    for (const c of drunkCopyFails) {
+      const r = this.world[c.source];
+      const sources = byRole.get(r) ?? [];
+      if (!sources.includes(c.source)) sources.push(c.source);
+      byRole.set(r, sources);
+    }
+    const groups = [...byRole.values()];
+    const choose = (k: number, freed: Set<number>): boolean => {
+      if (k === groups.length) {
+        const sizes = new Map<number, Set<number>>();
+        for (const [night, sources] of failing) sizes.set(night, new Set(sources));
+        for (const c of drunkCopyFails) {
+          if (freed.has(c.source)) continue;
+          if (!sizes.has(c.night)) sizes.set(c.night, new Set());
+          sizes.get(c.night)!.add(c.source);
+        }
+        return this.withinCorruption([...sizes.values()].map(s => s.size), cap);
+      }
+      return groups[k].some(source => choose(k + 1, new Set([...freed, source])));
+    };
+    return choose(0, new Set());
   }
 
   // ---------------------------------------------------------------------------

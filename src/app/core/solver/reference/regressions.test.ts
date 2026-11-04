@@ -2,15 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { GameEvent } from '../../models/game';
 import { RoleRegistry } from '../../roles/role-registry';
 import { InfoPayload } from '../../rules/info-specs';
-import { solve } from '../solver';
+import { SolverInput, solve } from '../solver';
 import { makePlayers } from './game-generator';
 import { referenceSolve } from './reference-solver';
 import { differentialCheck, explainByKnownBug } from './checks';
 
 // Minimized engine disagreements, one per FINDINGS.md entry (F-numbers match).
-// Each asserts the CORRECT answer, so `it.fails` passes while the engine is
-// wrong. When the engine is fixed, the test starts failing: change it.fails
-// to it and mark the finding fixed.
+// Each asserts the CORRECT answer. While a bug is open its engine test is
+// `it.fails` (it passes because the engine is wrong); once fixed it becomes a
+// plain `it` that guards against the bug coming back.
 
 let seq = 0;
 const ev = (kind: string, extra: Partial<GameEvent>): GameEvent => ({
@@ -41,7 +41,7 @@ describe('engine regressions found by the reference solver', () => {
     expect(referenceSolve(f001).consistent).toBe(true);
   });
 
-  it.fails('F-001 engine: tries each Village Idiot as the drunk copy', () => {
+  it('F-001 engine (fixed): tries each Village Idiot as the drunk copy', () => {
     expect(solve(f001).consistent).toBe(true);
   });
 
@@ -58,17 +58,20 @@ describe('engine regressions found by the reference solver', () => {
     expect(referenceSolve(f002(['godfather', 'baron'])).consistent).toBe(true);
   });
 
-  it.fails('F-002 engine: Godfather listed before the Baron', () => {
+  it('F-002 engine (fixed): the setup is legal in either pool order', () => {
     expect(solve(f002(['godfather', 'baron'])).consistent).toBe(true);
+    expect(solve(f002(['baron', 'godfather'])).consistent).toBe(true);
   });
 
-  // The fuzz filter (checks.ts) must recognise each recorded bug from its regression case.
-  it('the known-bug filter attributes each case to its finding', () => {
-    const passes = (v: Parameters<typeof differentialCheck>[0]) => differentialCheck(v).status !== 'disagree';
-    expect(differentialCheck(f001).status).toBe('disagree');
-    expect(explainByKnownBug(f001, passes)).toBe('F-001');
-    const order = f002(['godfather', 'baron']);
-    expect(differentialCheck(order).status).toBe('disagree');
-    expect(explainByKnownBug(order, passes)).toBe('F-002');
+  it('F-001 and F-002: engine and reference agree on the regression cases', () => {
+    expect(differentialCheck(f001).status).toBe('agree');
+    expect(differentialCheck(f002(['godfather', 'baron'])).status).toBe('agree');
+  });
+
+  it('the known-bug filter attributes a failure to the bug whose workaround removes it', () => {
+    const swapToBaronFirst = (input: SolverInput): SolverInput[] => [{ ...input, characters: [...input.characters].reverse() }];
+    const input = f002(['godfather', 'baron']);
+    expect(explainByKnownBug(input, v => v.characters[0].id !== 'godfather', [['F-test', swapToBaronFirst]])).toBe('F-test');
+    expect(explainByKnownBug(input, () => false, [['F-test', swapToBaronFirst]])).toBeNull();
   });
 });

@@ -1,5 +1,4 @@
 import { DeductionResult } from '../../models/game';
-import { getRoleRule, normalizeRoleId } from '../../rules/role-rules';
 import { SolverInput, solve } from '../solver';
 import { ReferenceResult, referenceSolve, worldFits } from './reference-solver';
 
@@ -127,58 +126,30 @@ export function minimize(input: SolverInput, stillFails: (candidate: SolverInput
 
 // --- Known-bug filter --------------------------------------------------------
 //
-// Each recorded engine bug gets a "workaround" transform: a change to the
-// input that leaves the correct answer the same but avoids the engine's
-// mistake. If a failure goes away under a bug's workaround, the failure is
-// attributed to that bug. A failure that no workaround explains is new.
+// Each open engine bug can register a "workaround": a change to the input that
+// keeps the correct answer but avoids the engine's mistake. If a failure goes
+// away under a bug's workaround, it is attributed to that bug and not reported
+// as new. Remove a bug's workaround once the bug is fixed, or the filter will
+// hide it if it comes back.
+//
+// No bugs are open now. F-001 (Village Idiot drunk copy) and F-002 (Outsider
+// modifier order) were fixed; their workarounds are in commit 8fdacbf
+// (`eachVillageIdiotFirst`, `outsiderRaisersFirst`) as examples.
 
-export type KnownBug = 'F-001' | 'F-002';
+export type Workaround = [bug: string, variants: (input: SolverInput) => SolverInput[]];
 
-/** F-002 workaround: list roles that raise the Outsider count before roles that lower it. */
-function outsiderRaisersFirst(input: SolverInput): SolverInput[] {
-  // Order: always-raising (Baron, Fang Gu), then maybe-raising (Balloonist, Godfather),
-  // then lowering (Hermit, Vigormortis). Sort by smallest change, then largest, both descending.
-  const deltas = (id: string): [number, number] => {
-    const setup = getRoleRule(normalizeRoleId(id)).setup;
-    if (setup?.anyOutsiderCount) return [99, 99];
-    const d = setup?.outsiderDelta ?? [0];
-    return [Math.min(...d), Math.max(...d)];
-  };
-  const sorted = [...input.characters].sort((a, b) => {
-    const [aMin, aMax] = deltas(a.id);
-    const [bMin, bMax] = deltas(b.id);
-    return bMin - aMin || bMax - aMax;
-  });
-  return sorted.every((c, i) => c === input.characters[i]) ? [] : [{ ...input, characters: sorted }];
-}
-
-/** F-001 workaround: for each Village Idiot, put its info first among the Village Idiot info events. */
-function eachVillageIdiotFirst(input: SolverInput): SolverInput[] {
-  const isVi = (e: SolverInput['events'][number]) =>
-    e.kind === 'info' && normalizeRoleId((e.payload as { type?: string })?.type ?? '') === 'villageidiot';
-  const slots = input.events.flatMap((e, i) => (isVi(e) ? [i] : []));
-  const actors = [...new Set(slots.map(i => input.events[i].actorId))];
-  if (actors.length < 2) return [];
-  return actors.map(actor => {
-    const vi = slots.map(i => input.events[i]);
-    const reordered = [...vi.filter(e => e.actorId === actor), ...vi.filter(e => e.actorId !== actor)];
-    const events = [...input.events];
-    slots.forEach((slot, k) => (events[slot] = reordered[k]));
-    return { ...input, events };
-  });
-}
-
-const WORKAROUNDS: [KnownBug, (input: SolverInput) => SolverInput[]][] = [
-  ['F-002', outsiderRaisersFirst],
-  ['F-001', eachVillageIdiotFirst]
-];
+export const WORKAROUNDS: Workaround[] = [];
 
 /**
- * Which recorded engine bug explains this failure, if any: the failure goes
- * away under that bug's workaround (or under both workarounds together).
- * `passes` re-runs the check on a variant and says whether it now passes.
+ * Which open engine bug explains this failure, if any: the failure goes away
+ * under that bug's workaround. `passes` re-runs the check on a variant and
+ * says whether it now passes.
  */
-export function explainByKnownBug(input: SolverInput, passes: (variant: SolverInput) => boolean): string | null {
+export function explainByKnownBug(
+  input: SolverInput,
+  passes: (variant: SolverInput) => boolean,
+  workarounds: readonly Workaround[] = WORKAROUNDS
+): string | null {
   const safe = (v: SolverInput) => {
     try {
       return passes(v);
@@ -186,11 +157,8 @@ export function explainByKnownBug(input: SolverInput, passes: (variant: SolverIn
       return false;
     }
   };
-  for (const [bug, variants] of WORKAROUNDS) {
+  for (const [bug, variants] of workarounds) {
     if (variants(input).some(safe)) return bug;
-  }
-  for (const reordered of outsiderRaisersFirst(input)) {
-    if (eachVillageIdiotFirst(reordered).some(safe)) return 'F-001+F-002';
   }
   return null;
 }

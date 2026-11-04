@@ -8,7 +8,9 @@ export const KNOWN_DISAGREEMENTS = new Set<string>([]);
 
 /** Number of generated games per check: REF_SOLVER_GAMES, or the given default. */
 export function gameCount(fallback: number): number {
-  const raw = typeof process !== 'undefined' ? process.env['REF_SOLVER_GAMES'] : undefined;
+  // Read through globalThis so this file also type-checks in the browser app build.
+  const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env;
+  const raw = env?.['REF_SOLVER_GAMES'];
   const n = raw ? Number.parseInt(raw, 10) : NaN;
   return Number.isFinite(n) && n > 0 ? n : fallback;
 }

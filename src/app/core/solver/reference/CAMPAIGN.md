@@ -11,16 +11,9 @@ Each job runs one pool profile on its own seed (`npm run fuzz -- profiles` lists
 
 ## Known bugs are filtered automatically
 
-Before a failure is written out, `explainByKnownBug` in `checks.ts` re-runs it with each recorded bug's **workaround**, a change to the input that keeps the correct answer but avoids the engine's mistake:
+Before a failure is written out, `explainByKnownBug` in `checks.ts` re-runs it with each **open** bug's workaround. A workaround is a change to the input that keeps the correct answer but avoids the engine's mistake. If the failure goes away under a workaround, it is counted under that bug (the `known bugs` line in the output, and `knownBugs` in `summary.json`) and not written. Use `--keep-known` to write these too.
 
-| Bug | Workaround |
-|-----|------------|
-| F-001 (two Village Idiots) | Put each Village Idiot's info first among the Village Idiot info events. |
-| F-002 (Outsider modifier order) | List Outsider-raising roles before Outsider-lowering ones. |
-
-If the failure goes away under a workaround, it is counted under that bug (the `known bugs` line in the output, and `knownBugs` in `summary.json`) and not written. Use `--keep-known` to write these too. `regressions.test.ts` checks that the filter recognises each bug's regression case.
-
-When a new bug is recorded, add a workaround for it to `WORKAROUNDS` in `checks.ts` if one exists, so that later runs stop reporting it.
+No bugs are open now, so `WORKAROUNDS` is empty. When a new engine bug is recorded, add a workaround to `WORKAROUNDS` if one exists, so later runs stop reporting it. **Remove the workaround when the bug is fixed**, or the filter will hide the bug if it comes back. The F-001 and F-002 workarounds are in commit `8fdacbf` as examples.
 
 ## Triage of new failures
 
@@ -31,7 +24,7 @@ Anything left in `fuzz-runs/campaign/*/failures/` is not explained by a known bu
 3. If the reference is wrong, fix it and add a hand-checked test to `reference-solver.test.ts`.
 4. If the engine is wrong:
    - add a finding to `FINDINGS.md` and an `it.fails` regression to `regressions.test.ts`;
-   - add a workaround to `checks.ts` if one exists.
+   - add a workaround to `WORKAROUNDS` in `checks.ts` if one exists.
 5. Rerun the campaign.
 
 ## Results
@@ -39,6 +32,7 @@ Anything left in `fuzz-runs/campaign/*/failures/` is not explained by a known bu
 | Date | Games per job | Jobs | Known-bug hits | New failures | Notes |
 |------|---------------|------|----------------|--------------|-------|
 | 2026-11-04 | 1500 (diff and truth) | 12 | F-002 ×624 (366 diff, 258 truth); F-001 ×0 | 0 | 4 games skipped (engine search limit). Slowest game 6 s. |
+| 2026-11-04 | 1500 (diff and truth) | 12 | none (filter empty) | 0 | After fixing F-001 and F-002. 4 games skipped (engine search limit). 7 minutes. |
 
 ### Does the campaign catch bugs?
 

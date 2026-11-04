@@ -8,7 +8,7 @@ Each engine bug has a matching `it.fails` test in `regressions.test.ts` with the
 
 ---
 
-## F-001 — Two Village Idiots: the engine always frees the first one · `open`
+## F-001 — Two Village Idiots: the engine always frees the first one · `fixed`
 
 - **Found by:** hand-built case while writing the reference (2026-11-04), not by a fuzz run.
 - **Test:** `regressions.test.ts` → `F-001`.
@@ -19,18 +19,20 @@ Each engine bug has a matching `it.fails` test in `regressions.test.ts` with the
   - night 2: p3 (as Empath) gets a 2.
 - **Engine:** inconsistent. **Reference:** consistent. With the two p1/p2 events swapped in the log, the engine says consistent too.
 - **Rule (design 4d):** with 2+ Village Idiots, one copy is drunk all game, and any copy may be that one. If p2 is the drunk copy, the remaining false info is p1 on night 1 and the Empath on night 2: one poisoning per night, which the Poisoner covers. The engine's final check (`leafOk`, the `drunkCopyFails` block) always frees the first Village Idiot in log order. Freeing p1 leaves p2 and the Empath both false on night 2, which is too many for one Poisoner.
-- **Verdict:** the engine is wrong. A fix would try each Village Idiot as the drunk one, as the reference does.
+- **Verdict:** the engine was wrong.
+- **Fix (2026-11-04):** `leafOk` now calls `drunkCopyChoiceFits`, which tries each Village Idiot that gave false info as the drunk copy. The regression test is now a plain `it`.
 
 ---
 
-## F-002 — Outsider modifiers depend on pool order · `open`
+## F-002 — Outsider modifiers depend on pool order · `fixed`
 
 - **Found by:** `npm run fuzz -- run --profile villageidiot --seed 1`, diff index 228 (2026-11-04). It first showed up as a reference bug: the reference had the same mistake, now fixed (see design Decision 3).
 - **Test:** `regressions.test.ts` → `F-002`.
 - **Minimized input:** 7 players, no events. Pool: Village Idiot, Slayer, Godfather, Baron, Drunk, Lil' Monsta. The only legal setup is 3 Village Idiots, Slayer, Drunk, Baron and Godfather: no Demon seat because Lil' Monsta is in play, and 1 Outsider = 0 + 2 (Baron) − 1 (Godfather).
 - **Engine:** no legal setup (inconsistent). With the Baron listed before the Godfather, consistent.
 - **Rule (design Decision 3):** add one change per modifier, then clamp once at zero. The engine (`compositionTargets`) clamps after each modifier in pool order: 0 → Godfather {0, 1} (−1 clamped to 0) → Baron {2, 3}, which loses 1.
-- **Verdict:** the engine is wrong. It probably also affects other pairs of a negative and a positive modifier when the base count is low (Vigormortis, Hermit, Godfather with Baron or Fang Gu).
+- **Verdict:** the engine was wrong. It also affected other pairs of a lowering and a raising modifier when the base count is low (Vigormortis, Hermit, Godfather with Baron or Fang Gu): 624 of 36,000 campaign checks hit it.
+- **Fix (2026-11-04):** `compositionTargets` now adds up the unclamped changes and clamps once at the end. After the fix, the full campaign has 0 failures with the known-bug filter emptied.
 
 ---
 

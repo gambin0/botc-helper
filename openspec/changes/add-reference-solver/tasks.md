@@ -42,10 +42,10 @@ Ground rules for every task: do not edit `src/app/core/solver/solver.ts` or anyt
 
 ## 7. Review (Claude)
 
-- [ ] 7.1 Review the findings. Every `open` finding has an `it.fails` test, and a workaround in `checks.ts` where possible. Verify that `npm test` passes.
+- [x] 7.1 Review the findings. Every `open` finding has an `it.fails` test, and a workaround in `checks.ts` where possible. Verify that `npm test` passes.
 - [ ] 7.2 Final check: `git diff --stat master` shows changes only to the new reference folder, `scripts/fuzz.ts`, `scripts/fuzz-campaign.sh`, `README.md`, `package.json`/`package-lock.json` (tsx), `tsconfig.spec.json`, `.gitignore` and this change's files.
 
 ## Workflow follow-up
 
-- Fixing the engine bugs (F-001, F-002 and any confirmed later) is a separate change.
+- F-001 and F-002 were fixed on 2026-11-04, in a separate commit on the same branch (see `FINDINGS.md`).
 - Archive this change after review.
