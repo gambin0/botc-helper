@@ -23,6 +23,7 @@ import {
 } from '../rules/role-rules';
 import { InfoPayload, InfoSpec, InfoView, PartialInfoView, getInfoSpec } from '../rules/info-specs';
 import { claimRole, describeEvent, executionEndedGame, infoPayload, targetPlayer } from '../rules/events';
+import { baseComposition } from '../rules/setup';
 
 /**
  * Blood on the Clocktower deduction engine.
@@ -70,25 +71,6 @@ export interface SolverInput {
   events: readonly GameEvent[];
   self?: SelfKnowledge | null;
   options?: SolverOptions;
-}
-
-/** [townsfolk, outsiders, minions, demons] by player count. */
-const BASE_COMPOSITION: Record<number, readonly [number, number, number, number]> = {
-  5: [3, 0, 1, 1],
-  6: [3, 1, 1, 1],
-  7: [5, 0, 1, 1],
-  8: [5, 1, 1, 1],
-  9: [5, 2, 1, 1],
-  10: [7, 0, 2, 1],
-  11: [7, 1, 2, 1],
-  12: [7, 2, 2, 1],
-  13: [9, 0, 3, 1],
-  14: [9, 1, 3, 1],
-  15: [9, 2, 3, 1]
-};
-
-export function baseComposition(playerCount: number): readonly [number, number, number, number] {
-  return BASE_COMPOSITION[Math.max(5, Math.min(15, playerCount))];
 }
 
 const T_TOWNSFOLK = 0;

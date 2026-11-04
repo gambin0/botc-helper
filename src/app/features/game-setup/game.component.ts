@@ -1,5 +1,4 @@
-import { Component, inject } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -7,6 +6,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { GameStateService } from '../../core/services/game-state.service';
+import { SetupCountsComponent } from './setup-counts.component';
 
 @Component({
   selector: 'app-new-game-dialog',
@@ -28,13 +28,13 @@ class NewGameDialog {}
 @Component({
   selector: 'app-game',
   imports: [
-    FormsModule,
     MatButtonModule,
     MatCardModule,
     MatFormFieldModule,
     MatInputModule,
     MatIconModule,
-    MatDialogModule
+    MatDialogModule,
+    SetupCountsComponent
   ],
   template: `
     <main class="page">
@@ -48,6 +48,7 @@ class NewGameDialog {}
           </mat-card-header>
           <mat-card-content>
             <p><strong>Players:</strong> {{ players().length }} ({{ alivePlayers().length }} alive)</p>
+            <app-setup-counts [playerCount]="players().length" [characters]="roles()" />
           </mat-card-content>
         </mat-card>
       }
@@ -61,8 +62,9 @@ class NewGameDialog {}
           <mat-card-content>
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Number of players (5-15)</mat-label>
-              <input matInput type="number" [(ngModel)]="playerCount" min="5" max="15">
+              <input matInput type="number" min="5" max="15" [value]="playerCount()" (input)="setCount($event)">
             </mat-form-field>
+            <app-setup-counts [playerCount]="clampedCount()" [characters]="roles()" />
           </mat-card-content>
           <mat-card-actions>
             <button mat-raised-button color="primary" (click)="createGame()">
@@ -104,11 +106,19 @@ export class GameComponent {
   readonly alivePlayers = this.gameState.alivePlayers;
   readonly hasGame = this.gameState.hasGame;
 
-  playerCount = 8;
+  readonly roles = this.gameState.activeRoles;
+  readonly playerCount = signal(8);
+
+  clampedCount(): number {
+    return Math.max(5, Math.min(15, Math.round(this.playerCount()) || 8));
+  }
+
+  setCount(event: Event): void {
+    this.playerCount.set(Number((event.target as HTMLInputElement).value));
+  }
 
   createGame(): void {
-    const count = Math.max(5, Math.min(15, Number(this.playerCount) || 8));
-    this.gameState.createGame('Game 1', count);
+    this.gameState.createGame('Game 1', this.clampedCount());
   }
 
   confirmNewGame(): void {

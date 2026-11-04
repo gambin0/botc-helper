@@ -34,6 +34,6 @@
 
 ## 6. Integration Testing
 
-- [ ] 6.1 Run end-to-end test: import a custom script with jinxes, verify validation errors are displayed
-- [ ] 6.2 Run end-to-end test: create a game with character images, verify images display on all screens
-- [ ] 6.3 Run end-to-end test: import a WC25 script, verify it loads and is playable
+- [x] 6.1 Run end-to-end test: import a custom script with jinxes, verify validation errors are displayed
+- [x] 6.2 Run end-to-end test: create a game with character images, verify images display on all screens
+- [x] 6.3 Run end-to-end test: import a WC25 script, verify it loads and is playable

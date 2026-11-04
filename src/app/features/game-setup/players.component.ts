@@ -10,6 +10,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { GameStateService } from '../../core/services/game-state.service';
 import { Player } from '../../core/models/game';
 import { CharacterImageComponent } from '../../shared/character-image/character-image.component';
+import { RoleGuideComponent } from './role-guide.component';
 
 @Component({
   selector: 'app-players',
@@ -22,7 +23,8 @@ import { CharacterImageComponent } from '../../shared/character-image/character-
     MatIconModule,
     MatInputModule,
     MatSelectModule,
-    CharacterImageComponent
+    CharacterImageComponent,
+    RoleGuideComponent
   ],
   template: `
     <main class="page">
@@ -68,6 +70,7 @@ import { CharacterImageComponent } from '../../shared/character-image/character-
                   <mat-checkbox [checked]="gameState.selfRoleCertain()" (change)="gameState.setSelfRole(role, $event.checked)">
                     I'm certain (I can't be the Drunk, Lunatic or Marionette)
                   </mat-checkbox>
+                  <app-role-guide [roleId]="role" />
                 }
               </div>
             }

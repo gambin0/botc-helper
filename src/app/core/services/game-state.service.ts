@@ -13,6 +13,7 @@ import {
   ScriptCharacter
 } from '../models/game';
 import { DeductionEngine, SolverInput } from '../solver/solver';
+import { BluffSuggestion, suggestBluffs } from '../solver/bluffs';
 import { DatabaseService, GameState } from '../storage/database.service';
 import { generateUUID } from '../utils/uuid';
 import { TROUBLE_BREWING_SCRIPT } from '../constants/trouble-brewing';
@@ -43,6 +44,8 @@ export class GameStateService {
   readonly selfRoleCertain = signal<boolean>(false);
   /** Treat asserted claims from good players as truthful (see SolverOptions). */
   readonly assumeHonest = signal<boolean>(true);
+  /** Not-in-play characters the Storyteller showed you as the Demon. */
+  readonly demonBluffs = signal<string[]>([]);
 
   readonly hasGame = computed(() => this.game() !== null);
   readonly alivePlayers = computed(() => this.players().filter(p => p.alive));
@@ -84,6 +87,22 @@ export class GameStateService {
     return new DeductionEngine(input).solve();
   });
 
+  /** Bluff options when you were shown an evil character; empty otherwise. */
+  readonly bluffs = computed<BluffSuggestion[]>(() => {
+    const selfPlayerId = this.selfPlayerId();
+    const selfRole = this.selfRole();
+    const team = this.activeRoles().find(c => c.id === selfRole)?.team ?? RoleRegistry.get(selfRole ?? '')?.team;
+    if (!selfPlayerId || (team !== 'minion' && team !== 'demon')) return [];
+    return suggestBluffs({
+      characters: this.activeRoles(),
+      players: this.players(),
+      events: this.events(),
+      deductions: this.deductions(),
+      selfPlayerId,
+      demonBluffs: team === 'demon' ? this.demonBluffs() : []
+    });
+  });
+
   roleName(roleId: string | null | undefined): string {
     if (!roleId) return 'unknown';
     return this.roleNames().get(roleId) ?? RoleRegistry.get(roleId)?.name ?? roleId;
@@ -114,6 +133,11 @@ export class GameStateService {
   /** Select a custom set of roles by ID (non-script games). */
   selectRoles(roleIds: string[]): void {
     this.customRoles.set(RoleRegistry.toScriptCharacters(roleIds));
+    this.persistState();
+  }
+
+  setDemonBluffs(roleIds: string[]): void {
+    this.demonBluffs.set(roleIds.slice(0, 3));
     this.persistState();
   }
 
@@ -173,6 +197,7 @@ export class GameStateService {
       }))
     );
     this.events.set([]);
+    this.demonBluffs.set([]);
     this.selfPlayerId.set(null);
     this.selfRole.set(null);
     this.selfRoleCertain.set(false);
@@ -284,6 +309,7 @@ export class GameStateService {
       this.selfRole.set(saved.selfRole ?? null);
       this.selfRoleCertain.set(saved.selfRoleCertain ?? false);
       this.assumeHonest.set(saved.assumeHonest ?? true);
+      this.demonBluffs.set(saved.demonBluffs ?? []);
       this.game.set(saved.game ?? null);
       const events = saved.events ?? [];
       this.events.set(events);
@@ -311,7 +337,8 @@ export class GameStateService {
       selfPlayerId: this.selfPlayerId(),
       selfRole: this.selfRole(),
       selfRoleCertain: this.selfRoleCertain(),
-      assumeHonest: this.assumeHonest()
+      assumeHonest: this.assumeHonest(),
+      demonBluffs: this.demonBluffs()
     };
     this.db.saveGameState(state);
   }
@@ -321,6 +348,7 @@ export class GameStateService {
     this.game.set(null);
     this.players.set([]);
     this.events.set([]);
+    this.demonBluffs.set([]);
     this.selfPlayerId.set(null);
     this.selfRole.set(null);
     this.selfRoleCertain.set(false);

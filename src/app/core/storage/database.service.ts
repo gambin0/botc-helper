@@ -11,6 +11,7 @@ export interface GameState {
   selfRole?: string | null;
   selfRoleCertain?: boolean;
   assumeHonest?: boolean;
+  demonBluffs?: string[];
 }
 
 @Injectable({
