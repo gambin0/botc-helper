@@ -68,7 +68,17 @@ src/
     └── scripts/          # Bundled script JSON files
 ```
 
-## Scripts
+## Scripts and Roles
+
+The app includes all 181 official Blood on the Clocktower roles across 6 editions:
+- Carousel (71 roles)
+- Trouble Brewing (27 roles)
+- Secrets in the Village (30 roles)
+- Beyond the Moonrise (30 roles)
+- Fabled (12 roles)
+- Loric (11 roles)
+
+Role data is sourced from the official [BotC Release repository](https://github.com/ThePandemoniumInstitute/botc-release) and converted to TypeScript at build time.
 
 The app supports importing official BotC script JSON files. The bundled "Trouble Brewing" script is included in `src/assets/scripts/`.
 

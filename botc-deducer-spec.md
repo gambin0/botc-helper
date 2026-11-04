@@ -62,12 +62,16 @@ src/
 ├─ assets/
 │  └─ scripts/
 │     └─ trouble-brewing.json
+├─ scripts/
+│  └─ convert-roles.mjs  # Converts official JSON to TypeScript
 └─ android/
 ```
 
 ### Domain layer
 
 The domain layer must contain no Angular dependencies.
+
+**Role Data:** The app includes all 181 official Blood on the Clocktower roles across 6 editions (Carousel, Trouble Brewing, Secrets in the Village, Beyond the Moonrise, Fabled, Loric). Role data is sourced from the official [BotC Release repository](https://github.com/ThePandemoniumInstitute/botc-release) and converted to TypeScript at build time via `scripts/convert-roles.mjs`. The `RoleRegistry` class provides access to all roles by ID, name, or team.
 
 ```ts
 export type Team = 'townsfolk' | 'outsider' | 'minion' | 'traveller' | 'fabled';

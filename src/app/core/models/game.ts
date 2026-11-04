@@ -1,4 +1,4 @@
-export type Team = 'townsfolk' | 'outsider' | 'minion' | 'demon' | 'traveller' | 'fabled';
+export type Team = 'townsfolk' | 'outsider' | 'minion' | 'demon' | 'traveller' | 'fabled' | 'loric';
 
 export interface ScriptCharacter {
   id: string;
@@ -35,6 +35,9 @@ export interface Player {
   seat: number;
   alive: boolean;
   notes?: string;
+  isSelf?: boolean;          // marks which player seat "you" occupy
+  selfRole?: string;         // the role you privately know (or think) you are
+  selfRoleCertain?: boolean; // false by default (Drunk edge case)
 }
 
 export type ClaimTrust = 'asserted' | 'confirmed' | 'doubted' | 'false';
