@@ -24,6 +24,7 @@
     "@capacitor/android": "^8.6.0",
     "@capacitor/cli": "^8.6.0",
     "@capacitor/core": "^8.6.0",
+    "ajv": "^8.20.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },

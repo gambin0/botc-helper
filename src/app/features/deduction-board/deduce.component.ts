@@ -6,6 +6,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { GameStateService } from '../../core/services/game-state.service';
 import { RolePossibility } from '../../core/models/game';
+import { CharacterImageComponent } from '../../shared/character-image/character-image.component';
 
 @Component({
   selector: 'app-deduce',
@@ -14,7 +15,8 @@ import { RolePossibility } from '../../core/models/game';
     MatButtonModule,
     MatIconModule,
     MatChipsModule,
-    MatExpansionModule
+    MatExpansionModule,
+    CharacterImageComponent
   ],
   template: `
     <div class="page">
@@ -62,6 +64,12 @@ import { RolePossibility } from '../../core/models/game';
               <div class="roles-container">
                 @for (role of getPossibleRoles(player.id); track role.roleId) {
                   <div class="role-row">
+                    <app-character-image
+                      [roleId]="role.roleId"
+                      [alignment]="'unknown'"
+                      [size]="24"
+                      class="role-image"
+                    />
                     <mat-chip
                       [color]="role.status === 'possible' ? 'primary' : 'warn'"
                       [disabled]="role.status === 'impossible'"
@@ -123,6 +131,10 @@ import { RolePossibility } from '../../core/models/game';
       display: flex;
       align-items: center;
       gap: 8px;
+    }
+    .role-image {
+      display: flex;
+      align-items: center;
     }
     .role-chip {
       font-size: 12px;

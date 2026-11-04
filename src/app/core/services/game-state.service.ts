@@ -77,7 +77,7 @@ export class GameStateService {
   }
 
   async importScript(json: string): Promise<void> {
-    const script = this.scriptImport.importScript(json);
+    const script = await this.scriptImport.importScript(json);
     this.customRoles.set(null);
     this.script.set(script);
     await this.db.saveScript(script);

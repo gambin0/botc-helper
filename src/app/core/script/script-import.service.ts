@@ -1,23 +1,39 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Script, ScriptCharacter } from '../models/game';
 import { generateUUID } from '../utils/uuid';
+import { JinxesService } from '../services/jinxes.service';
+import { ScriptValidatorService } from './script-validator.service';
+import { firstValueFrom } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ScriptImportService {
-  importScript(json: string): Script {
+  private jinxesService = inject(JinxesService);
+  private validatorService = inject(ScriptValidatorService);
+
+  async importScript(json: string): Promise<Script> {
     const parsed = JSON.parse(json);
-    return this.validateScript(parsed);
+
+    // Validate against JSON schema first
+    const validation = await this.validatorService.validate(parsed);
+    if (!validation.valid) {
+      throw new Error(`Script schema validation failed: ${validation.errors?.join('; ')}`);
+    }
+
+    const script = this.validateScript(parsed);
+    await this.validateJinxes(script);
+    return script;
   }
 
   importFromFile(file: File): Promise<Script> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         try {
           const json = e.target?.result as string;
-          resolve(this.importScript(json));
+          const script = await this.importScript(json);
+          resolve(script);
         } catch (err) {
           reject(err);
         }
@@ -62,5 +78,15 @@ export class ScriptImportService {
       source: typeof raw['source'] === 'string' && raw['source'] ? raw['source'] : 'imported',
       characters
     };
+  }
+
+  private async validateJinxes(script: Script): Promise<void> {
+    const characterIds = script.characters.map(c => c.id);
+    const jinxes = await firstValueFrom(this.jinxesService.validateScript(characterIds));
+
+    if (jinxes.length > 0) {
+      const jinxMessages = jinxes.map(j => j.reason).join('; ');
+      throw new Error(`Script has incompatible characters (jinxes): ${jinxMessages}`);
+    }
   }
 }

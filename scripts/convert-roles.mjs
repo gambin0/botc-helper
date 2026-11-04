@@ -103,6 +103,7 @@ for (const [edition, editionRoles] of Object.entries(byEdition)) {
     if (role.reminders && role.reminders.length > 0) {
       output += `    reminders: [${role.reminders.map(r => `'${r.replace(/'/g, "\\'")}'`).join(', ')}],\n`;
     }
+    output += `    edition: '${role.edition}',\n`;
     output += `    producesInformation: ${role.producesInformation},\n`;
     output += `    canBeDrunkOrPoisoned: ${role.canBeDrunkOrPoisoned}`;
     if (role.oncePerGame) {

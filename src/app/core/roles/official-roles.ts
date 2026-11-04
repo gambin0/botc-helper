@@ -14,6 +14,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     ability: 'You start knowing 1 good player.',
     firstNight: 62,
     reminders: ['Know'],
+    edition: 'carousel',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -24,6 +25,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     ability: 'You start knowing 2 players that are not the Demon.',
     firstNight: 63,
     reminders: ['Know', 'Know'],
+    edition: 'carousel',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -34,6 +36,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     ability: 'You start knowing 3 players, 1 and only 1 of which is evil.',
     firstNight: 64,
     reminders: ['Know', 'Know', 'Know'],
+    edition: 'carousel',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -43,6 +46,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     team: 'townsfolk',
     ability: 'You start knowing if your closest evil player is clockwise or anti-clockwise. If equidistant, this info is arbitrary.',
     firstNight: 66,
+    edition: 'carousel',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -53,6 +57,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     ability: 'You start knowing 1 in-play Townsfolk. If you were mad that you were this character, you gain their ability when they die.',
     firstNight: 47,
     reminders: ['Mad', 'Has Ability'],
+    edition: 'carousel',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -65,6 +70,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     otherNight: 87,
     setup: true,
     reminders: ['Know'],
+    edition: 'carousel',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -75,6 +81,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     ability: 'Each night, learn which player the Storyteller believes you should talk to most.',
     firstNight: 73,
     otherNight: 92,
+    edition: 'carousel',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -87,6 +94,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     otherNight: 84,
     setup: true,
     reminders: ['Know'],
+    edition: 'carousel',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -97,6 +105,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     ability: 'Each night, you learn which alignment the Storyteller believes is winning: good, evil, or neither.',
     firstNight: 74,
     otherNight: 93,
+    edition: 'carousel',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -108,6 +117,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     firstNight: 28,
     otherNight: 14,
     reminders: ['No Ability', 'No Ability', 'No Ability'],
+    edition: 'carousel',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -120,6 +130,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     otherNight: 85,
     setup: true,
     reminders: ['Drunk'],
+    edition: 'carousel',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -130,6 +141,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     ability: 'Each night, if the dead equal or outnumber the living, you learn 1 alive character. The Demon knows you are the King.',
     firstNight: 24,
     otherNight: 86,
+    edition: 'carousel',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -140,6 +152,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     ability: 'Each night, you become the alignment of an alive neighbor. If all good players choose to join your cult, your team wins.',
     firstNight: 70,
     otherNight: 89,
+    edition: 'carousel',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -150,6 +163,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     ability: 'Each night*, choose a player: if they are or become drunk or poisoned tonight, you die.',
     otherNight: 21,
     reminders: ['Dead', 'Chosen'],
+    edition: 'carousel',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -160,6 +174,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     ability: 'Each night*, choose an alive player. If good, they die & the Demon doesn’t kill tonight. One good player registers as evil.',
     otherNight: 36,
     reminders: ['Faux Paw', 'Dead'],
+    edition: 'carousel',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -168,6 +183,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     name: 'Alsaahir',
     team: 'townsfolk',
     ability: 'Each day, if you publicly guess which players are Minion(s) and which are Demon(s), good wins.',
+    edition: 'carousel',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -179,6 +195,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     firstNight: 27,
     otherNight: 13,
     reminders: ['No Ability'],
+    edition: 'carousel',
     producesInformation: false,
     canBeDrunkOrPoisoned: true,
     oncePerGame: true
@@ -191,6 +208,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     firstNight: 69,
     otherNight: 88,
     reminders: ['No Ability'],
+    edition: 'carousel',
     producesInformation: true,
     canBeDrunkOrPoisoned: true,
     oncePerGame: true
@@ -204,6 +222,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     otherNight: 66,
     setup: true,
     reminders: ['No Ability'],
+    edition: 'carousel',
     producesInformation: false,
     canBeDrunkOrPoisoned: true,
     oncePerGame: true
@@ -214,6 +233,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     team: 'townsfolk',
     ability: 'Once per game, during the day, visit the Storyteller for some advice to help your team win.',
     reminders: ['No Ability'],
+    edition: 'carousel',
     producesInformation: false,
     canBeDrunkOrPoisoned: true,
     oncePerGame: true
@@ -225,6 +245,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     ability: 'On your 1st day, if you nominated & executed a player, the Demon doesn\'t kill tonight.',
     otherNight: 37,
     reminders: ['Doesn\'t Kill'],
+    edition: 'carousel',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -234,6 +255,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     team: 'townsfolk',
     ability: 'You have a Minion ability. When using this, the Storyteller may prompt you to choose differently.',
     firstNight: 14,
+    edition: 'carousel',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -243,6 +265,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     team: 'townsfolk',
     ability: 'You have the ability of the recently killed executee. If they are evil, you are poisoned until a good player dies by execution.',
     reminders: ['Poisoned', 'Lunch'],
+    edition: 'carousel',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -254,6 +277,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     firstNight: 50,
     otherNight: 68,
     reminders: ['?', '?', '?'],
+    edition: 'carousel',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -263,6 +287,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     team: 'townsfolk',
     ability: 'When you die at night, an alive good player becomes a Farmer.',
     otherNight: 69,
+    edition: 'carousel',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -273,6 +298,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     ability: 'If the Demon kills the King, you learn which player is the Demon. [+the King]',
     otherNight: 65,
     setup: true,
+    edition: 'carousel',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -283,6 +309,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     ability: 'If the Demon kills you, all players learn this. From now on, you may nominate twice per day and vote twice per nomination.',
     otherNight: 63,
     reminders: ['Has Ability'],
+    edition: 'carousel',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -292,6 +319,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     team: 'townsfolk',
     ability: 'The Demon thinks you are a Minion. Minions think you are a Demon.',
     firstNight: 17,
+    edition: 'carousel',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -303,6 +331,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     firstNight: 15,
     otherNight: 11,
     reminders: ['Evil Wakes'],
+    edition: 'carousel',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -312,6 +341,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     team: 'townsfolk',
     ability: 'The Storyteller can break the game rules, and if executed, good wins, even if you are dead. [No evil characters]',
     setup: true,
+    edition: 'carousel',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -322,6 +352,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     ability: 'You have all Outsider abilities. [-0 or -1 Outsider]',
     setup: true,
     reminders: ['1', '2', '3'],
+    edition: 'carousel',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -332,6 +363,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     ability: 'On your 1st night, choose a player (not yourself): you become their alignment (you don\'t know which) even if drunk or poisoned.',
     firstNight: 72,
     reminders: ['Friend'],
+    edition: 'carousel',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -341,6 +373,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     team: 'outsider',
     ability: 'You may only nominate once per game. When you do, if the nominee is not the Demon, they die.',
     reminders: ['May Not Nominate'],
+    edition: 'carousel',
     producesInformation: false,
     canBeDrunkOrPoisoned: true,
     oncePerGame: true
@@ -352,6 +385,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     ability: 'When you die, the Storyteller gains a Minion ability.',
     otherNight: 61,
     reminders: ['Storyteller Ability'],
+    edition: 'carousel',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -362,6 +396,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     ability: 'If you died today or tonight, the Minion & Demon players may choose new Minion & Demon characters to be.',
     otherNight: 58,
     reminders: ['Tea Party Tonight'],
+    edition: 'carousel',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -370,6 +405,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     name: 'Politician',
     team: 'outsider',
     ability: 'If you were the player most responsible for your team losing, you change alignment & win, even if dead.',
+    edition: 'carousel',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -378,6 +414,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     name: 'Zealot',
     team: 'outsider',
     ability: 'If there are 5 or more players alive, you must vote for every nomination.',
+    edition: 'carousel',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -389,6 +426,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     firstNight: 49,
     otherNight: 67,
     reminders: ['Guess Used'],
+    edition: 'carousel',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -398,6 +436,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     team: 'outsider',
     ability: 'Each Minion gets 3 bluffs.',
     firstNight: 20,
+    edition: 'carousel',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -406,6 +445,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     name: 'Heretic',
     team: 'outsider',
     ability: 'Whoever wins, loses & whoever loses, wins, even if you are dead.',
+    edition: 'carousel',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -415,6 +455,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     team: 'outsider',
     ability: '1 player is drunk, even if you die. If you guess (once) who it is, learn the Demon player, but guess wrong & get false info.',
     reminders: ['Drunk', 'Guess Used'],
+    edition: 'carousel',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -426,6 +467,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     firstNight: 45,
     otherNight: 31,
     reminders: ['Turns Evil', 'No Ability'],
+    edition: 'carousel',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -437,6 +479,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     firstNight: 44,
     otherNight: 30,
     reminders: ['Mad', '2nd'],
+    edition: 'carousel',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -448,6 +491,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     firstNight: 43,
     otherNight: 29,
     reminders: ['Fear'],
+    edition: 'carousel',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -456,6 +500,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     name: 'Psychopath',
     team: 'minion',
     ability: 'Each day, before nominations, you may publicly choose a player: they die. If executed, you only die if you lose roshambo.',
+    edition: 'carousel',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -467,6 +512,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     firstNight: 35,
     otherNight: 19,
     reminders: ['?', '?'],
+    edition: 'carousel',
     producesInformation: false,
     canBeDrunkOrPoisoned: true,
     oncePerGame: true
@@ -478,6 +524,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     ability: 'On your 1st night, look at the Grimoire & choose a player: they are poisoned. 1 good player knows a Widow is in play.',
     firstNight: 33,
     reminders: ['Poisoned', 'Know'],
+    edition: 'carousel',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -490,6 +537,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     otherNight: 15,
     setup: true,
     reminders: ['Night 1', 'Night 2', 'Night 3', 'X'],
+    edition: 'carousel',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -500,6 +548,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     ability: 'You think you are a good character, but you are not. The Demon knows who you are. [You neighbor the Demon]',
     firstNight: 26,
     setup: true,
+    edition: 'carousel',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -510,6 +559,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     ability: 'You may choose to open your eyes at night. You wake when other evil players do.',
     firstNight: 5,
     otherNight: 3,
+    edition: 'carousel',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -522,6 +572,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     otherNight: 33,
     setup: true,
     reminders: ['Night 1', 'Night 2', 'Night 3'],
+    edition: 'carousel',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -531,6 +582,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     team: 'minion',
     ability: 'If you publicly claim to be the Goblin when nominated & are executed that day, your team wins.',
     reminders: ['Claimed'],
+    edition: 'carousel',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -539,6 +591,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     name: 'Boomdandy',
     team: 'minion',
     ability: 'If you are executed, all but 3 players die. After a 10 to 1 countdown, the player with the most players pointing at them, dies.',
+    edition: 'carousel',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -548,6 +601,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     team: 'minion',
     ability: 'All players know you are the Vizier. You cannot die during the day. If good voted, you may choose to execute immediately.',
     firstNight: 79,
+    edition: 'carousel',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -559,6 +613,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     firstNight: 38,
     otherNight: 24,
     reminders: ['About To Die', 'Drunk'],
+    edition: 'carousel',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -568,6 +623,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     team: 'minion',
     ability: 'The Demon (even if drunk or poisoned) has a not-in-play good character’s ability. You both know which.',
     firstNight: 12,
+    edition: 'carousel',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -579,6 +635,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     firstNight: 16,
     otherNight: 53,
     reminders: ['Dead', 'Dead', 'Dead'],
+    edition: 'carousel',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -590,6 +647,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     firstNight: 29,
     otherNight: 52,
     setup: true,
+    edition: 'carousel',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -600,6 +658,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     ability: 'Each night*, choose a character: they die. If they are not in play, the Storyteller chooses who dies.',
     otherNight: 49,
     reminders: ['Dead'],
+    edition: 'carousel',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -612,6 +671,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     otherNight: 54,
     setup: true,
     reminders: ['Dead'],
+    edition: 'carousel',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -623,6 +683,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     otherNight: 38,
     setup: true,
     reminders: ['Dead', 'About To Die'],
+    edition: 'carousel',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -635,6 +696,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     otherNight: 47,
     setup: true,
     reminders: ['Dead'],
+    edition: 'carousel',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -646,6 +708,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     firstNight: 30,
     otherNight: 51,
     reminders: ['Dead', 'Poisoned'],
+    edition: 'carousel',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -656,6 +719,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     ability: 'Each night*, you may choose 3 players (all players learn who): each silently chooses to live or die, but if all live, all die.',
     otherNight: 50,
     reminders: ['1', '2', '3'],
+    edition: 'carousel',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -666,6 +730,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     ability: 'On day 3, Minions become Riot & nominees die but nominate an alive player immediately. This must happen.',
     otherNight: 96,
     reminders: ['Day 1', 'Day 2', 'Day 3'],
+    edition: 'carousel',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -677,6 +742,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     firstNight: 78,
     otherNight: 98,
     reminders: ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Good Player Executed'],
+    edition: 'carousel',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -687,6 +753,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     ability: 'Each day, choose a player: a different player changes character tonight.',
     otherNight: 4,
     reminders: ['Not Me'],
+    edition: 'carousel',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -695,6 +762,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     name: 'Gangster',
     team: 'traveller',
     ability: 'Once per day, you may choose to kill an alive neighbor, if your other alive neighbor agrees.',
+    edition: 'carousel',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -704,6 +772,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     team: 'traveller',
     ability: 'All players start knowing a player of your alignment. You may choose to kill anyone who nominates them.',
     reminders: ['Amigo'],
+    edition: 'carousel',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -714,6 +783,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     ability: 'At least once per game, the Storyteller will make a mistake, correct it, and publicly admit to it.',
     setup: true,
     reminders: ['Whoopsie'],
+    edition: 'carousel',
     producesInformation: false,
     canBeDrunkOrPoisoned: true,
     oncePerGame: true
@@ -723,6 +793,7 @@ export const OFFICIAL_CAROUSEL_ROLES: RoleDefinition[] = [
     name: 'Ferryman',
     team: 'fabled',
     ability: 'On the final day, all dead players regain their vote token.',
+    edition: 'carousel',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   }
@@ -735,6 +806,7 @@ export const OFFICIAL_TB_ROLES: RoleDefinition[] = [
     team: 'townsfolk',
     ability: 'You start knowing how many pairs of evil players there are.',
     firstNight: 54,
+    edition: 'tb',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -745,6 +817,7 @@ export const OFFICIAL_TB_ROLES: RoleDefinition[] = [
     ability: 'You start knowing that 1 of 2 players is a particular Minion.',
     firstNight: 53,
     reminders: ['Minion', 'Wrong'],
+    edition: 'tb',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -755,6 +828,7 @@ export const OFFICIAL_TB_ROLES: RoleDefinition[] = [
     ability: 'You start knowing that 1 of 2 players is a particular Townsfolk.',
     firstNight: 51,
     reminders: ['Townsfolk', 'Wrong'],
+    edition: 'tb',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -765,6 +839,7 @@ export const OFFICIAL_TB_ROLES: RoleDefinition[] = [
     ability: 'You start knowing that 1 of 2 players is a particular Outsider. (Or that zero are in play.)',
     firstNight: 52,
     reminders: ['Outsider', 'Wrong'],
+    edition: 'tb',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -775,6 +850,7 @@ export const OFFICIAL_TB_ROLES: RoleDefinition[] = [
     ability: 'Each night, you learn how many of your 2 alive neighbors are evil.',
     firstNight: 55,
     otherNight: 75,
+    edition: 'tb',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -786,6 +862,7 @@ export const OFFICIAL_TB_ROLES: RoleDefinition[] = [
     firstNight: 56,
     otherNight: 76,
     reminders: ['Red Herring'],
+    edition: 'tb',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -796,6 +873,7 @@ export const OFFICIAL_TB_ROLES: RoleDefinition[] = [
     ability: 'Each night*, you learn which character died by execution today.',
     otherNight: 77,
     reminders: ['Died Today'],
+    edition: 'tb',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -806,6 +884,7 @@ export const OFFICIAL_TB_ROLES: RoleDefinition[] = [
     ability: 'Each night*, choose a player (not yourself): they are safe from the Demon tonight.',
     otherNight: 23,
     reminders: ['Safe'],
+    edition: 'tb',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -815,6 +894,7 @@ export const OFFICIAL_TB_ROLES: RoleDefinition[] = [
     team: 'townsfolk',
     ability: 'Once per game, during the day, publicly choose a player: if they are the Demon, they die.',
     reminders: ['No Ability'],
+    edition: 'tb',
     producesInformation: false,
     canBeDrunkOrPoisoned: true,
     oncePerGame: true
@@ -824,6 +904,7 @@ export const OFFICIAL_TB_ROLES: RoleDefinition[] = [
     name: 'Soldier',
     team: 'townsfolk',
     ability: 'You are safe from the Demon.',
+    edition: 'tb',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -833,6 +914,7 @@ export const OFFICIAL_TB_ROLES: RoleDefinition[] = [
     team: 'townsfolk',
     ability: 'If you die at night, you are woken to choose a player: you learn their character.',
     otherNight: 74,
+    edition: 'tb',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -841,6 +923,7 @@ export const OFFICIAL_TB_ROLES: RoleDefinition[] = [
     name: 'Mayor',
     team: 'townsfolk',
     ability: 'If only 3 players live & no execution occurs, your team wins. If you die at night, another player might die instead.',
+    edition: 'tb',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -850,6 +933,7 @@ export const OFFICIAL_TB_ROLES: RoleDefinition[] = [
     team: 'townsfolk',
     ability: 'The 1st time you are nominated, if the nominator is a Townsfolk, they are executed immediately.',
     reminders: ['No Ability'],
+    edition: 'tb',
     producesInformation: false,
     canBeDrunkOrPoisoned: true,
     oncePerGame: true
@@ -862,6 +946,7 @@ export const OFFICIAL_TB_ROLES: RoleDefinition[] = [
     firstNight: 57,
     otherNight: 90,
     reminders: ['Master'],
+    edition: 'tb',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -871,6 +956,7 @@ export const OFFICIAL_TB_ROLES: RoleDefinition[] = [
     team: 'outsider',
     ability: 'You do not know you are the Drunk. You think you are a Townsfolk character, but you are not.',
     setup: true,
+    edition: 'tb',
     producesInformation: true,
     canBeDrunkOrPoisoned: false
   },
@@ -879,6 +965,7 @@ export const OFFICIAL_TB_ROLES: RoleDefinition[] = [
     name: 'Recluse',
     team: 'outsider',
     ability: 'You might register as evil & as a Minion or Demon, even if dead.',
+    edition: 'tb',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -887,6 +974,7 @@ export const OFFICIAL_TB_ROLES: RoleDefinition[] = [
     name: 'Saint',
     team: 'outsider',
     ability: 'If you die by execution, your team loses.',
+    edition: 'tb',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -898,6 +986,7 @@ export const OFFICIAL_TB_ROLES: RoleDefinition[] = [
     firstNight: 32,
     otherNight: 16,
     reminders: ['Poisoned'],
+    edition: 'tb',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -908,6 +997,7 @@ export const OFFICIAL_TB_ROLES: RoleDefinition[] = [
     ability: 'Each night, you see the Grimoire. You might register as good & as a Townsfolk or Outsider, even if dead.',
     firstNight: 71,
     otherNight: 91,
+    edition: 'tb',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -918,6 +1008,7 @@ export const OFFICIAL_TB_ROLES: RoleDefinition[] = [
     ability: 'If there are 5 or more players alive & the Demon dies, you become the Demon. (Travellers don\'t count.)',
     otherNight: 32,
     reminders: ['Is The Demon'],
+    edition: 'tb',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -927,6 +1018,7 @@ export const OFFICIAL_TB_ROLES: RoleDefinition[] = [
     team: 'minion',
     ability: 'There are extra Outsiders in play. [+2 Outsiders]',
     setup: true,
+    edition: 'tb',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -937,6 +1029,7 @@ export const OFFICIAL_TB_ROLES: RoleDefinition[] = [
     ability: 'Each night*, choose a player: they die. If you kill yourself this way, a Minion becomes the Imp.',
     otherNight: 39,
     reminders: ['Dead'],
+    edition: 'tb',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -948,6 +1041,7 @@ export const OFFICIAL_TB_ROLES: RoleDefinition[] = [
     firstNight: 11,
     otherNight: 7,
     reminders: ['Negative Vote'],
+    edition: 'tb',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -959,6 +1053,7 @@ export const OFFICIAL_TB_ROLES: RoleDefinition[] = [
     firstNight: 10,
     otherNight: 6,
     reminders: ['3 Votes'],
+    edition: 'tb',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -967,6 +1062,7 @@ export const OFFICIAL_TB_ROLES: RoleDefinition[] = [
     name: 'Gunslinger',
     team: 'traveller',
     ability: 'Each day, after the 1st vote has been tallied, you may choose a player that voted: they die.',
+    edition: 'tb',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -975,6 +1071,7 @@ export const OFFICIAL_TB_ROLES: RoleDefinition[] = [
     name: 'Beggar',
     team: 'traveller',
     ability: 'You must use a vote token to vote. If a dead player gives you theirs, you learn their alignment. You are sober & healthy.',
+    edition: 'tb',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -983,6 +1080,7 @@ export const OFFICIAL_TB_ROLES: RoleDefinition[] = [
     name: 'Scapegoat',
     team: 'traveller',
     ability: 'If a player of your alignment is executed, you might be executed instead.',
+    edition: 'tb',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   }
@@ -995,6 +1093,7 @@ export const OFFICIAL_SNV_ROLES: RoleDefinition[] = [
     team: 'townsfolk',
     ability: 'You start knowing how many steps from the Demon to its nearest Minion.',
     firstNight: 59,
+    edition: 'snv',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -1006,6 +1105,7 @@ export const OFFICIAL_SNV_ROLES: RoleDefinition[] = [
     firstNight: 36,
     otherNight: 22,
     reminders: ['Poisoned'],
+    edition: 'snv',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -1017,6 +1117,7 @@ export const OFFICIAL_SNV_ROLES: RoleDefinition[] = [
     firstNight: 76,
     otherNight: 95,
     reminders: ['Abnormal', 'Abnormal', 'Abnormal', 'Abnormal', 'Abnormal'],
+    edition: 'snv',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -1027,6 +1128,7 @@ export const OFFICIAL_SNV_ROLES: RoleDefinition[] = [
     ability: 'Each night, choose a player (not yourself or Travellers): you learn 1 good & 1 evil character, 1 of which is correct.',
     firstNight: 60,
     otherNight: 78,
+    edition: 'snv',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -1037,6 +1139,7 @@ export const OFFICIAL_SNV_ROLES: RoleDefinition[] = [
     ability: 'Each night*, you learn if a Demon voted today.',
     otherNight: 79,
     reminders: ['Demon Voted', 'Demon Not Voted'],
+    edition: 'snv',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -1047,6 +1150,7 @@ export const OFFICIAL_SNV_ROLES: RoleDefinition[] = [
     ability: 'Each night*, you learn if a Minion nominated today.',
     otherNight: 80,
     reminders: ['Minions Not Nominated', 'Minion Nominated'],
+    edition: 'snv',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -1056,6 +1160,7 @@ export const OFFICIAL_SNV_ROLES: RoleDefinition[] = [
     team: 'townsfolk',
     ability: 'Each night*, you learn how many dead players are evil.',
     otherNight: 81,
+    edition: 'snv',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -1064,6 +1169,7 @@ export const OFFICIAL_SNV_ROLES: RoleDefinition[] = [
     name: 'Savant',
     team: 'townsfolk',
     ability: 'Each day, you may visit the Storyteller to learn 2 things in private: 1 is true & 1 is false.',
+    edition: 'snv',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -1075,6 +1181,7 @@ export const OFFICIAL_SNV_ROLES: RoleDefinition[] = [
     firstNight: 61,
     otherNight: 82,
     reminders: ['No Ability'],
+    edition: 'snv',
     producesInformation: true,
     canBeDrunkOrPoisoned: true,
     oncePerGame: true
@@ -1087,6 +1194,7 @@ export const OFFICIAL_SNV_ROLES: RoleDefinition[] = [
     firstNight: 13,
     otherNight: 10,
     reminders: ['Drunk'],
+    edition: 'snv',
     producesInformation: false,
     canBeDrunkOrPoisoned: true,
     oncePerGame: true
@@ -1097,6 +1205,7 @@ export const OFFICIAL_SNV_ROLES: RoleDefinition[] = [
     team: 'townsfolk',
     ability: 'Once per game, during the day, privately ask the Storyteller any yes/no question.',
     reminders: ['No Ability'],
+    edition: 'snv',
     producesInformation: false,
     canBeDrunkOrPoisoned: true,
     oncePerGame: true
@@ -1108,6 +1217,7 @@ export const OFFICIAL_SNV_ROLES: RoleDefinition[] = [
     ability: 'On your 1st day, publicly guess up to 5 players\' characters. That night, you learn how many you got correct.',
     otherNight: 83,
     reminders: ['Correct', 'Correct', 'Correct', 'Correct', 'Correct'],
+    edition: 'snv',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -1117,6 +1227,7 @@ export const OFFICIAL_SNV_ROLES: RoleDefinition[] = [
     team: 'townsfolk',
     ability: 'If the Demon kills you, you learn that it is 1 of 2 players.',
     otherNight: 62,
+    edition: 'snv',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -1127,6 +1238,7 @@ export const OFFICIAL_SNV_ROLES: RoleDefinition[] = [
     ability: 'When you die, 1 player is drunk from now on.',
     otherNight: 60,
     reminders: ['Drunk'],
+    edition: 'snv',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -1135,6 +1247,7 @@ export const OFFICIAL_SNV_ROLES: RoleDefinition[] = [
     name: 'Klutz',
     team: 'outsider',
     ability: 'When you learn that you died, publicly choose 1 alive player: if they are evil, your team loses.',
+    edition: 'snv',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -1145,6 +1258,7 @@ export const OFFICIAL_SNV_ROLES: RoleDefinition[] = [
     ability: 'If you died today or tonight, the Demon may choose 2 players (not another Demon) to swap characters.',
     otherNight: 59,
     reminders: ['Haircuts Tonight'],
+    edition: 'snv',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -1153,6 +1267,7 @@ export const OFFICIAL_SNV_ROLES: RoleDefinition[] = [
     name: 'Mutant',
     team: 'outsider',
     ability: 'If you are “mad” about being an Outsider, you might be executed.',
+    edition: 'snv',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -1164,6 +1279,7 @@ export const OFFICIAL_SNV_ROLES: RoleDefinition[] = [
     firstNight: 41,
     otherNight: 26,
     reminders: ['Cursed'],
+    edition: 'snv',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -1175,6 +1291,7 @@ export const OFFICIAL_SNV_ROLES: RoleDefinition[] = [
     firstNight: 42,
     otherNight: 27,
     reminders: ['Mad'],
+    edition: 'snv',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -1184,6 +1301,7 @@ export const OFFICIAL_SNV_ROLES: RoleDefinition[] = [
     team: 'minion',
     ability: 'Each night*, choose a player & a character they become (if not in play). If a Demon is made, deaths tonight are arbitrary.',
     otherNight: 28,
+    edition: 'snv',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -1194,6 +1312,7 @@ export const OFFICIAL_SNV_ROLES: RoleDefinition[] = [
     ability: 'You & an opposing player know each other. If the good player is executed, evil wins. Good can\'t win if you both live.',
     firstNight: 40,
     reminders: ['Twin'],
+    edition: 'snv',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -1204,6 +1323,7 @@ export const OFFICIAL_SNV_ROLES: RoleDefinition[] = [
     ability: 'Each night*, choose a player: they die. Your 2 Townsfolk neighbors are poisoned.',
     otherNight: 45,
     reminders: ['Dead', 'Poisoned', 'Poisoned'],
+    edition: 'snv',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -1215,6 +1335,7 @@ export const OFFICIAL_SNV_ROLES: RoleDefinition[] = [
     otherNight: 48,
     setup: true,
     reminders: ['Dead', 'Has Ability', 'Has Ability', 'Has Ability', 'Poisoned', 'Poisoned', 'Poisoned'],
+    edition: 'snv',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -1225,6 +1346,7 @@ export const OFFICIAL_SNV_ROLES: RoleDefinition[] = [
     ability: 'Each night*, choose a player: they die. Townsfolk abilities yield false info. Each day, if no-one is executed, evil wins.',
     otherNight: 46,
     reminders: ['Dead'],
+    edition: 'snv',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -1236,6 +1358,7 @@ export const OFFICIAL_SNV_ROLES: RoleDefinition[] = [
     otherNight: 44,
     setup: true,
     reminders: ['Dead', 'Once'],
+    edition: 'snv',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -1247,6 +1370,7 @@ export const OFFICIAL_SNV_ROLES: RoleDefinition[] = [
     firstNight: 9,
     otherNight: 5,
     reminders: ['Sober & Healthy', 'Acts Twice', '?', '?'],
+    edition: 'snv',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -1257,6 +1381,7 @@ export const OFFICIAL_SNV_ROLES: RoleDefinition[] = [
     ability: 'Each night*, choose a living player: if they agree, you learn their character, but you both might die.',
     otherNight: 8,
     reminders: ['Dead', 'Dead'],
+    edition: 'snv',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -1265,6 +1390,7 @@ export const OFFICIAL_SNV_ROLES: RoleDefinition[] = [
     name: 'Butcher',
     team: 'traveller',
     ability: 'Each day, after the 1st execution, you may nominate again.',
+    edition: 'snv',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -1275,6 +1401,7 @@ export const OFFICIAL_SNV_ROLES: RoleDefinition[] = [
     ability: 'Once per game, at night*, choose a dead player: they regain their ability until dusk.',
     otherNight: 9,
     reminders: ['No Ability', 'Has Ability'],
+    edition: 'snv',
     producesInformation: false,
     canBeDrunkOrPoisoned: true,
     oncePerGame: true
@@ -1284,6 +1411,7 @@ export const OFFICIAL_SNV_ROLES: RoleDefinition[] = [
     name: 'Deviant',
     team: 'traveller',
     ability: 'If you were funny today, you cannot die by exile.',
+    edition: 'snv',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   }
@@ -1298,6 +1426,7 @@ export const OFFICIAL_BMR_ROLES: RoleDefinition[] = [
     firstNight: 58,
     otherNight: 72,
     reminders: ['Grandchild', 'Dead'],
+    edition: 'bmr',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -1309,6 +1438,7 @@ export const OFFICIAL_BMR_ROLES: RoleDefinition[] = [
     firstNight: 25,
     otherNight: 12,
     reminders: ['Drunk'],
+    edition: 'bmr',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -1319,6 +1449,7 @@ export const OFFICIAL_BMR_ROLES: RoleDefinition[] = [
     ability: 'Each night, choose 2 alive players (not yourself): you learn how many woke tonight due to their ability.',
     firstNight: 75,
     otherNight: 94,
+    edition: 'bmr',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -1329,6 +1460,7 @@ export const OFFICIAL_BMR_ROLES: RoleDefinition[] = [
     ability: 'Each night*, choose 2 players: they can\'t die tonight, but 1 is drunk until dusk.',
     otherNight: 18,
     reminders: ['Safe', 'Safe', 'Drunk'],
+    edition: 'bmr',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -1339,6 +1471,7 @@ export const OFFICIAL_BMR_ROLES: RoleDefinition[] = [
     ability: 'Each night*, choose a player & guess their character: if you guess wrong, you die.',
     otherNight: 20,
     reminders: ['Dead'],
+    edition: 'bmr',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -1349,6 +1482,7 @@ export const OFFICIAL_BMR_ROLES: RoleDefinition[] = [
     ability: 'Each night*, choose a player (different to last night): the Demon, if chosen, learns who you are then doesn\'t wake tonight.',
     otherNight: 35,
     reminders: ['Chosen'],
+    edition: 'bmr',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -1359,6 +1493,7 @@ export const OFFICIAL_BMR_ROLES: RoleDefinition[] = [
     ability: 'Each day, you may make a public statement. Tonight, if it was true, a player dies.',
     otherNight: 57,
     reminders: ['Dead'],
+    edition: 'bmr',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -1370,6 +1505,7 @@ export const OFFICIAL_BMR_ROLES: RoleDefinition[] = [
     firstNight: 34,
     otherNight: 17,
     reminders: ['Drunk 3', 'Drunk 2', 'Drunk 1', 'No Ability'],
+    edition: 'bmr',
     producesInformation: false,
     canBeDrunkOrPoisoned: true,
     oncePerGame: true
@@ -1381,6 +1517,7 @@ export const OFFICIAL_BMR_ROLES: RoleDefinition[] = [
     ability: 'Once per game, at night*, choose a dead player: if they are a Townsfolk, they are resurrected.',
     otherNight: 64,
     reminders: ['Alive', 'No Ability'],
+    edition: 'bmr',
     producesInformation: false,
     canBeDrunkOrPoisoned: true,
     oncePerGame: true
@@ -1391,6 +1528,7 @@ export const OFFICIAL_BMR_ROLES: RoleDefinition[] = [
     team: 'townsfolk',
     ability: 'When a Minion dies by execution, all other players (except Travellers) are drunk until dusk tomorrow.',
     reminders: ['Everyone Is Drunk'],
+    edition: 'bmr',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -1400,6 +1538,7 @@ export const OFFICIAL_BMR_ROLES: RoleDefinition[] = [
     team: 'townsfolk',
     ability: 'If both your alive neighbors are good, they can\'t die.',
     reminders: ['Cannot Die', 'Cannot Die'],
+    edition: 'bmr',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -1409,6 +1548,7 @@ export const OFFICIAL_BMR_ROLES: RoleDefinition[] = [
     team: 'townsfolk',
     ability: 'The 1st time you die, you don\'t.',
     reminders: ['No Ability'],
+    edition: 'bmr',
     producesInformation: false,
     canBeDrunkOrPoisoned: true,
     oncePerGame: true
@@ -1418,6 +1558,7 @@ export const OFFICIAL_BMR_ROLES: RoleDefinition[] = [
     name: 'Pacifist',
     team: 'townsfolk',
     ability: 'Executed good players might not die.',
+    edition: 'bmr',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -1427,6 +1568,7 @@ export const OFFICIAL_BMR_ROLES: RoleDefinition[] = [
     team: 'outsider',
     ability: 'Each night, the 1st player to choose you with their ability is drunk until dusk. You become their alignment.',
     reminders: ['Drunk'],
+    edition: 'bmr',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -1438,6 +1580,7 @@ export const OFFICIAL_BMR_ROLES: RoleDefinition[] = [
     firstNight: 21,
     otherNight: 34,
     reminders: ['Chosen', 'Chosen', 'Chosen'],
+    edition: 'bmr',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -1448,6 +1591,7 @@ export const OFFICIAL_BMR_ROLES: RoleDefinition[] = [
     ability: 'You might die at any time.',
     otherNight: 70,
     reminders: ['Dead'],
+    edition: 'bmr',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -1458,6 +1602,7 @@ export const OFFICIAL_BMR_ROLES: RoleDefinition[] = [
     ability: 'When you learn that you died, publicly choose 1 alive player. Tonight, if it was a good player, they die.',
     otherNight: 71,
     reminders: ['Dead'],
+    edition: 'bmr',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -1470,6 +1615,7 @@ export const OFFICIAL_BMR_ROLES: RoleDefinition[] = [
     otherNight: 56,
     setup: true,
     reminders: ['Died Today', 'Dead'],
+    edition: 'bmr',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -1481,6 +1627,7 @@ export const OFFICIAL_BMR_ROLES: RoleDefinition[] = [
     firstNight: 39,
     otherNight: 25,
     reminders: ['Survives Execution'],
+    edition: 'bmr',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -1491,6 +1638,7 @@ export const OFFICIAL_BMR_ROLES: RoleDefinition[] = [
     ability: 'Once per game, at night*, choose a player: they die, even if for some reason they could not.',
     otherNight: 55,
     reminders: ['Dead', 'No Ability'],
+    edition: 'bmr',
     producesInformation: false,
     canBeDrunkOrPoisoned: true,
     oncePerGame: true
@@ -1500,6 +1648,7 @@ export const OFFICIAL_BMR_ROLES: RoleDefinition[] = [
     name: 'Mastermind',
     team: 'minion',
     ability: 'If the Demon dies by execution (ending the game), play for 1 more day. If a player is then executed, their team loses.',
+    edition: 'bmr',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -1511,6 +1660,7 @@ export const OFFICIAL_BMR_ROLES: RoleDefinition[] = [
     firstNight: 46,
     otherNight: 41,
     reminders: ['Poisoned', 'Poisoned', 'Dead'],
+    edition: 'bmr',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -1521,6 +1671,7 @@ export const OFFICIAL_BMR_ROLES: RoleDefinition[] = [
     ability: 'Each night*, choose 2 players: they die. A dead player you chose last night might be regurgitated.',
     otherNight: 42,
     reminders: ['Dead', 'Dead', 'Alive'],
+    edition: 'bmr',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -1531,6 +1682,7 @@ export const OFFICIAL_BMR_ROLES: RoleDefinition[] = [
     ability: 'Each night*, you may choose a player: they die. If your last choice was no-one, choose 3 players tonight.',
     otherNight: 43,
     reminders: ['Dead', 'Dead', 'Dead', '3 Attacks'],
+    edition: 'bmr',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -1541,6 +1693,7 @@ export const OFFICIAL_BMR_ROLES: RoleDefinition[] = [
     ability: 'Each night*, if no-one died today, choose a player: they die. The 1st time you die, you live but register as dead.',
     otherNight: 40,
     reminders: ['Died Today', 'Dead'],
+    edition: 'bmr',
     producesInformation: false,
     canBeDrunkOrPoisoned: true,
     oncePerGame: true
@@ -1550,6 +1703,7 @@ export const OFFICIAL_BMR_ROLES: RoleDefinition[] = [
     name: 'Matron',
     team: 'traveller',
     ability: 'Each day, you may choose up to 3 sets of 2 players to swap seats. Players may not leave their seats to talk in private.',
+    edition: 'bmr',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -1559,6 +1713,7 @@ export const OFFICIAL_BMR_ROLES: RoleDefinition[] = [
     team: 'traveller',
     ability: 'Once per game, if another player nominated, you may choose to force the current execution to pass or fail.',
     reminders: ['No Ability'],
+    edition: 'bmr',
     producesInformation: false,
     canBeDrunkOrPoisoned: true,
     oncePerGame: true
@@ -1570,6 +1725,7 @@ export const OFFICIAL_BMR_ROLES: RoleDefinition[] = [
     ability: 'On your 1st night, you gain a Townsfolk ability (if good), or a Minion ability (if evil).',
     firstNight: 8,
     reminders: ['Is The Apprentice'],
+    edition: 'bmr',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -1579,6 +1735,7 @@ export const OFFICIAL_BMR_ROLES: RoleDefinition[] = [
     team: 'traveller',
     ability: 'Only the Storyteller can nominate. At least 1 opposing player must be nominated each day.',
     reminders: ['Nominate Good', 'Nominate Evil'],
+    edition: 'bmr',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -1587,6 +1744,7 @@ export const OFFICIAL_BMR_ROLES: RoleDefinition[] = [
     name: 'Voudon',
     team: 'traveller',
     ability: 'Only you & the dead can vote. They don\'t need a vote token to do so. A 50% majority isn\'t required.',
+    edition: 'bmr',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   }
@@ -1600,6 +1758,7 @@ export const OFFICIAL_FABLED_ROLES: RoleDefinition[] = [
     ability: 'Something bad might happen to whoever is most responsible for the death of a new player.',
     firstNight: 1,
     reminders: ['Protected', 'Protected', 'Something Bad'],
+    edition: 'fabled',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -1609,6 +1768,7 @@ export const OFFICIAL_FABLED_ROLES: RoleDefinition[] = [
     team: 'fabled',
     ability: 'For the first 2 minutes of each day, veteran players may not talk.',
     firstNight: 2,
+    edition: 'fabled',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -1617,6 +1777,7 @@ export const OFFICIAL_FABLED_ROLES: RoleDefinition[] = [
     name: 'Djinn',
     team: 'fabled',
     ability: 'Use the Djinn\'s special rule. All players know what it is.',
+    edition: 'fabled',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -1625,6 +1786,7 @@ export const OFFICIAL_FABLED_ROLES: RoleDefinition[] = [
     name: 'Doomsayer',
     team: 'fabled',
     ability: 'If 4 or more players live, each living player may publicly choose (once per game) that a player of their own alignment dies.',
+    edition: 'fabled',
     producesInformation: false,
     canBeDrunkOrPoisoned: true,
     oncePerGame: true
@@ -1636,6 +1798,7 @@ export const OFFICIAL_FABLED_ROLES: RoleDefinition[] = [
     ability: 'Each day, 3 players may choose to visit you. At night*, each visitor learns how many visitors are evil, but 1 gets false info.',
     otherNight: 1,
     reminders: ['Visitor', 'Visitor', 'False Info'],
+    edition: 'fabled',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -1645,6 +1808,7 @@ export const OFFICIAL_FABLED_ROLES: RoleDefinition[] = [
     team: 'fabled',
     ability: 'Once per game, 1 good player might get incorrect information.',
     reminders: ['No Ability'],
+    edition: 'fabled',
     producesInformation: false,
     canBeDrunkOrPoisoned: true,
     oncePerGame: true
@@ -1654,6 +1818,7 @@ export const OFFICIAL_FABLED_ROLES: RoleDefinition[] = [
     name: 'Fiddler',
     team: 'fabled',
     ability: 'Once per game, the Demon secretly chooses an opposing player: all players choose which of these 2 players win.',
+    edition: 'fabled',
     producesInformation: false,
     canBeDrunkOrPoisoned: true,
     oncePerGame: true
@@ -1664,6 +1829,7 @@ export const OFFICIAL_FABLED_ROLES: RoleDefinition[] = [
     team: 'fabled',
     ability: 'Something bad might happen to whoever talks when the Storyteller has asked for silence.',
     reminders: ['Something Bad'],
+    edition: 'fabled',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -1673,6 +1839,7 @@ export const OFFICIAL_FABLED_ROLES: RoleDefinition[] = [
     team: 'fabled',
     ability: '2 neighboring players are known to be the same alignment. Once per game, 1 of them registers falsely.',
     reminders: ['Register Falsely?', 'Aligned', 'Aligned'],
+    edition: 'fabled',
     producesInformation: true,
     canBeDrunkOrPoisoned: true,
     oncePerGame: true
@@ -1683,6 +1850,7 @@ export const OFFICIAL_FABLED_ROLES: RoleDefinition[] = [
     team: 'fabled',
     ability: 'There might be 1 extra or 1 fewer Outsider in play.',
     setup: true,
+    edition: 'fabled',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -1692,6 +1860,7 @@ export const OFFICIAL_FABLED_ROLES: RoleDefinition[] = [
     team: 'fabled',
     ability: 'There can\'t be more than 1 extra evil player.',
     reminders: ['No More Evil'],
+    edition: 'fabled',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -1703,6 +1872,7 @@ export const OFFICIAL_FABLED_ROLES: RoleDefinition[] = [
     firstNight: 3,
     otherNight: 2,
     reminders: ['Final Night: No Attack'],
+    edition: 'fabled',
     producesInformation: false,
     canBeDrunkOrPoisoned: true,
     oncePerGame: true
@@ -1715,6 +1885,7 @@ export const OFFICIAL_LORIC_ROLES: RoleDefinition[] = [
     name: 'Big Wig',
     team: 'loric',
     ability: 'Each nominee chooses a player: until voting, only they may speak & they are mad the nominee is good or they might die.',
+    edition: 'loric',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -1725,6 +1896,7 @@ export const OFFICIAL_LORIC_ROLES: RoleDefinition[] = [
     ability: 'This script has homebrew characters or rules.',
     setup: true,
     reminders: ['?', '?'],
+    edition: 'loric',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -1734,6 +1906,7 @@ export const OFFICIAL_LORIC_ROLES: RoleDefinition[] = [
     team: 'loric',
     ability: 'The Storyteller assigns all players\' characters.',
     setup: true,
+    edition: 'loric',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -1743,6 +1916,7 @@ export const OFFICIAL_LORIC_ROLES: RoleDefinition[] = [
     team: 'loric',
     ability: 'One Ug hat. When wear Ug hat, must speak one sound at a time but vote twice. If fail, pass Ug hat.',
     reminders: ['Hat'],
+    edition: 'loric',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -1751,6 +1925,7 @@ export const OFFICIAL_LORIC_ROLES: RoleDefinition[] = [
     name: 'Hindu',
     team: 'loric',
     ability: 'The first 4 players to die are immediately reincarnated as Travellers of the same alignment.',
+    edition: 'loric',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -1759,6 +1934,7 @@ export const OFFICIAL_LORIC_ROLES: RoleDefinition[] = [
     name: 'Knaves',
     team: 'loric',
     ability: 'There are 2 Storytellers: one lies & one tells the truth. Once per game, at dusk, they might switch.',
+    edition: 'loric',
     producesInformation: false,
     canBeDrunkOrPoisoned: true,
     oncePerGame: true
@@ -1769,6 +1945,7 @@ export const OFFICIAL_LORIC_ROLES: RoleDefinition[] = [
     team: 'loric',
     ability: 'There are duplicate good characters in play. They might also be bluffs.',
     setup: true,
+    edition: 'loric',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -1779,6 +1956,7 @@ export const OFFICIAL_LORIC_ROLES: RoleDefinition[] = [
     ability: 'Name a good character. If in play, they can only die by execution, but evil players learn which player it is.',
     firstNight: 4,
     reminders: ['Stormcaught'],
+    edition: 'loric',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -1790,6 +1968,7 @@ export const OFFICIAL_LORIC_ROLES: RoleDefinition[] = [
     firstNight: 18,
     otherNight: 73,
     setup: true,
+    edition: 'loric',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   },
@@ -1799,6 +1978,7 @@ export const OFFICIAL_LORIC_ROLES: RoleDefinition[] = [
     team: 'loric',
     ability: 'If a player is mad as a fresh character during their nomination, they might not die if executed today.',
     reminders: ['Mad'],
+    edition: 'loric',
     producesInformation: false,
     canBeDrunkOrPoisoned: true
   },
@@ -1808,6 +1988,7 @@ export const OFFICIAL_LORIC_ROLES: RoleDefinition[] = [
     team: 'loric',
     ability: 'One or more players each have a goal. When achieved, that player learns a piece of true info.',
     reminders: ['Goal', 'Goal', 'Goal'],
+    edition: 'loric',
     producesInformation: true,
     canBeDrunkOrPoisoned: true
   }

@@ -11,13 +11,15 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { GameStateService } from '../../core/services/game-state.service';
 import { Player, RolePossibility } from '../../core/models/game';
+import { CharacterImageComponent } from '../../shared/character-image/character-image.component';
 
 @Component({
   selector: 'app-players',
   imports: [
     RouterLink, FormsModule,
     MatCardModule, MatButtonModule, MatIconModule, MatChipsModule,
-    MatSelectModule, MatFormFieldModule, MatCheckboxModule, MatTooltipModule
+    MatSelectModule, MatFormFieldModule, MatCheckboxModule, MatTooltipModule,
+    CharacterImageComponent
   ],
   template: `
     <div class="page">
@@ -115,6 +117,12 @@ import { Player, RolePossibility } from '../../core/models/game';
                   class="role-chip"
                   [class.confirmed-chip]="role.status === 'confirmed'"
                 >
+                  <app-character-image
+                    [roleId]="role.roleId"
+                    [alignment]="getRoleAlignment(role)"
+                    [size]="24"
+                    class="chip-image"
+                  />
                   {{ getRoleName(role.roleId) }}
                 </mat-chip>
               }
@@ -231,6 +239,13 @@ import { Player, RolePossibility } from '../../core/models/game';
     }
     .role-chip {
       font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .chip-image {
+      display: flex;
+      align-items: center;
     }
     .confirmed-chip {
       font-weight: bold;
@@ -291,5 +306,14 @@ export class PlayersComponent {
     if (role.status === 'confirmed') return 'accent';
     if (role.status === 'possible') return 'primary';
     return undefined;
+  }
+
+  getRoleAlignment(role: RolePossibility): 'good' | 'evil' | 'unknown' {
+    if (role.status === 'confirmed') {
+      // For confirmed roles, we could determine alignment from the role definition
+      // For now, return unknown
+      return 'unknown';
+    }
+    return 'unknown';
   }
 }

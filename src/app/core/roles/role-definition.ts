@@ -5,6 +5,7 @@ export interface RoleDefinition {
   name: string;
   team: Team;
   ability: string;
+  edition?: string;
   firstNight?: number;
   otherNight?: number;
   setup?: boolean;
