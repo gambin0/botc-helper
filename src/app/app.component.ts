@@ -4,7 +4,6 @@ import { BottomNavComponent } from './shared/bottom-nav/bottom-nav.component';
 
 @Component({
   selector: 'app-root',
-  standalone: true,
   imports: [RouterOutlet, BottomNavComponent],
   template: `
     <div class="app-container">

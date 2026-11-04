@@ -1,103 +1,108 @@
 import { Injectable } from '@angular/core';
-import { Capacitor } from '@capacitor/core';
-import { Script, Player, GameEvent, Game } from '../models/game';
+import { Script, Player, GameEvent, Game, ScriptCharacter } from '../models/game';
 
 export interface GameState {
-  script: Script;
+  game: Game | null;
+  script: Script | null;
+  customRoles?: ScriptCharacter[] | null;
   players: Player[];
   events: GameEvent[];
+  selfPlayerId?: string | null;
+  selfRole?: string | null;
+  selfRoleCertain?: boolean;
 }
 
 @Injectable({
   providedIn: 'root'
 })
 export class DatabaseService {
-  private db: any = null;
-
-  async init() {
-    if (Capacitor.isNativePlatform()) {
-      console.log('Initializing native SQLite database');
-    } else {
-      console.log('Using localStorage for development');
-    }
+  async init(): Promise<void> {
+    // Ready for persistence
   }
 
-  async saveScript(script: Script) {
-    const json = JSON.stringify(script);
-    if (Capacitor.isNativePlatform()) {
-      // SQLite insert
-    } else {
-      localStorage.setItem(`script_${script.id}`, json);
+  async saveScript(script: Script): Promise<void> {
+    try {
+      localStorage.setItem(`script_${script.id}`, JSON.stringify(script));
+      localStorage.setItem('current_script_id', script.id);
+    } catch (e) {
+      console.warn('Failed to save script to storage:', e);
     }
   }
 
   async getScript(id: string): Promise<Script | null> {
-    if (Capacitor.isNativePlatform()) {
-      return null;
-    } else {
+    try {
       const json = localStorage.getItem(`script_${id}`);
       return json ? JSON.parse(json) : null;
+    } catch {
+      return null;
     }
   }
 
-  async saveGame(game: Game) {
-    const json = JSON.stringify(game);
-    if (Capacitor.isNativePlatform()) {
-      // SQLite insert
-    } else {
-      localStorage.setItem(`game_${game.id}`, json);
+  async getCurrentScriptId(): Promise<string | null> {
+    try {
+      return localStorage.getItem('current_script_id');
+    } catch {
+      return null;
+    }
+  }
+
+  async saveGame(game: Game): Promise<void> {
+    try {
+      localStorage.setItem(`game_${game.id}`, JSON.stringify(game));
+      localStorage.setItem('current_game_id', game.id);
+    } catch (e) {
+      console.warn('Failed to save game to storage:', e);
     }
   }
 
   async getGame(id: string): Promise<Game | null> {
-    if (Capacitor.isNativePlatform()) {
-      return null;
-    } else {
+    try {
       const json = localStorage.getItem(`game_${id}`);
       return json ? JSON.parse(json) : null;
+    } catch {
+      return null;
     }
   }
 
-  async saveCurrentGameId(gameId: string) {
-    if (Capacitor.isNativePlatform()) {
-      // SQLite insert
-    } else {
+  async saveCurrentGameId(gameId: string): Promise<void> {
+    try {
       localStorage.setItem('current_game_id', gameId);
+    } catch (e) {
+      console.warn('Failed to save current game id:', e);
     }
   }
 
   async getCurrentGameId(): Promise<string | null> {
-    if (Capacitor.isNativePlatform()) {
-      return null;
-    } else {
+    try {
       return localStorage.getItem('current_game_id');
+    } catch {
+      return null;
     }
   }
 
-  async saveGameState(state: GameState) {
-    const json = JSON.stringify(state);
-    if (Capacitor.isNativePlatform()) {
-      // SQLite insert
-    } else {
-      localStorage.setItem('game_state', json);
+  async saveGameState(state: GameState): Promise<void> {
+    try {
+      localStorage.setItem('game_state', JSON.stringify(state));
+    } catch (e) {
+      console.warn('Failed to save game state to storage:', e);
     }
   }
 
   async getGameState(): Promise<GameState | null> {
-    if (Capacitor.isNativePlatform()) {
-      return null;
-    } else {
+    try {
       const json = localStorage.getItem('game_state');
       return json ? JSON.parse(json) : null;
+    } catch {
+      return null;
     }
   }
 
-  async clearGameState() {
-    if (Capacitor.isNativePlatform()) {
-      // SQLite delete
-    } else {
+  async clearGameState(): Promise<void> {
+    try {
       localStorage.removeItem('game_state');
       localStorage.removeItem('current_game_id');
+    } catch (e) {
+      console.warn('Failed to clear game state:', e);
     }
   }
 }

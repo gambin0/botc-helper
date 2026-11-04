@@ -1,119 +1,225 @@
-import { Injectable, signal, computed } from '@angular/core';
-import { Script, Player, GameEvent, RolePossibility, DeductionResult, ClaimTrust, Game } from '../models/game';
+import { Injectable, signal, computed, inject } from '@angular/core';
+import { Script, Player, GameEvent, RolePossibility, DeductionResult, ClaimTrust, Game, ScriptCharacter } from '../models/game';
 import { BotcSolver } from '../solver/solver';
 import { DatabaseService, GameState } from '../storage/database.service';
 import { ScriptImportService } from '../script/script-import.service';
+import { generateUUID } from '../utils/uuid';
+import { TROUBLE_BREWING_SCRIPT } from '../constants/trouble-brewing';
+import { RoleRegistry } from '../roles/role-registry';
 
 @Injectable({
   providedIn: 'root'
 })
 export class GameStateService {
-  private currentScript: Script | null = null;
-  private currentPlayers: Player[] = [];
-  private currentEvents: GameEvent[] = [];
-  private solver = new BotcSolver();
-  private currentGameId: string | null = null;
-  private currentGame: Game | null = null;
+  private db = inject(DatabaseService);
+  private scriptImport = inject(ScriptImportService);
 
-  private eventsVersion = signal(0);
+  readonly script = signal<Script | null>(null);
+  readonly customRoles = signal<ScriptCharacter[] | null>(null);
+  readonly game = signal<Game | null>(null);
+  readonly players = signal<Player[]>([]);
+  readonly events = signal<GameEvent[]>([]);
+  readonly selfPlayerId = signal<string | null>(null);
+  readonly selfRole = signal<string | null>(null);
+  readonly selfRoleCertain = signal<boolean>(false);
 
-  deductions = computed(() => {
-    this.eventsVersion(); // trigger re-computation when events change
-    return this.solver.solve();
+  readonly hasGame = computed(() => this.game() !== null);
+  readonly alivePlayers = computed(() => this.players().filter(p => p.alive));
+
+  /**
+   * The active pool of character roles for the current game.
+   * If custom roles are selected, they take precedence; otherwise the loaded script's roles,
+   * falling back to Trouble Brewing characters.
+   */
+  readonly activeRoles = computed<ScriptCharacter[]>(() => {
+    const custom = this.customRoles();
+    if (custom && custom.length > 0) return custom;
+    const s = this.script();
+    if (s && s.characters.length > 0) return s.characters;
+    return TROUBLE_BREWING_SCRIPT.characters;
   });
 
-  constructor(
-    private db: DatabaseService,
-    private scriptImport: ScriptImportService
-  ) {}
+  readonly deductions = computed<DeductionResult>(() => {
+    const characters = this.activeRoles();
+    const players = this.players();
+    const events = this.events();
+    const selfPlayerId = this.selfPlayerId();
+    const selfRole = this.selfRole();
+    const selfRoleCertain = this.selfRoleCertain();
+
+    if (characters.length === 0 || players.length === 0) {
+      return {
+        possibleRoles: [],
+        survivingWorldCount: 0,
+        contradictions: [],
+        requiredAssumptions: []
+      };
+    }
+
+    const solver = new BotcSolver();
+    solver.init(characters, players);
+    if (selfPlayerId && selfRole) {
+      solver.setSelfKnowledge(selfPlayerId, selfRole, selfRoleCertain);
+    }
+    for (const event of events) {
+      solver.addEvent(event);
+    }
+    return solver.solve();
+  });
 
   async loadScript(id: string): Promise<void> {
     const script = await this.db.getScript(id);
     if (script) {
-      this.currentScript = script;
+      this.customRoles.set(null);
+      this.script.set(script);
+      this.persistState();
     }
   }
 
   async importScript(json: string): Promise<void> {
     const script = this.scriptImport.importScript(json);
-    this.currentScript = script;
+    this.customRoles.set(null);
+    this.script.set(script);
     await this.db.saveScript(script);
+    this.persistState();
   }
 
-  createGame(name: string, playerCount: number) {
-    if (!this.currentScript) {
-      throw new Error('No script loaded');
+  setScript(script: Script): void {
+    this.customRoles.set(null);
+    this.script.set(script);
+    this.db.saveScript(script);
+    this.persistState();
+  }
+
+  /**
+   * Select a custom set of roles by ID (e.g. for custom role draft / non-script games).
+   */
+  selectRoles(roleIds: string[]): void {
+    const characters = RoleRegistry.toScriptCharacters(roleIds);
+    this.customRoles.set(characters);
+    this.persistState();
+  }
+
+  setCustomRoles(roles: ScriptCharacter[]): void {
+    this.customRoles.set(roles);
+    this.persistState();
+  }
+
+  setSelf(playerId: string): void {
+    // Clear isSelf on all players, set on this one
+    this.players.update(players =>
+      players.map(p => ({ ...p, isSelf: p.id === playerId }))
+    );
+    this.selfPlayerId.set(playerId);
+    this.persistState();
+  }
+
+  setSelfRole(roleId: string | null, certain = false): void {
+    this.selfRole.set(roleId);
+    this.selfRoleCertain.set(certain);
+    this.persistState();
+  }
+
+  clearSelf(): void {
+    this.players.update(players =>
+      players.map(p => ({ ...p, isSelf: false }))
+    );
+    this.selfPlayerId.set(null);
+    this.selfRole.set(null);
+    this.selfRoleCertain.set(false);
+    this.persistState();
+  }
+
+  createGame(name: string, playerCount: number): void {
+    let currentScript = this.script();
+    if (!currentScript && !this.customRoles()) {
+      currentScript = TROUBLE_BREWING_SCRIPT;
+      this.script.set(currentScript);
     }
 
-    this.currentGameId = crypto.randomUUID();
-    this.currentPlayers = [];
-    this.currentEvents = [];
-
-    this.currentGame = {
-      id: this.currentGameId,
-      name,
-      scriptId: this.currentScript.id,
-      playerCount,
+    const count = Math.max(5, Math.min(15, Number(playerCount) || 8));
+    const gameId = generateUUID();
+    const newGame: Game = {
+      id: gameId,
+      name: name || 'Game',
+      scriptId: currentScript?.id || 'custom',
+      playerCount: count,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
 
-    // Create player slots
-    for (let i = 0; i < playerCount; i++) {
-      const player: Player = {
-        id: crypto.randomUUID(),
-        gameId: this.currentGameId,
+    const newPlayers: Player[] = [];
+    for (let i = 0; i < count; i++) {
+      newPlayers.push({
+        id: generateUUID(),
+        gameId,
         name: `Player ${i + 1}`,
         seat: i + 1,
         alive: true
-      };
-      this.currentPlayers.push(player);
+      });
     }
 
-    // Initialize solver
-    this.solver.init(this.currentScript, this.currentPlayers);
+    this.game.set(newGame);
+    this.players.set(newPlayers);
+    this.events.set([]);
 
-    // Persist game
     this.persistState();
   }
 
-  addPlayer(player: Player) {
-    if (!this.currentGameId) {
+  addPlayer(player: Player): void {
+    const currentGame = this.game();
+    if (!currentGame) {
       throw new Error('No game created');
     }
-    player.gameId = this.currentGameId;
-    this.currentPlayers.push(player);
+    player.gameId = currentGame.id;
+    this.players.update(players => [...players, player]);
     this.persistState();
   }
 
-  removePlayer(playerId: string) {
-    this.currentPlayers = this.currentPlayers.filter(p => p.id !== playerId);
+  removePlayer(playerId: string): void {
+    this.players.update(players => players.filter(p => p.id !== playerId));
     this.persistState();
   }
 
-  updatePlayer(player: Player) {
-    const index = this.currentPlayers.findIndex(p => p.id === player.id);
-    if (index !== -1) {
-      this.currentPlayers[index] = player;
+  updatePlayer(player: Player): void {
+    this.players.update(players =>
+      players.map(p => (p.id === player.id ? { ...p, ...player } : p))
+    );
+    this.persistState();
+  }
+
+  togglePlayerAlive(playerId: string): void {
+    const player = this.players().find(p => p.id === playerId);
+    if (!player) return;
+
+    if (player.alive) {
+      this.addDeath(playerId, 0);
+    } else {
+      this.addResurrection(playerId);
     }
-    this.persistState();
   }
 
-  addEvent(event: GameEvent) {
-    if (!this.currentGameId) {
+  addEvent(event: GameEvent): void {
+    const currentGame = this.game();
+    if (!currentGame) {
       throw new Error('No game created');
     }
-    event.gameId = this.currentGameId;
-    this.currentEvents.push(event);
-    this.rebuildSolver();
-    this.eventsVersion.update(v => v + 1);
+    event.gameId = currentGame.id;
+
+    const updatedEvents = [...this.events(), event];
+    this.events.set(updatedEvents);
+    this.players.update(currentPlayers => this.updatePlayerAliveStatus(currentPlayers, updatedEvents));
     this.persistState();
   }
 
-  addClaim(playerId: string, claimedRole: string, trust: ClaimTrust = 'asserted') {
+  addClaim(playerId: string, claimedRole: string, trust: ClaimTrust = 'asserted'): void {
+    const currentGame = this.game();
+    if (!currentGame) {
+      throw new Error('No game created');
+    }
     const event: GameEvent = {
-      id: crypto.randomUUID(),
-      gameId: this.currentGameId!,
+      id: generateUUID(),
+      gameId: currentGame.id,
       night: 0,
       phase: 'day',
       actorId: playerId,
@@ -125,10 +231,14 @@ export class GameStateService {
     this.addEvent(event);
   }
 
-  addDeath(playerId: string, night: number) {
+  addDeath(playerId: string, night: number): void {
+    const currentGame = this.game();
+    if (!currentGame) {
+      throw new Error('No game created');
+    }
     const event: GameEvent = {
-      id: crypto.randomUUID(),
-      gameId: this.currentGameId!,
+      id: generateUUID(),
+      gameId: currentGame.id,
       night,
       phase: 'day',
       kind: 'death',
@@ -137,105 +247,178 @@ export class GameStateService {
       createdAt: new Date().toISOString()
     };
     this.addEvent(event);
-
-    // Mark player as dead
-    const player = this.currentPlayers.find(p => p.id === playerId);
-    if (player) {
-      player.alive = false;
-      this.updatePlayer(player);
-    }
   }
 
-  addExecution(playerId: string, revealedRole?: string) {
+  addExecution(playerId: string, revealedRole?: string): void {
+    const currentGame = this.game();
+    if (!currentGame) {
+      throw new Error('No game created');
+    }
     const event: GameEvent = {
-      id: crypto.randomUUID(),
-      gameId: this.currentGameId!,
+      id: generateUUID(),
+      gameId: currentGame.id,
       night: 0,
       phase: 'execution',
       kind: 'execution',
-      payload: { executedPlayerId: playerId, revealedRole },
+      payload: { executedPlayerId: playerId, playerId, revealedRole },
       trust: 'confirmed',
       createdAt: new Date().toISOString()
     };
     this.addEvent(event);
   }
 
-  addInfo(event: GameEvent) {
+  addResurrection(playerId: string): void {
+    const currentGame = this.game();
+    if (!currentGame) {
+      throw new Error('No game created');
+    }
+    const event: GameEvent = {
+      id: generateUUID(),
+      gameId: currentGame.id,
+      night: 0,
+      phase: 'day',
+      kind: 'resurrection',
+      payload: { playerId },
+      trust: 'confirmed',
+      createdAt: new Date().toISOString()
+    };
     this.addEvent(event);
   }
 
-  removeEvent(eventId: string) {
-    this.currentEvents = this.currentEvents.filter(e => e.id !== eventId);
-    this.rebuildPlayerState();
-    this.rebuildSolver();
-    this.eventsVersion.update(v => v + 1);
+  addInfo(event: GameEvent): void {
+    this.addEvent(event);
+  }
+
+  removeEvent(eventId: string): void {
+    const updatedEvents = this.events().filter(e => e.id !== eventId);
+    this.events.set(updatedEvents);
+    this.players.update(currentPlayers => this.updatePlayerAliveStatus(currentPlayers, updatedEvents));
     this.persistState();
   }
 
-  private rebuildPlayerState() {
-    // Create new player objects with updated alive status
-    const deathPlayerIds = new Set<string>();
-    for (const event of this.currentEvents) {
-      if (event.kind === 'death') {
-        const payload = event.payload as { playerId: string };
-        deathPlayerIds.add(payload.playerId);
+  private updatePlayerAliveStatus(players: Player[], events: GameEvent[]): Player[] {
+    return players.map(player => {
+      let alive = true;
+      for (const event of events) {
+        if (event.kind === 'death') {
+          const payload = event.payload as { playerId?: string } | undefined;
+          if (payload?.playerId === player.id) {
+            alive = false;
+          }
+        } else if (event.kind === 'execution') {
+          const payload = event.payload as { executedPlayerId?: string; playerId?: string } | undefined;
+          if (payload?.executedPlayerId === player.id || payload?.playerId === player.id) {
+            alive = false;
+          }
+        } else if (event.kind === 'resurrection') {
+          const payload = event.payload as { playerId?: string } | undefined;
+          if (payload?.playerId === player.id) {
+            alive = true;
+          }
+        }
       }
-    }
-
-    this.currentPlayers = this.currentPlayers.map(player => ({
-      ...player,
-      alive: !deathPlayerIds.has(player.id)
-    }));
-  }
-
-  private rebuildSolver() {
-    if (this.currentScript && this.currentPlayers.length > 0) {
-      this.solver.init(this.currentScript, this.currentPlayers);
-      for (const event of this.currentEvents) {
-        this.solver.addEvent(event);
-      }
-    }
+      return { ...player, alive };
+    });
   }
 
   async loadCurrentGame(): Promise<boolean> {
-    const savedState = await this.db.getGameState();
-    if (!savedState) {
+    try {
+      const savedState = await this.db.getGameState();
+      if (!savedState) {
+        const scriptId = await this.db.getCurrentScriptId();
+        if (scriptId) {
+          const savedScript = await this.db.getScript(scriptId);
+          if (savedScript) {
+            this.script.set(savedScript);
+            return false;
+          }
+        }
+        this.script.set(TROUBLE_BREWING_SCRIPT);
+        return false;
+      }
+
+      const activeScript = savedState.script || TROUBLE_BREWING_SCRIPT;
+      this.script.set(activeScript);
+      if (savedState.customRoles) {
+        this.customRoles.set(savedState.customRoles);
+      }
+      if (savedState.selfPlayerId) {
+        this.selfPlayerId.set(savedState.selfPlayerId);
+      }
+      if (savedState.selfRole) {
+        this.selfRole.set(savedState.selfRole);
+        this.selfRoleCertain.set(savedState.selfRoleCertain ?? false);
+      }
+
+      let loadedGame = savedState.game ?? null;
+      if (!loadedGame) {
+        const gameId = savedState.players?.[0]?.gameId ?? (await this.db.getCurrentGameId());
+        if (gameId) {
+          loadedGame = await this.db.getGame(gameId);
+        }
+      }
+
+      if (!loadedGame && savedState.players && savedState.players.length > 0) {
+        loadedGame = {
+          id: savedState.players[0].gameId || generateUUID(),
+          name: 'Restored Game',
+          scriptId: activeScript.id,
+          playerCount: savedState.players.length,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+      }
+
+      this.game.set(loadedGame);
+
+      const events = savedState.events || [];
+      this.events.set(events);
+      const players = this.updatePlayerAliveStatus(savedState.players || [], events);
+      this.players.set(players);
+
+      return loadedGame !== null;
+    } catch (err) {
+      console.error('Failed to load current game:', err);
+      if (!this.script()) {
+        this.script.set(TROUBLE_BREWING_SCRIPT);
+      }
       return false;
     }
-
-    this.currentScript = savedState.script;
-    this.currentPlayers = savedState.players;
-    this.currentEvents = savedState.events;
-    this.currentGameId = this.currentPlayers[0]?.gameId ?? null;
-
-    // Restore game metadata
-    if (this.currentGameId) {
-      const savedGame = await this.db.getGame(this.currentGameId);
-      this.currentGame = savedGame;
-    }
-
-    this.rebuildSolver();
-    this.eventsVersion.update(v => v + 1);
-    return true;
   }
 
-  private persistState() {
-    if (!this.currentScript || !this.currentGameId || !this.currentGame) {
+  persistState(): void {
+    const currentScript = this.script();
+    const currentCustomRoles = this.customRoles();
+    const currentGame = this.game();
+    const currentPlayers = this.players();
+    const currentEvents = this.events();
+
+    if (!currentScript && !currentGame && !currentCustomRoles) {
       return;
     }
 
-    // Update game timestamp
-    this.currentGame.updatedAt = new Date().toISOString();
+    if (currentGame) {
+      const updatedGame: Game = {
+        ...currentGame,
+        updatedAt: new Date().toISOString()
+      };
+      this.db.saveGame(updatedGame);
+      this.db.saveCurrentGameId(currentGame.id);
+    }
 
-    // Save game metadata
-    this.db.saveGame(this.currentGame);
-    this.db.saveCurrentGameId(this.currentGameId);
+    if (currentScript) {
+      this.db.saveScript(currentScript);
+    }
 
-    // Save full game state
     const state: GameState = {
-      script: this.currentScript,
-      players: this.currentPlayers,
-      events: this.currentEvents
+      game: currentGame,
+      script: currentScript,
+      customRoles: currentCustomRoles,
+      players: currentPlayers,
+      events: currentEvents,
+      selfPlayerId: this.selfPlayerId(),
+      selfRole: this.selfRole(),
+      selfRoleCertain: this.selfRoleCertain()
     };
     this.db.saveGameState(state);
   }
@@ -248,34 +431,32 @@ export class GameStateService {
     return this.deductions().possibleRoles.filter(r => r.playerId === playerId);
   }
 
-  getScript() {
-    return this.currentScript;
+  getScript(): Script | null {
+    return this.script();
   }
 
-  getPlayers() {
-    return this.currentPlayers;
+  getPlayers(): Player[] {
+    return this.players();
   }
 
-  getEvents() {
-    return this.currentEvents;
+  getEvents(): GameEvent[] {
+    return this.events();
   }
 
-  hasGame() {
-    return this.currentGameId !== null;
+  getGame(): Game | null {
+    return this.game();
   }
 
-  getGame() {
-    return this.currentGame;
-  }
-
-  async resetGame() {
-    this.currentScript = null;
-    this.currentPlayers = [];
-    this.currentEvents = [];
-    this.currentGameId = null;
-    this.currentGame = null;
-    this.solver = new BotcSolver();
-    this.eventsVersion.update(v => v + 1);
+  async resetGame(): Promise<void> {
+    const currentScript = this.script() || TROUBLE_BREWING_SCRIPT;
+    this.game.set(null);
+    this.players.set([]);
+    this.events.set([]);
+    this.selfPlayerId.set(null);
+    this.selfRole.set(null);
+    this.selfRoleCertain.set(false);
     await this.db.clearGameState();
+    this.script.set(currentScript);
+    this.persistState();
   }
 }

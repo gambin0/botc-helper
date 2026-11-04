@@ -4,7 +4,6 @@ import { MatIconModule } from '@angular/material/icon';
 
 @Component({
   selector: 'app-bottom-nav',
-  standalone: true,
   imports: [RouterLink, RouterLinkActive, MatIconModule],
   template: `
     <nav class="bottom-nav">

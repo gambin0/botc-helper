@@ -1,67 +1,91 @@
-import { Component, OnInit, effect } from '@angular/core';
-import { NgIf, NgFor } from '@angular/common';
+import { Component, inject } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
+import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { GameStateService } from '../../core/services/game-state.service';
+import { RolePossibility } from '../../core/models/game';
 
 @Component({
   selector: 'app-deduce',
-  standalone: true,
-  imports: [NgIf, NgFor, MatCardModule, MatIconModule, MatChipsModule, MatExpansionModule],
+  imports: [
+    MatCardModule,
+    MatButtonModule,
+    MatIconModule,
+    MatChipsModule,
+    MatExpansionModule
+  ],
   template: `
     <div class="page">
       <div class="header-row">
         <h1>Deduction Board</h1>
-        <button mat-icon-button color="primary" (click)="refreshState()" title="Refresh deductions">
-          <mat-icon>refresh</mat-icon>
-        </button>
       </div>
-      <mat-card *ngIf="result">
-        <mat-card-header>
-          <mat-icon mat-card-avatar>insights</mat-icon>
-          <mat-card-title>Analysis</mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          <p>{{ result.survivingWorldCount }} possible world(s) remaining</p>
-          <div *ngIf="result.contradictions.length > 0" class="contradictions">
-            <h3>Contradictions</h3>
-            <mat-chip *ngFor="let c of result.contradictions" color="warn" class="contradiction-chip">
-              {{ c.description }}
-            </mat-chip>
-          </div>
-        </mat-card-content>
-      </mat-card>
-
-      <div *ngFor="let player of players" class="player-deduction">
-        <mat-accordion>
-          <mat-expansion-panel>
-            <mat-expansion-panel-header>
-              <mat-panel-title>
-                {{ player.name }}
-              </mat-panel-title>
-              <mat-panel-description>
-                Seat {{ player.seat }} • {{ getPossibleCount(player.id) }} possible
-              </mat-panel-description>
-            </mat-expansion-panel-header>
-            <div class="roles-container">
-              <div *ngFor="let role of getPossibleRoles(player.id)" class="role-row">
-                <mat-chip [color]="role.status === 'possible' ? 'primary' : 'warn'"
-                          [disabled]="role.status === 'impossible'"
-                          class="role-chip">
-                  <mat-icon *ngIf="role.status === 'possible'" class="chip-icon">check</mat-icon>
-                  <mat-icon *ngIf="role.status === 'impossible'" class="chip-icon">close</mat-icon>
-                  {{ getRoleName(role.roleId) }}
-                </mat-chip>
-                <span *ngIf="role.status === 'impossible' && role.reason" class="reason">
-                  {{ role.reason }}
-                </span>
+      @if (players().length === 0) {
+        <div class="empty">
+          <p>No active game. Start a game to see deductions.</p>
+        </div>
+      } @else if (deductions(); as result) {
+        <mat-card>
+          <mat-card-header>
+            <mat-icon mat-card-avatar>insights</mat-icon>
+            <mat-card-title>Analysis</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <p>{{ result.survivingWorldCount }} possible world(s) remaining</p>
+            @if (result.contradictions.length > 0) {
+              <div class="contradictions">
+                <h3>Contradictions</h3>
+                @for (c of result.contradictions; track c.description) {
+                  <mat-chip color="warn" class="contradiction-chip">
+                    {{ c.description }}
+                  </mat-chip>
+                }
               </div>
-            </div>
-          </mat-expansion-panel>
-        </mat-accordion>
-      </div>
+            }
+          </mat-card-content>
+        </mat-card>
+      }
+
+      @for (player of players(); track player.id) {
+        <div class="player-deduction">
+          <mat-accordion>
+            <mat-expansion-panel>
+              <mat-expansion-panel-header>
+                <mat-panel-title>
+                  {{ player.name }}
+                </mat-panel-title>
+                <mat-panel-description>
+                  Seat {{ player.seat }} • {{ getPossibleCount(player.id) }} possible
+                </mat-panel-description>
+              </mat-expansion-panel-header>
+              <div class="roles-container">
+                @for (role of getPossibleRoles(player.id); track role.roleId) {
+                  <div class="role-row">
+                    <mat-chip
+                      [color]="role.status === 'possible' ? 'primary' : 'warn'"
+                      [disabled]="role.status === 'impossible'"
+                      class="role-chip"
+                    >
+                      @if (role.status === 'possible') {
+                        <mat-icon class="chip-icon">check</mat-icon>
+                      } @else {
+                        <mat-icon class="chip-icon">close</mat-icon>
+                      }
+                      {{ getRoleName(role.roleId) }}
+                    </mat-chip>
+                    @if (role.status === 'impossible' && role.reason) {
+                      <span class="reason">
+                        {{ role.reason }}
+                      </span>
+                    }
+                  </div>
+                }
+              </div>
+            </mat-expansion-panel>
+          </mat-accordion>
+        </div>
+      }
     </div>
   `,
   styles: [`
@@ -116,39 +140,22 @@ import { GameStateService } from '../../core/services/game-state.service';
     }
   `]
 })
-export class DeduceComponent implements OnInit {
-  players: any[] = [];
-  roles: any[] = [];
-  result: any = null;
+export class DeduceComponent {
+  private gameState = inject(GameStateService);
 
-  constructor(private gameState: GameStateService) {
-    // Reactively update deductions when events change
-    effect(() => {
-      this.result = this.gameState.deductions();
-    });
-  }
+  readonly players = this.gameState.players;
+  readonly deductions = this.gameState.deductions;
 
-  ngOnInit() {
-    this.refreshState();
-  }
-
-  refreshState() {
-    this.players = this.gameState.getPlayers();
-    const script = this.gameState.getScript();
-    this.roles = script ? script.characters : [];
-    this.result = this.gameState.getDeductions();
-  }
-
-  getPossibleRoles(playerId: string) {
-    return this.gameState.getPossibleRoles(playerId);
+  getPossibleRoles(playerId: string): RolePossibility[] {
+    return this.deductions().possibleRoles.filter(r => r.playerId === playerId);
   }
 
   getPossibleCount(playerId: string): number {
-    return this.gameState.getPossibleRoles(playerId).filter(r => r.status === 'possible').length;
+    return this.getPossibleRoles(playerId).filter(r => r.status === 'possible').length;
   }
 
   getRoleName(roleId: string): string {
-    const script = this.gameState.getScript();
+    const script = this.gameState.script();
     if (!script) return roleId;
     const char = script.characters.find(c => c.id === roleId);
     return char ? char.name : roleId;

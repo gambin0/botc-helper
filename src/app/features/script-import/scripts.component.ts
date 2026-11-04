@@ -1,14 +1,13 @@
-import { Component, OnInit } from '@angular/core';
-import { NgIf } from '@angular/common';
+import { Component, computed, inject } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { GameStateService } from '../../core/services/game-state.service';
+import { TROUBLE_BREWING_SCRIPT } from '../../core/constants/trouble-brewing';
 
 @Component({
   selector: 'app-scripts',
-  standalone: true,
-  imports: [NgIf, MatCardModule, MatButtonModule, MatIconModule],
+  imports: [MatCardModule, MatButtonModule, MatIconModule],
   template: `
     <div class="page">
       <h1 mat-title>Scripts</h1>
@@ -21,11 +20,19 @@ import { GameStateService } from '../../core/services/game-state.service';
         <mat-card-content>
           <p>24 characters including all Townsfolk, Outsiders, Minions, and the Ogre Demon.</p>
         </mat-card-content>
-        <mat-card-actions *ngIf="loaded">
-          <button mat-button color="primary" disabled>
-            <mat-icon>check_circle</mat-icon> Loaded
-          </button>
-        </mat-card-actions>
+        @if (isTroubleBrewingActive()) {
+          <mat-card-actions>
+            <button mat-button color="primary" disabled>
+              <mat-icon>check_circle</mat-icon> Active Script
+            </button>
+          </mat-card-actions>
+        } @else {
+          <mat-card-actions>
+            <button mat-raised-button color="primary">
+              <mat-icon>file_download</mat-icon> Select Script
+            </button>
+          </mat-card-actions>
+        }
       </mat-card>
     </div>
   `,
@@ -43,25 +50,28 @@ import { GameStateService } from '../../core/services/game-state.service';
     .script-card:hover {
       box-shadow: 0 4px 20px rgba(0,0,0,0.15);
     }
+    mat-card-actions {
+      padding: 8px 16px;
+    }
   `]
 })
-export class ScriptsComponent implements OnInit {
-  loaded = false;
+export class ScriptsComponent {
+  private gameState = inject(GameStateService);
 
-  constructor(private gameState: GameStateService) {}
+  readonly script = this.gameState.script;
+  readonly isTroubleBrewingActive = computed(() => this.script()?.id === 'trouble-brewing');
 
-  ngOnInit() {
-    this.loaded = this.gameState.getScript() !== null;
-  }
-
-  async loadTroubleBrewing() {
+  async loadTroubleBrewing(): Promise<void> {
     try {
-      const response = await fetch('/scripts/trouble-brewing.json');
-      const json = await response.text();
-      await this.gameState.importScript(json);
-      this.loaded = true;
-    } catch (err) {
-      console.error('Failed to load script:', err);
+      const response = await fetch('scripts/trouble-brewing.json');
+      if (response.ok) {
+        const json = await response.text();
+        await this.gameState.importScript(json);
+        return;
+      }
+    } catch {
+      // Fallback to bundled constant
     }
+    this.gameState.setScript(TROUBLE_BREWING_SCRIPT);
   }
 }
