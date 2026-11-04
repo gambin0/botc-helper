@@ -43,7 +43,7 @@ Ground rules for every task: do not edit `src/app/core/solver/solver.ts` or anyt
 ## 7. Review (Claude)
 
 - [x] 7.1 Review the findings. Every `open` finding has an `it.fails` test, and a workaround in `checks.ts` where possible. Verify that `npm test` passes.
-- [ ] 7.2 Final check: `git diff --stat master` shows changes only to the new reference folder, `scripts/fuzz.ts`, `scripts/fuzz-campaign.sh`, `README.md`, `package.json`/`package-lock.json` (tsx), `tsconfig.spec.json`, `.gitignore` and this change's files.
+- [x] 7.2 Final check (done 2026-11-04; `solver.ts` also changed, by the separate F-001/F-002 fix commit): `git diff --stat master` shows changes only to the new reference folder, `scripts/fuzz.ts`, `scripts/fuzz-campaign.sh`, `README.md`, `package.json`/`package-lock.json` (tsx), `tsconfig.spec.json`, `.gitignore` and this change's files.
 
 ## Workflow follow-up
 
