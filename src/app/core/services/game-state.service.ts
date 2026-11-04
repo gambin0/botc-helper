@@ -1,18 +1,37 @@
-import { Injectable, signal, computed, inject } from '@angular/core';
-import { Script, Player, GameEvent, RolePossibility, DeductionResult, ClaimTrust, Game, ScriptCharacter } from '../models/game';
-import { BotcSolver } from '../solver/solver';
+import { Injectable, computed, inject, signal } from '@angular/core';
+import {
+  ClaimTrust,
+  DeductionResult,
+  Explanation,
+  Game,
+  GameEvent,
+  GameEventKind,
+  GamePhase,
+  Player,
+  RolePossibility,
+  Script,
+  ScriptCharacter
+} from '../models/game';
+import { DeductionEngine, SolverInput } from '../solver/solver';
 import { DatabaseService, GameState } from '../storage/database.service';
-import { ScriptImportService } from '../script/script-import.service';
 import { generateUUID } from '../utils/uuid';
 import { TROUBLE_BREWING_SCRIPT } from '../constants/trouble-brewing';
 import { RoleRegistry } from '../roles/role-registry';
+import { InfoPayload } from '../rules/info-specs';
+import { targetPlayer } from '../rules/events';
 
-@Injectable({
-  providedIn: 'root'
-})
+const EMPTY_RESULT: DeductionResult = {
+  consistent: true,
+  possibleRoles: [],
+  alignments: [],
+  contradictions: [],
+  warnings: [],
+  incomplete: false
+};
+
+@Injectable({ providedIn: 'root' })
 export class GameStateService {
   private db = inject(DatabaseService);
-  private scriptImport = inject(ScriptImportService);
 
   readonly script = signal<Script | null>(null);
   readonly customRoles = signal<ScriptCharacter[] | null>(null);
@@ -22,14 +41,16 @@ export class GameStateService {
   readonly selfPlayerId = signal<string | null>(null);
   readonly selfRole = signal<string | null>(null);
   readonly selfRoleCertain = signal<boolean>(false);
+  /** Treat asserted claims from good players as truthful (see SolverOptions). */
+  readonly assumeHonest = signal<boolean>(true);
 
   readonly hasGame = computed(() => this.game() !== null);
   readonly alivePlayers = computed(() => this.players().filter(p => p.alive));
+  readonly currentNight = computed(() => this.events().reduce((max, e) => Math.max(max, e.night), 1));
 
   /**
-   * The active pool of character roles for the current game.
-   * If custom roles are selected, they take precedence; otherwise the loaded script's roles,
-   * falling back to Trouble Brewing characters.
+   * The candidate role pool for the current game. Scripts only pre-select
+   * roles; custom role selections take precedence.
    */
   readonly activeRoles = computed<ScriptCharacter[]>(() => {
     const custom = this.customRoles();
@@ -39,77 +60,74 @@ export class GameStateService {
     return TROUBLE_BREWING_SCRIPT.characters;
   });
 
-  readonly deductions = computed<DeductionResult>(() => {
-    const characters = this.activeRoles();
-    const players = this.players();
-    const events = this.events();
-    const selfPlayerId = this.selfPlayerId();
-    const selfRole = this.selfRole();
-    const selfRoleCertain = this.selfRoleCertain();
-
-    if (characters.length === 0 || players.length === 0) {
-      return {
-        possibleRoles: [],
-        survivingWorldCount: 0,
-        contradictions: [],
-        requiredAssumptions: []
-      };
-    }
-
-    const solver = new BotcSolver();
-    solver.init(characters, players);
-    if (selfPlayerId && selfRole) {
-      solver.setSelfKnowledge(selfPlayerId, selfRole, selfRoleCertain);
-    }
-    for (const event of events) {
-      solver.addEvent(event);
-    }
-    return solver.solve();
+  readonly roleNames = computed(() => {
+    const map = new Map<string, string>();
+    for (const c of this.activeRoles()) map.set(c.id, c.name);
+    return map;
   });
 
-  async loadScript(id: string): Promise<void> {
-    const script = await this.db.getScript(id);
-    if (script) {
-      this.customRoles.set(null);
-      this.script.set(script);
-      this.persistState();
-    }
+  private readonly solverInput = computed<SolverInput>(() => {
+    const selfPlayerId = this.selfPlayerId();
+    const selfRole = this.selfRole();
+    return {
+      characters: this.activeRoles(),
+      players: this.players(),
+      events: this.events(),
+      self: selfPlayerId && selfRole ? { playerId: selfPlayerId, roleId: selfRole, certain: this.selfRoleCertain() } : null,
+      options: { assumeGoodPlayersHonest: this.assumeHonest() }
+    };
+  });
+
+  readonly deductions = computed<DeductionResult>(() => {
+    const input = this.solverInput();
+    if (input.characters.length === 0 || input.players.length === 0) return EMPTY_RESULT;
+    return new DeductionEngine(input).solve();
+  });
+
+  roleName(roleId: string | null | undefined): string {
+    if (!roleId) return 'unknown';
+    return this.roleNames().get(roleId) ?? RoleRegistry.get(roleId)?.name ?? roleId;
   }
 
-  async importScript(json: string): Promise<void> {
-    const script = await this.scriptImport.importScript(json);
-    this.customRoles.set(null);
-    this.script.set(script);
-    await this.db.saveScript(script);
-    this.persistState();
+  playerName(playerId: string | null | undefined): string {
+    return this.players().find(p => p.id === playerId)?.name ?? 'Unknown player';
   }
+
+  explain(playerId: string, roleId: string): Explanation {
+    return new DeductionEngine(this.solverInput()).explain(playerId, roleId);
+  }
+
+  getPossibleRoles(playerId: string): RolePossibility[] {
+    return this.deductions().possibleRoles.filter(r => r.playerId === playerId);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Scripts and role pools
+  // ---------------------------------------------------------------------------
 
   setScript(script: Script): void {
     this.customRoles.set(null);
     this.script.set(script);
-    this.db.saveScript(script);
     this.persistState();
   }
 
-  /**
-   * Select a custom set of roles by ID (e.g. for custom role draft / non-script games).
-   */
+  /** Select a custom set of roles by ID (non-script games). */
   selectRoles(roleIds: string[]): void {
-    const characters = RoleRegistry.toScriptCharacters(roleIds);
-    this.customRoles.set(characters);
+    this.customRoles.set(RoleRegistry.toScriptCharacters(roleIds));
     this.persistState();
   }
 
-  setCustomRoles(roles: ScriptCharacter[]): void {
-    this.customRoles.set(roles);
+  setAssumeHonest(value: boolean): void {
+    this.assumeHonest.set(value);
     this.persistState();
   }
+
+  // ---------------------------------------------------------------------------
+  // Self knowledge
+  // ---------------------------------------------------------------------------
 
   setSelf(playerId: string): void {
-    // Clear isSelf on all players, set on this one
-    this.players.update(players =>
-      players.map(p => ({ ...p, isSelf: p.id === playerId }))
-    );
+    this.players.update(players => players.map(p => ({ ...p, isSelf: p.id === playerId })));
     this.selfPlayerId.set(playerId);
     this.persistState();
   }
@@ -121,334 +139,185 @@ export class GameStateService {
   }
 
   clearSelf(): void {
-    this.players.update(players =>
-      players.map(p => ({ ...p, isSelf: false }))
-    );
+    this.players.update(players => players.map(p => ({ ...p, isSelf: false })));
     this.selfPlayerId.set(null);
     this.selfRole.set(null);
     this.selfRoleCertain.set(false);
     this.persistState();
   }
 
-  createGame(name: string, playerCount: number): void {
-    let currentScript = this.script();
-    if (!currentScript && !this.customRoles()) {
-      currentScript = TROUBLE_BREWING_SCRIPT;
-      this.script.set(currentScript);
-    }
+  // ---------------------------------------------------------------------------
+  // Game and players
+  // ---------------------------------------------------------------------------
 
-    const count = Math.max(5, Math.min(15, Number(playerCount) || 8));
+  createGame(name: string, playerCount: number): void {
+    if (!this.script() && !this.customRoles()) this.script.set(TROUBLE_BREWING_SCRIPT);
+    const count = Math.max(5, Math.min(15, Math.round(Number(playerCount)) || 8));
     const gameId = generateUUID();
-    const newGame: Game = {
+    const now = new Date().toISOString();
+    this.game.set({
       id: gameId,
       name: name || 'Game',
-      scriptId: currentScript?.id || 'custom',
+      scriptId: this.script()?.id ?? 'custom',
       playerCount: count,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    const newPlayers: Player[] = [];
-    for (let i = 0; i < count; i++) {
-      newPlayers.push({
+      createdAt: now,
+      updatedAt: now
+    });
+    this.players.set(
+      Array.from({ length: count }, (_, i) => ({
         id: generateUUID(),
         gameId,
         name: `Player ${i + 1}`,
         seat: i + 1,
         alive: true
-      });
-    }
-
-    this.game.set(newGame);
-    this.players.set(newPlayers);
+      }))
+    );
     this.events.set([]);
-
-    this.persistState();
-  }
-
-  addPlayer(player: Player): void {
-    const currentGame = this.game();
-    if (!currentGame) {
-      throw new Error('No game created');
-    }
-    player.gameId = currentGame.id;
-    this.players.update(players => [...players, player]);
-    this.persistState();
-  }
-
-  removePlayer(playerId: string): void {
-    this.players.update(players => players.filter(p => p.id !== playerId));
+    this.selfPlayerId.set(null);
+    this.selfRole.set(null);
+    this.selfRoleCertain.set(false);
     this.persistState();
   }
 
   updatePlayer(player: Player): void {
-    this.players.update(players =>
-      players.map(p => (p.id === player.id ? { ...p, ...player } : p))
-    );
+    this.players.update(players => players.map(p => (p.id === player.id ? { ...p, ...player } : p)));
     this.persistState();
   }
 
   togglePlayerAlive(playerId: string): void {
     const player = this.players().find(p => p.id === playerId);
     if (!player) return;
-
-    if (player.alive) {
-      this.addDeath(playerId, 0);
-    } else {
-      this.addResurrection(playerId);
-    }
+    if (player.alive) this.addDeath(playerId, this.currentNight());
+    else this.addPlayerEvent('resurrection', playerId, this.currentNight());
   }
 
-  addEvent(event: GameEvent): void {
-    const currentGame = this.game();
-    if (!currentGame) {
-      throw new Error('No game created');
-    }
-    event.gameId = currentGame.id;
+  // ---------------------------------------------------------------------------
+  // Events
+  // ---------------------------------------------------------------------------
 
-    const updatedEvents = [...this.events(), event];
-    this.events.set(updatedEvents);
-    this.players.update(currentPlayers => this.updatePlayerAliveStatus(currentPlayers, updatedEvents));
+  private newEvent(kind: GameEventKind, night: number, phase: GamePhase, extra: Partial<GameEvent>): GameEvent {
+    const game = this.game();
+    if (!game) throw new Error('No game created');
+    return {
+      id: generateUUID(),
+      gameId: game.id,
+      night: Math.max(1, Math.round(night) || 1),
+      phase,
+      kind,
+      payload: {},
+      trust: 'confirmed',
+      createdAt: new Date().toISOString(),
+      ...extra
+    };
+  }
+
+  private addEvent(event: GameEvent): void {
+    const events = [...this.events(), event];
+    this.events.set(events);
+    this.players.update(players => this.withAliveStatus(players, events));
     this.persistState();
   }
 
-  addClaim(playerId: string, claimedRole: string, trust: ClaimTrust = 'asserted'): void {
-    const currentGame = this.game();
-    if (!currentGame) {
-      throw new Error('No game created');
-    }
-    const event: GameEvent = {
-      id: generateUUID(),
-      gameId: currentGame.id,
-      night: 0,
-      phase: 'day',
-      actorId: playerId,
-      kind: 'claim',
-      payload: { claimedRole },
-      trust,
-      createdAt: new Date().toISOString()
-    };
-    this.addEvent(event);
+  addClaim(playerId: string, roleId: string, trust: ClaimTrust, night: number): void {
+    this.addEvent(this.newEvent('claim', night, 'day', { actorId: playerId, payload: { roleId }, trust }));
   }
 
   addDeath(playerId: string, night: number): void {
-    const currentGame = this.game();
-    if (!currentGame) {
-      throw new Error('No game created');
-    }
-    const event: GameEvent = {
-      id: generateUUID(),
-      gameId: currentGame.id,
-      night,
-      phase: 'day',
-      kind: 'death',
-      payload: { playerId },
-      trust: 'confirmed',
-      createdAt: new Date().toISOString()
-    };
-    this.addEvent(event);
+    this.addPlayerEvent('death', playerId, night);
   }
 
-  addExecution(playerId: string, revealedRole?: string): void {
-    const currentGame = this.game();
-    if (!currentGame) {
-      throw new Error('No game created');
-    }
-    const event: GameEvent = {
-      id: generateUUID(),
-      gameId: currentGame.id,
-      night: 0,
-      phase: 'execution',
-      kind: 'execution',
-      payload: { executedPlayerId: playerId, playerId, revealedRole },
-      trust: 'confirmed',
-      createdAt: new Date().toISOString()
-    };
-    this.addEvent(event);
+  addExecution(playerId: string, night: number, gameEnded = false): void {
+    this.addEvent(this.newEvent('execution', night, 'execution', { payload: { playerId, gameEnded } }));
   }
 
-  addResurrection(playerId: string): void {
-    const currentGame = this.game();
-    if (!currentGame) {
-      throw new Error('No game created');
-    }
-    const event: GameEvent = {
-      id: generateUUID(),
-      gameId: currentGame.id,
-      night: 0,
-      phase: 'day',
-      kind: 'resurrection',
-      payload: { playerId },
-      trust: 'confirmed',
-      createdAt: new Date().toISOString()
-    };
-    this.addEvent(event);
+  private addPlayerEvent(kind: 'death' | 'resurrection', playerId: string, night: number): void {
+    this.addEvent(this.newEvent(kind, night, 'day', { payload: { playerId } }));
   }
 
-  addInfo(event: GameEvent): void {
-    this.addEvent(event);
+  addInfo(sourcePlayerId: string, payload: InfoPayload, night: number): void {
+    this.addEvent(
+      this.newEvent('info', night, night === 1 ? 'first-night' : 'other-night', {
+        actorId: sourcePlayerId,
+        payload,
+        trust: 'asserted'
+      })
+    );
   }
 
   removeEvent(eventId: string): void {
-    const updatedEvents = this.events().filter(e => e.id !== eventId);
-    this.events.set(updatedEvents);
-    this.players.update(currentPlayers => this.updatePlayerAliveStatus(currentPlayers, updatedEvents));
+    const events = this.events().filter(e => e.id !== eventId);
+    this.events.set(events);
+    this.players.update(players => this.withAliveStatus(players, events));
     this.persistState();
   }
 
-  private updatePlayerAliveStatus(players: Player[], events: GameEvent[]): Player[] {
+  /** Alive status is a projection of the event log. */
+  private withAliveStatus(players: Player[], events: GameEvent[]): Player[] {
     return players.map(player => {
       let alive = true;
       for (const event of events) {
-        if (event.kind === 'death') {
-          const payload = event.payload as { playerId?: string } | undefined;
-          if (payload?.playerId === player.id) {
-            alive = false;
-          }
-        } else if (event.kind === 'execution') {
-          const payload = event.payload as { executedPlayerId?: string; playerId?: string } | undefined;
-          if (payload?.executedPlayerId === player.id || payload?.playerId === player.id) {
-            alive = false;
-          }
-        } else if (event.kind === 'resurrection') {
-          const payload = event.payload as { playerId?: string } | undefined;
-          if (payload?.playerId === player.id) {
-            alive = true;
-          }
-        }
+        if (targetPlayer(event) !== player.id) continue;
+        if (event.kind === 'death' || event.kind === 'execution') alive = false;
+        else if (event.kind === 'resurrection') alive = true;
       }
       return { ...player, alive };
     });
   }
 
+  // ---------------------------------------------------------------------------
+  // Persistence
+  // ---------------------------------------------------------------------------
+
   async loadCurrentGame(): Promise<boolean> {
     try {
-      const savedState = await this.db.getGameState();
-      if (!savedState) {
+      const saved = await this.db.getGameState();
+      if (!saved) {
         const scriptId = await this.db.getCurrentScriptId();
-        if (scriptId) {
-          const savedScript = await this.db.getScript(scriptId);
-          if (savedScript) {
-            this.script.set(savedScript);
-            return false;
-          }
-        }
-        this.script.set(TROUBLE_BREWING_SCRIPT);
+        const savedScript = scriptId ? await this.db.getScript(scriptId) : null;
+        this.script.set(savedScript ?? TROUBLE_BREWING_SCRIPT);
         return false;
       }
 
-      const activeScript = savedState.script || TROUBLE_BREWING_SCRIPT;
-      this.script.set(activeScript);
-      if (savedState.customRoles) {
-        this.customRoles.set(savedState.customRoles);
-      }
-      if (savedState.selfPlayerId) {
-        this.selfPlayerId.set(savedState.selfPlayerId);
-      }
-      if (savedState.selfRole) {
-        this.selfRole.set(savedState.selfRole);
-        this.selfRoleCertain.set(savedState.selfRoleCertain ?? false);
-      }
-
-      let loadedGame = savedState.game ?? null;
-      if (!loadedGame) {
-        const gameId = savedState.players?.[0]?.gameId ?? (await this.db.getCurrentGameId());
-        if (gameId) {
-          loadedGame = await this.db.getGame(gameId);
-        }
-      }
-
-      if (!loadedGame && savedState.players && savedState.players.length > 0) {
-        loadedGame = {
-          id: savedState.players[0].gameId || generateUUID(),
-          name: 'Restored Game',
-          scriptId: activeScript.id,
-          playerCount: savedState.players.length,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
-      }
-
-      this.game.set(loadedGame);
-
-      const events = savedState.events || [];
+      this.script.set(saved.script ?? TROUBLE_BREWING_SCRIPT);
+      this.customRoles.set(saved.customRoles ?? null);
+      this.selfPlayerId.set(saved.selfPlayerId ?? null);
+      this.selfRole.set(saved.selfRole ?? null);
+      this.selfRoleCertain.set(saved.selfRoleCertain ?? false);
+      this.assumeHonest.set(saved.assumeHonest ?? true);
+      this.game.set(saved.game ?? null);
+      const events = saved.events ?? [];
       this.events.set(events);
-      const players = this.updatePlayerAliveStatus(savedState.players || [], events);
-      this.players.set(players);
-
-      return loadedGame !== null;
+      this.players.set(this.withAliveStatus(saved.players ?? [], events));
+      return saved.game !== null;
     } catch (err) {
       console.error('Failed to load current game:', err);
-      if (!this.script()) {
-        this.script.set(TROUBLE_BREWING_SCRIPT);
-      }
+      if (!this.script()) this.script.set(TROUBLE_BREWING_SCRIPT);
       return false;
     }
   }
 
   persistState(): void {
-    const currentScript = this.script();
-    const currentCustomRoles = this.customRoles();
-    const currentGame = this.game();
-    const currentPlayers = this.players();
-    const currentEvents = this.events();
-
-    if (!currentScript && !currentGame && !currentCustomRoles) {
-      return;
-    }
-
-    if (currentGame) {
-      const updatedGame: Game = {
-        ...currentGame,
-        updatedAt: new Date().toISOString()
-      };
-      this.db.saveGame(updatedGame);
-      this.db.saveCurrentGameId(currentGame.id);
-    }
-
-    if (currentScript) {
-      this.db.saveScript(currentScript);
-    }
+    const script = this.script();
+    const game = this.game();
+    if (game) this.db.saveGame({ ...game, updatedAt: new Date().toISOString() });
+    if (script) this.db.saveScript(script);
 
     const state: GameState = {
-      game: currentGame,
-      script: currentScript,
-      customRoles: currentCustomRoles,
-      players: currentPlayers,
-      events: currentEvents,
+      game,
+      script,
+      customRoles: this.customRoles(),
+      players: this.players(),
+      events: this.events(),
       selfPlayerId: this.selfPlayerId(),
       selfRole: this.selfRole(),
-      selfRoleCertain: this.selfRoleCertain()
+      selfRoleCertain: this.selfRoleCertain(),
+      assumeHonest: this.assumeHonest()
     };
     this.db.saveGameState(state);
   }
 
-  getDeductions(): DeductionResult {
-    return this.deductions();
-  }
-
-  getPossibleRoles(playerId: string): RolePossibility[] {
-    return this.deductions().possibleRoles.filter(r => r.playerId === playerId);
-  }
-
-  getScript(): Script | null {
-    return this.script();
-  }
-
-  getPlayers(): Player[] {
-    return this.players();
-  }
-
-  getEvents(): GameEvent[] {
-    return this.events();
-  }
-
-  getGame(): Game | null {
-    return this.game();
-  }
-
   async resetGame(): Promise<void> {
-    const currentScript = this.script() || TROUBLE_BREWING_SCRIPT;
+    const script = this.script() ?? TROUBLE_BREWING_SCRIPT;
     this.game.set(null);
     this.players.set([]);
     this.events.set([]);
@@ -456,7 +325,7 @@ export class GameStateService {
     this.selfRole.set(null);
     this.selfRoleCertain.set(false);
     await this.db.clearGameState();
-    this.script.set(currentScript);
+    this.script.set(script);
     this.persistState();
   }
 }

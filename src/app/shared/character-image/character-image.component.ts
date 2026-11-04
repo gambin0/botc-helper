@@ -1,75 +1,60 @@
-import { Component, input } from '@angular/core';
+import { Component, computed, input } from '@angular/core';
 import { NgOptimizedImage } from '@angular/common';
 import { RoleRegistry } from '../../core/roles/role-registry';
 
+/**
+ * Character token image. Decorative: it is always shown next to the
+ * character's name, so it is hidden from assistive technology.
+ */
 @Component({
   selector: 'app-character-image',
-  standalone: true,
   imports: [NgOptimizedImage],
   template: `
-    @if (imageSrc()) {
-      <img
-        [ngSrc]="imageSrc()!"
-        [alt]="name()"
-        width="48"
-        height="48"
-        class="character-image"
-        loading="lazy"
-      />
+    @if (src(); as s) {
+      <img [ngSrc]="s" alt="" aria-hidden="true" [width]="size()" [height]="size()" class="token" />
     } @else {
-      <div class="character-image-placeholder" [attr.aria-label]="name()">
-        {{ name().charAt(0) }}
-      </div>
+      <span class="token placeholder" aria-hidden="true" [style.width.px]="size()" [style.height.px]="size()">
+        {{ initial() }}
+      </span>
     }
   `,
   styles: `
-    .character-image {
-      border-radius: 8px;
+    :host {
+      display: inline-flex;
+      flex-shrink: 0;
+    }
+    .token {
+      border-radius: 50%;
       object-fit: cover;
     }
-    .character-image-placeholder {
-      width: 48px;
-      height: 48px;
-      border-radius: 8px;
-      background-color: #e0e0e0;
-      display: flex;
+    .placeholder {
+      display: inline-flex;
       align-items: center;
       justify-content: center;
-      font-weight: bold;
-      font-size: 20px;
-      color: #666;
+      background: #e0e0e0;
+      color: #424242;
+      font-weight: 600;
     }
   `
 })
 export class CharacterImageComponent {
-  roleId = input.required<string>();
-  alignment = input<'good' | 'evil' | 'unknown'>('unknown');
-  size = input<number>(48);
+  readonly roleId = input.required<string>();
+  /** Override the token colouring; defaults to the character's team. */
+  readonly alignment = input<'good' | 'evil' | 'default'>('default');
+  readonly size = input(32);
 
-  name() {
-    const role = RoleRegistry.get(this.roleId());
-    return role?.name ?? this.roleId();
-  }
+  private readonly role = computed(() => RoleRegistry.get(this.roleId()));
+  protected readonly initial = computed(() => (this.role()?.name ?? this.roleId()).charAt(0).toUpperCase());
 
-  imageSrc(): string | null {
-    const role = RoleRegistry.get(this.roleId());
-    if (!role?.edition) {
-      return null;
-    }
-
-    const edition = role.edition;
-    const id = this.roleId();
-    const align = this.alignment();
-
-    // Try alignment-specific image first
-    if (align === 'good') {
-      return `/assets/characters/${edition}/${id}_g.webp`;
-    }
-    if (align === 'evil') {
-      return `/assets/characters/${edition}/${id}_e.webp`;
-    }
-
-    // Default: try without alignment suffix, then good variant
-    return `/assets/characters/${edition}/${id}.webp`;
-  }
+  protected readonly src = computed(() => {
+    const role = this.role();
+    if (!role?.edition) return null;
+    let suffix = '';
+    const alignment = this.alignment();
+    if (alignment === 'good') suffix = '_g';
+    else if (alignment === 'evil') suffix = '_e';
+    else if (role.team === 'townsfolk' || role.team === 'outsider') suffix = '_g';
+    else if (role.team === 'minion' || role.team === 'demon' || role.team === 'traveller') suffix = '_e';
+    return `assets/characters/${role.edition}/${role.id}${suffix}.webp`;
+  });
 }

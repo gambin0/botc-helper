@@ -26,7 +26,7 @@ export class JinxesService {
    */
   getJinxes(): Observable<JinxEntry[]> {
     if (!this.jinxes$) {
-      this.jinxes$ = this.http.get<JinxEntry[]>('/assets/data/jinxes.json');
+      this.jinxes$ = this.http.get<JinxEntry[]>('assets/data/jinxes.json');
     }
     return this.jinxes$;
   }

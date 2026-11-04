@@ -1,648 +1,1157 @@
 import {
-  Script,
-  ScriptCharacter,
-  Player,
-  GameEvent,
-  RolePossibility,
   DeductionResult,
-  Contradiction,
-  Team,
-  RequiredAssumption
+  EvidenceRef,
+  Explanation,
+  GameEvent,
+  Player,
+  PlayerAlignment,
+  RolePossibility,
+  ScriptCharacter,
+  Team
 } from '../models/game';
 import { RoleRegistry } from '../roles/role-registry';
-import { SeatingCircle } from '../utils/seating';
+import {
+  Alignment,
+  Registration,
+  RoleRule,
+  SEAT_TEAMS,
+  getRoleRule,
+  normalizeRoleId,
+  possibleTrueRolesForBelief,
+  registrationsFor,
+  teamAlignment
+} from '../rules/role-rules';
+import { InfoPayload, InfoSpec, InfoView, PartialInfoView, getInfoSpec } from '../rules/info-specs';
+import { claimRole, describeEvent, executionEndedGame, infoPayload, targetPlayer } from '../rules/events';
 
-interface Domain {
+/**
+ * Blood on the Clocktower deduction engine.
+ *
+ * A *world* is a complete starting grimoire: one character per seat, drawn
+ * from the candidate role pool, that satisfies the setup rules (role counts
+ * for the player count, setup modifiers such as the Baron, uniqueness).
+ *
+ * Evidence never has to be true by itself. Information only constrains a
+ * world when its source genuinely holds that ability in the world AND is not
+ * drunk/poisoned. Every world gets a budget of drunk/poisoned players per
+ * night from the corrupting characters in play (Poisoner, No Dashii, ...),
+ * so "the Empath is lying" and "the Empath is poisoned" remain open unless
+ * the evidence rules them out.
+ *
+ * The engine searches for worlds with backtracking and reports which
+ * (player, role) pairs appear in at least one world. It is pure TypeScript
+ * with no Angular dependencies, so it can move to a Web Worker unchanged.
+ */
+
+export interface SelfKnowledge {
   playerId: string;
-  possibleRoles: Set<string>;
+  /** The character the Storyteller showed you. */
+  roleId: string;
+  /** If false, you might actually be the Drunk, Lunatic or Marionette. */
+  certain: boolean;
 }
 
-export class BotcSolver {
-  private domains: Domain[] = [];
-  private events: GameEvent[] = [];
-  private characters: ScriptCharacter[] = [];
-  private players: Player[] = [];
-  private eliminationReasons: Map<string, string> = new Map(); // key: `${playerId}:${roleId}`
-  private selfPlayerId: string | null = null;
-  private selfRole: string | null = null;
-  private selfRoleCertain = false;
-
+export interface SolverOptions {
   /**
-   * Initialize solver with either a Script or an ad-hoc list of characters,
-   * completely decoupling the solver engine from scripts.
+   * Treat every 'asserted' claim as truthful when the claimant is good
+   * (allowing for the Drunk/Lunatic/Marionette). Mark a claim 'doubted' to
+   * exempt it. Defaults to true.
    */
-  init(scriptOrCharacters: Script | ScriptCharacter[], players: Player[]): void {
-    if ('characters' in scriptOrCharacters) {
-      this.characters = scriptOrCharacters.characters;
-    } else {
-      this.characters = scriptOrCharacters;
+  assumeGoodPlayersHonest?: boolean;
+  /** Maximum search nodes for a single search. */
+  nodeBudget?: number;
+  /** Maximum search nodes for a whole solve() call. */
+  totalBudget?: number;
+}
+
+export interface SolverInput {
+  characters: readonly ScriptCharacter[];
+  players: readonly Player[];
+  events: readonly GameEvent[];
+  self?: SelfKnowledge | null;
+  options?: SolverOptions;
+}
+
+/** [townsfolk, outsiders, minions, demons] by player count. */
+const BASE_COMPOSITION: Record<number, readonly [number, number, number, number]> = {
+  5: [3, 0, 1, 1],
+  6: [3, 1, 1, 1],
+  7: [5, 0, 1, 1],
+  8: [5, 1, 1, 1],
+  9: [5, 2, 1, 1],
+  10: [7, 0, 2, 1],
+  11: [7, 1, 2, 1],
+  12: [7, 2, 2, 1],
+  13: [9, 0, 3, 1],
+  14: [9, 1, 3, 1],
+  15: [9, 2, 3, 1]
+};
+
+export function baseComposition(playerCount: number): readonly [number, number, number, number] {
+  return BASE_COMPOSITION[Math.max(5, Math.min(15, playerCount))];
+}
+
+const T_TOWNSFOLK = 0;
+const T_OUTSIDER = 1;
+const T_MINION = 2;
+const T_DEMON = 3;
+const TEAM_INDEX: Partial<Record<Team, number>> = { townsfolk: 0, outsider: 1, minion: 2, demon: 3 };
+
+interface RoleInfo {
+  id: string;
+  name: string;
+  team: Team;
+  teamIdx: number;
+  alignment: Alignment;
+  regs: readonly Registration[];
+  rule: RoleRule;
+}
+
+interface Evidence {
+  id: string;
+  label: string;
+}
+
+interface UnaryConstraint {
+  ev: number;
+  player: number;
+  allowed: Uint8Array;
+  reason: string;
+}
+
+interface InfoConstraint {
+  ev: number;
+  source: number;
+  infoRole: string;
+  night: number;
+  spec: InfoSpec;
+  payload: InfoPayload;
+  /** Seat indexes whose registration matters; null means the whole circle. */
+  involved: number[] | null;
+  alive: boolean[];
+  /** Publicly observable result: the source must genuinely, soberly have the ability. */
+  isPublic: boolean;
+  /** Townsfolk information is inverted by the Vortox. */
+  vortoxApplies: boolean;
+  /** An always-false "info", e.g. a Saint executed without the game ending. */
+  alwaysFalse?: boolean;
+}
+
+interface GlobalConstraint {
+  ev: number;
+  /** Seats whose role this rule depends on (used to find interchangeable seats). */
+  refs: number[];
+  /** Seats that trigger a partial check when assigned; null = check at leaves only. */
+  watch: number[] | null;
+  /** With complete=false, return false only if definitely violated. */
+  test(world: Int16Array, complete: boolean): boolean;
+}
+
+type SearchOutcome = { kind: 'sat'; world: Int16Array; free: number[] } | { kind: 'unsat' } | { kind: 'unknown' };
+
+class BudgetExceeded extends Error {}
+
+/** Small deterministic PRNG so results are reproducible. */
+function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+export class DeductionEngine {
+  private readonly n: number;
+  private readonly seatIds: string[];
+  private readonly seatIndex = new Map<string, number>();
+  private readonly playerNames = new Map<string, string>();
+  private readonly roles: RoleInfo[] = [];
+  private readonly roleIndex = new Map<string, number>();
+  private readonly composition: readonly [number, number, number, number];
+  private readonly evidence: Evidence[] = [];
+  private readonly unary: UnaryConstraint[] = [];
+  private readonly infos: InfoConstraint[] = [];
+  private readonly globals: GlobalConstraint[] = [];
+  private readonly warnings: string[] = [];
+  private readonly options: Required<SolverOptions>;
+
+  // Constraint indexes by seat
+  private infosBySeat: number[][] = [];
+  private globalsBySeat: number[][] = [];
+  private wholeCircleInfos: number[] = [];
+  private leafGlobals: number[] = [];
+
+  // Role groups
+  private setupModifierRoles: number[] = [];
+  private corrupterRoles: number[] = [];
+  private requiresRoles: number[] = [];
+  private vortoxRole = -1;
+  private maxMinionsEver = 0;
+  private ambiguousRole: boolean[] = [];
+
+  // Search state
+  private world!: Int16Array;
+  private used!: Uint8Array;
+  private teamCount = [0, 0, 0, 0];
+  private assignedCount = 0;
+  private active!: Uint8Array;
+  private failing = new Map<number, Map<number, number>>();
+  private nodes = 0;
+  private searchBudget = 0;
+  private totalNodes = 0;
+  private rng = mulberry32(1);
+  private links: Set<number>[] = [];
+  private freeSeats: number[] = [];
+  private isFree = new Uint8Array(0);
+  private freeAssigned = 0;
+
+  // Evaluation scratch state for InfoView
+  private curReg: (Registration | null)[] = [];
+  private curAlive: boolean[] = [];
+  private curRedHerring = -1;
+  private readonly view: InfoView;
+  private readonly partialView: PartialInfoView;
+  private partialAlignments: Set<Alignment>[] = [];
+
+  constructor(input: SolverInput) {
+    this.options = {
+      assumeGoodPlayersHonest: input.options?.assumeGoodPlayersHonest ?? true,
+      nodeBudget: input.options?.nodeBudget ?? 150_000,
+      totalBudget: input.options?.totalBudget ?? 4_000_000
+    };
+
+    const seated = [...input.players].sort((a, b) => a.seat - b.seat);
+    this.n = seated.length;
+    this.seatIds = seated.map(p => p.id);
+    seated.forEach((p, i) => {
+      this.seatIndex.set(p.id, i);
+      this.playerNames.set(p.id, p.name);
+    });
+    this.composition = baseComposition(this.n);
+    if (this.n > 15) {
+      this.warnings.push('More than 15 players: Travellers are not modelled, so 15-player role counts are used.');
     }
-    this.players = players;
-    this.events = [];
-    this.eliminationReasons.clear();
-    this.selfPlayerId = null;
-    this.selfRole = null;
-    this.selfRoleCertain = false;
-    this.domains = players.map(p => ({
-      playerId: p.id,
-      possibleRoles: new Set(this.characters.map(c => c.id))
-    }));
-  }
 
-  setSelfKnowledge(playerId: string, roleId: string, certain = false): void {
-    this.selfPlayerId = playerId;
-    this.selfRole = roleId;
-    this.selfRoleCertain = certain;
-  }
+    this.buildRoles(input.characters);
+    this.compileEvidence(input);
+    this.indexConstraints();
 
-  addEvent(event: GameEvent): void {
-    this.events.push(event);
-  }
-
-  solve(): DeductionResult {
-    if (this.characters.length === 0 || this.players.length === 0) {
-      return {
-        possibleRoles: [],
-        survivingWorldCount: 0,
-        contradictions: [],
-        requiredAssumptions: []
-      };
+    for (const role of this.roles) {
+      if (role.rule.approximation) this.warnings.push(`${role.name}: ${role.rule.approximation}`);
     }
 
-    this.eliminationReasons.clear();
-
-    // Reset domains
-    this.domains = this.players.map(p => ({
-      playerId: p.id,
-      possibleRoles: new Set(this.characters.map(c => c.id))
-    }));
-
-    // Apply private self-knowledge
-    if (this.selfPlayerId && this.selfRole) {
-      this.applyPrivateSelfKnowledge();
-    }
-
-    // Apply event constraints iteratively until fixed point or max iterations
-    let changed = true;
-    let iterations = 0;
-    while (changed && iterations < 50) {
-      changed = false;
-      iterations++;
-      for (const event of this.events) {
-        if (this.applyEventConstraint(event)) {
-          changed = true;
-        }
-      }
-    }
-
-    // Build deduction result
-    const possibleRoles: RolePossibility[] = [];
-    for (const domain of this.domains) {
-      for (const char of this.characters) {
-        const status = domain.possibleRoles.has(char.id) ? 'possible' : 'impossible';
-        const reasonKey = `${domain.playerId}:${char.id}`;
-        possibleRoles.push({
-          playerId: domain.playerId,
-          roleId: char.id,
-          status,
-          reason: status === 'impossible' ? (this.eliminationReasons.get(reasonKey) || 'Eliminated by constraints') : undefined
-        });
-      }
-    }
-
-    // Mark self player's known role as 'confirmed' in output (even if uncertain — it's their self-knowledge)
-    if (this.selfPlayerId && this.selfRole) {
-      const selfEntry = possibleRoles.find(
-        r => r.playerId === this.selfPlayerId && r.roleId === this.selfRole
-      );
-      if (selfEntry) {
-        selfEntry.status = 'confirmed';
-        selfEntry.reason = this.selfRoleCertain
-          ? 'You privately know you are this role (certain)'
-          : 'You believe you are this role (may differ if Drunk/poisoned)';
-      }
-    }
-
-    return {
-      possibleRoles,
-      survivingWorldCount: this.countSurvivingWorlds(),
-      contradictions: this.findContradictions(),
-      requiredAssumptions: this.findRequiredAssumptions()
+    const engine = this;
+    this.view = {
+      seats: this.seatIds,
+      isAlive: id => engine.curAlive[engine.seatIndex.get(id) ?? -1] ?? false,
+      alignment: id => engine.regOf(id).alignment,
+      team: id => engine.regOf(id).team,
+      registersAsRole: (id, roleId) => {
+        const reg = engine.regOf(id);
+        const wanted = normalizeRoleId(roleId);
+        return reg.roleId === '*' ? engine.teamOfAnyRole(wanted) === reg.team : reg.roleId === wanted;
+      },
+      isRedHerring: id => engine.curRedHerring >= 0 && engine.seatIndex.get(id) === engine.curRedHerring
+    };
+    this.partialView = {
+      seats: this.seatIds,
+      alignmentOptions: id => engine.partialAlignments[engine.seatIndex.get(id) ?? 0]
     };
   }
 
-  private applyPrivateSelfKnowledge(): void {
-    if (!this.selfPlayerId || !this.selfRole) return;
-    const selfId = this.selfPlayerId;
-    const roleId = this.selfRole;
-    const certain = this.selfRoleCertain;
+  // ---------------------------------------------------------------------------
+  // Setup
+  // ---------------------------------------------------------------------------
 
-    // Mark self player's domain: set confirmed for self role
-    const selfDomain = this.domains.find(d => d.playerId === selfId);
-    if (selfDomain) {
-      // If certain: lock self to this role (clear all others)
-      // If uncertain (Drunk case): just mark as self-claimed — don't lock them
-      // Either way: eliminate this role from ALL OTHER players
-      if (certain) {
-        selfDomain.possibleRoles.clear();
-        selfDomain.possibleRoles.add(roleId);
-        this.eliminationReasons.set(`${selfId}:${roleId}`, 'You privately know you are this role (confirmed)');
-      }
-      // For uncertain: don't restrict self's domain — they might actually be Drunk/different
+  private buildRoles(characters: readonly ScriptCharacter[]): void {
+    for (const char of characters) {
+      const id = normalizeRoleId(char.id);
+      if (this.roleIndex.has(id)) continue;
+      const registered = RoleRegistry.get(id);
+      const team = registered?.team ?? char.team;
+      if (!SEAT_TEAMS.includes(team)) continue; // Travellers, Fabled and Loric are not seat roles
+      const info: RoleInfo = {
+        id,
+        name: registered?.name ?? char.name,
+        team,
+        teamIdx: TEAM_INDEX[team]!,
+        alignment: teamAlignment(team),
+        regs: registrationsFor(id, team),
+        rule: getRoleRule(id)
+      };
+      this.roleIndex.set(id, this.roles.length);
+      this.roles.push(info);
     }
 
-    // Eliminate from other players
-    for (const domain of this.domains) {
-      if (domain.playerId === selfId) continue;
-      if (domain.possibleRoles.has(roleId)) {
-        domain.possibleRoles.delete(roleId);
-        this.eliminationReasons.set(
-          `${domain.playerId}:${roleId}`,
-          certain
-            ? `You are confirmed as this role — cannot be anyone else`
-            : `You privately believe you are this role — unlikely to also be assigned here`
+    this.roles.forEach((r, i) => {
+      if (r.rule.setup?.outsiderDelta || r.rule.setup?.anyOutsiderCount || r.rule.setup?.minionDelta) {
+        this.setupModifierRoles.push(i);
+      }
+      if (r.rule.setup?.requiresInPlay) this.requiresRoles.push(i);
+      if (r.rule.corruptionCapacity) this.corrupterRoles.push(i);
+      if (r.rule.falsifiesTownsfolkInfo) this.vortoxRole = i;
+      this.ambiguousRole[i] = r.regs.length > 1;
+    });
+
+    this.maxMinionsEver =
+      this.composition[T_MINION] +
+      this.setupModifierRoles.reduce((sum, r) => sum + Math.max(0, this.roles[r].rule.setup?.minionDelta ?? 0), 0);
+
+    const [, , minions] = this.composition;
+    const count = (t: number) => this.roles.filter(r => r.teamIdx === t).length;
+    if (count(T_DEMON) === 0) this.warnings.push('The role pool has no Demon.');
+    if (count(T_MINION) < minions) this.warnings.push(`The role pool has fewer than ${minions} Minions.`);
+  }
+
+  private addEvidence(id: string, label: string): number {
+    this.evidence.push({ id, label });
+    return this.evidence.length - 1;
+  }
+
+  private name(playerId?: string | null): string {
+    return (playerId && this.playerNames.get(playerId)) || 'Unknown player';
+  }
+
+  private roleName(roleId?: string | null): string {
+    if (!roleId) return 'unknown character';
+    const id = normalizeRoleId(roleId);
+    const idx = this.roleIndex.get(id);
+    return idx !== undefined ? this.roles[idx].name : (RoleRegistry.get(id)?.name ?? roleId);
+  }
+
+  private teamOfAnyRole(roleId: string): Team | null {
+    const idx = this.roleIndex.get(roleId);
+    if (idx !== undefined) return this.roles[idx].team;
+    return RoleRegistry.get(roleId)?.team ?? null;
+  }
+
+  private maskWhere(pred: (r: RoleInfo, i: number) => boolean): Uint8Array {
+    const m = new Uint8Array(this.roles.length);
+    this.roles.forEach((r, i) => (m[i] = pred(r, i) ? 1 : 0));
+    return m;
+  }
+
+  private addUnary(ev: number, player: number, allowed: Uint8Array, reason: string): void {
+    this.unary.push({ ev, player, allowed, reason });
+  }
+
+  /** Global rule: if `seat` is the Drunk, `believed` cannot be in play. */
+  private addDrunkBeliefRule(ev: number, seat: number, believed: string): void {
+    const drunk = this.roleIndex.get('drunk');
+    const believedIdx = this.roleIndex.get(believed);
+    if (drunk === undefined || believedIdx === undefined) return;
+    this.globals.push({
+      ev,
+      refs: [seat],
+      watch: null,
+      test: w => {
+        if (w[seat] !== drunk) return true;
+        for (let i = 0; i < this.n; i++) if (w[i] === believedIdx) return false;
+        return true;
+      }
+    });
+  }
+
+  private compileEvidence(input: SolverInput): void {
+    const describe = (e: GameEvent) =>
+      describeEvent(e, id => this.name(id), id => this.roleName(id));
+
+    // Private self-knowledge
+    const self = input.self;
+    if (self && this.seatIndex.has(self.playerId)) {
+      const seat = this.seatIndex.get(self.playerId)!;
+      const believed = normalizeRoleId(self.roleId);
+      const believedTeam = this.teamOfAnyRole(believed);
+      if (believedTeam) {
+        const ev = this.addEvidence(
+          'self',
+          `You were told you are the ${this.roleName(believed)}${self.certain ? ' (certain)' : ''}`
         );
+        const candidates = self.certain ? [believed] : possibleTrueRolesForBelief(believed, believedTeam);
+        this.addUnary(ev, seat, this.maskWhere(r => candidates.includes(r.id)), this.evidence[ev].label);
+        if (!self.certain) this.addDrunkBeliefRule(ev, seat, believed);
+      }
+    }
+
+    // Walk the log in order, tracking who is alive at each point.
+    const alive = new Array<boolean>(this.n).fill(true);
+    for (const event of input.events) {
+      const label = describe(event);
+      switch (event.kind) {
+        case 'death':
+        case 'resurrection': {
+          const seat = this.seatIndex.get(targetPlayer(event) ?? '');
+          if (seat !== undefined) alive[seat] = event.kind === 'resurrection';
+          break;
+        }
+        case 'execution':
+          this.compileExecution(event, label, alive);
+          break;
+        case 'claim':
+          this.compileClaim(event, label);
+          break;
+        case 'info':
+          this.compileInfo(event, label, alive);
+          break;
       }
     }
   }
 
-  private setEliminated(playerId: string, roleId: string, reason: string): boolean {
-    const domain = this.domains.find(d => d.playerId === playerId);
-    if (!domain || !domain.possibleRoles.has(roleId)) {
-      return false;
+  private compileClaim(event: GameEvent, label: string): void {
+    const seat = this.seatIndex.get(event.actorId ?? '');
+    const roleId = claimRole(event);
+    if (seat === undefined || !roleId) return;
+    const team = this.teamOfAnyRole(roleId);
+    if (!team) return;
+
+    switch (event.trust) {
+      case 'confirmed': {
+        const ev = this.addEvidence(event.id, label);
+        this.addUnary(ev, seat, this.maskWhere(r => r.id === roleId), label);
+        break;
+      }
+      case 'false': {
+        const ev = this.addEvidence(event.id, label);
+        this.addUnary(ev, seat, this.maskWhere(r => r.id !== roleId), label);
+        break;
+      }
+      case 'asserted': {
+        if (!this.options.assumeGoodPlayersHonest) return;
+        const ev = this.addEvidence(event.id, `${label} — assuming good players claim honestly`);
+        const truthful = possibleTrueRolesForBelief(roleId, team);
+        this.addUnary(
+          ev,
+          seat,
+          this.maskWhere(r => r.alignment === 'evil' || truthful.includes(r.id)),
+          `Claimed ${this.roleName(roleId)}, so if good they would be the ${this.roleName(roleId)} (or Drunk)`
+        );
+        this.addDrunkBeliefRule(ev, seat, roleId);
+        break;
+      }
+      // 'doubted': no constraint
     }
-    domain.possibleRoles.delete(roleId);
-    this.eliminationReasons.set(`${playerId}:${roleId}`, reason);
+  }
+
+  private compileExecution(event: GameEvent, label: string, alive: boolean[]): void {
+    const seat = this.seatIndex.get(targetPlayer(event) ?? '');
+    if (seat === undefined) return;
+    const aliveBefore = alive.filter(Boolean).length;
+    alive[seat] = false;
+    const aliveAfter = aliveBefore - 1;
+
+    if (executionEndedGame(event)) {
+      if (aliveAfter <= 2) return; // Could be the final-two evil win.
+      const ev = this.addEvidence(event.id, label);
+      this.addUnary(
+        ev,
+        seat,
+        this.maskWhere(r => r.team === 'demon' || r.id === 'saint'),
+        'The game ended on their execution, so they were the Demon (or Saint)'
+      );
+      return;
+    }
+
+    const ev = this.addEvidence(event.id, `${label} and the game continued`);
+
+    // Executing a sober Saint ends the game.
+    if (this.roleIndex.has('saint')) {
+      this.infos.push({
+        ev,
+        source: seat,
+        infoRole: 'saint',
+        night: event.night,
+        spec: getInfoSpec('steward')!, // unused when alwaysFalse
+        payload: { type: 'saint' },
+        involved: [],
+        alive: [...alive],
+        isPublic: false,
+        vortoxApplies: false,
+        alwaysFalse: true
+      });
+    }
+
+    // Executing the Demon ends the game unless something saves it.
+    const sw = this.roleIndex.get('scarletwoman');
+    const mastermind = this.roleIndex.get('mastermind');
+    this.globals.push({
+      ev,
+      refs: [seat],
+      watch: [seat],
+      test: (w, complete) => {
+        const r = w[seat];
+        if (r < 0 || this.roles[r].teamIdx !== T_DEMON) return true;
+        const swOk = sw !== undefined && aliveBefore >= 5;
+        if (!complete) return swOk || mastermind !== undefined;
+        for (let i = 0; i < this.n; i++) {
+          if (i === seat) continue;
+          if (swOk && w[i] === sw) return true;
+          if (mastermind !== undefined && w[i] === mastermind) return true;
+        }
+        return false;
+      }
+    });
+  }
+
+  private compileInfo(event: GameEvent, label: string, alive: boolean[]): void {
+    const payload = infoPayload(event);
+    const source = this.seatIndex.get(event.actorId ?? '');
+    if (!payload || source === undefined) return;
+    const spec = getInfoSpec(payload.type);
+    if (!spec) {
+      this.warnings.push(`No deduction rule for "${this.roleName(payload.type)}" info; it was ignored.`);
+      return;
+    }
+    const aliveSnapshot = [...alive];
+    const involvedIds = spec.involved(payload, event.actorId!, {
+      seats: this.seatIds,
+      isAlive: id => aliveSnapshot[this.seatIndex.get(id) ?? -1] ?? false
+    });
+    let involved: number[] | null = null;
+    if (involvedIds !== 'all') {
+      involved = [];
+      for (const id of involvedIds) {
+        const idx = this.seatIndex.get(id);
+        if (idx === undefined) return; // references a removed player
+        if (!involved.includes(idx)) involved.push(idx);
+      }
+    }
+    const ev = this.addEvidence(event.id, label);
+    this.infos.push({
+      ev,
+      source,
+      infoRole: spec.roleId,
+      night: event.night,
+      spec,
+      payload,
+      involved,
+      alive: aliveSnapshot,
+      isPublic: spec.publicWhen?.(payload) ?? false,
+      vortoxApplies: this.teamOfAnyRole(spec.roleId) === 'townsfolk' && !spec.publicWhen
+    });
+  }
+
+  private indexConstraints(): void {
+    this.infosBySeat = Array.from({ length: this.n }, () => []);
+    this.globalsBySeat = Array.from({ length: this.n }, () => []);
+    this.infos.forEach((c, i) => {
+      if (c.involved === null) {
+        this.wholeCircleInfos.push(i);
+        return;
+      }
+      for (const s of new Set([c.source, ...c.involved])) this.infosBySeat[s].push(i);
+    });
+    this.globals.forEach((g, i) => {
+      if (g.watch === null) this.leafGlobals.push(i);
+      else for (const s of g.watch) this.globalsBySeat[s].push(i);
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Evaluation helpers
+  // ---------------------------------------------------------------------------
+
+  private regOf(id: string): Registration {
+    const idx = this.seatIndex.get(id);
+    const reg = idx === undefined ? null : this.curReg[idx];
+    if (!reg) throw new Error(`Registration requested for unassigned player ${id}`);
+    return reg;
+  }
+
+  /**
+   * Returns which truth values the info can take in the current (partial)
+   * world, over all ways ambiguous characters may register.
+   * redHerring: a seat index, -1 for none, or 'any' to let any good target be it.
+   */
+  private outcomes(c: InfoConstraint, redHerring: number | 'any'): { canTrue: boolean; canFalse: boolean } {
+    if (c.alwaysFalse) return { canTrue: false, canFalse: true };
+    const seats = c.involved ?? this.seatIds.map((_, i) => i);
+    this.curAlive = c.alive;
+    const ambiguous: number[] = [];
+    for (const s of seats) {
+      const r = this.world[s];
+      this.curReg[s] = this.roles[r].regs[0];
+      if (this.ambiguousRole[r]) ambiguous.push(s);
+    }
+    const herrings: number[] =
+      redHerring === 'any'
+        ? [-1, ...seats.filter(s => this.roles[this.world[s]].alignment === 'good')]
+        : [redHerring];
+
+    let canTrue = false;
+    let canFalse = false;
+    const recurse = (k: number): boolean => {
+      if (k === ambiguous.length) {
+        for (const rh of herrings) {
+          this.curRedHerring = rh;
+          if (c.spec.check(c.payload, this.seatIds[c.source], this.view)) canTrue = true;
+          else canFalse = true;
+          if (canTrue && canFalse) return true;
+        }
+        return false;
+      }
+      const s = ambiguous[k];
+      for (const reg of this.roles[this.world[s]].regs) {
+        this.curReg[s] = reg;
+        if (recurse(k + 1)) return true;
+      }
+      return false;
+    };
+    recurse(0);
+    this.curRedHerring = -1;
+    return { canTrue, canFalse };
+  }
+
+  private hasRedHerringRole(c: InfoConstraint): boolean {
+    return getRoleRule(c.infoRole).hasRedHerring === true;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Composition
+  // ---------------------------------------------------------------------------
+
+  /** Can role r still appear given the current partial assignment? */
+  private placeable(r: number): boolean {
+    if (this.used[r] || this.assignedCount >= this.n) return false;
+    const t = this.roles[r].teamIdx;
+    if (t === T_DEMON) return this.teamCount[T_DEMON] < this.composition[T_DEMON];
+    if (t === T_MINION) return this.teamCount[T_MINION] < this.maxMinionsEver;
     return true;
   }
 
-  private getTeam(roleId: string): Team | null {
-    const regRole = RoleRegistry.get(roleId);
-    if (regRole) return regRole.team;
-    const char = this.characters.find(c => c.id === roleId);
-    return char ? char.team : null;
-  }
-
-  private isEvilRole(roleId: string): boolean {
-    const team = this.getTeam(roleId);
-    return team === 'minion' || team === 'demon';
-  }
-
-  private isGoodRole(roleId: string): boolean {
-    const team = this.getTeam(roleId);
-    return team === 'townsfolk' || team === 'outsider';
-  }
-
-  private applyEventConstraint(event: GameEvent): boolean {
-    switch (event.kind) {
-      case 'claim':
-        return this.applyClaimConstraint(event);
-      case 'death':
-        return this.applyDeathConstraint(event);
-      case 'execution':
-        return this.applyExecutionConstraint(event);
-      case 'info':
-        return this.applyInfoConstraint(event);
-      default:
-        return false;
+  /** Allowed outsider counts and minion count range given mandatory and optional modifiers. */
+  private compositionTargets(complete: boolean): { outsiders: Set<number>; minMinions: number; maxMinions: number } {
+    let outsiders = new Set([this.composition[T_OUTSIDER]]);
+    let minMinions = this.composition[T_MINION];
+    let maxMinions = minMinions;
+    const apply = (set: Set<number>, rule: RoleRule): Set<number> => {
+      const next = new Set<number>();
+      if (rule.setup?.anyOutsiderCount) {
+        for (let x = 0; x <= this.n; x++) next.add(x);
+        return next;
+      }
+      const deltas = rule.setup?.outsiderDelta ?? [0];
+      for (const x of set) for (const d of deltas) next.add(Math.max(0, x + d));
+      return next;
+    };
+    for (const r of this.setupModifierRoles) {
+      const rule = this.roles[r].rule;
+      if (this.used[r]) {
+        outsiders = apply(outsiders, rule);
+        minMinions += rule.setup?.minionDelta ?? 0;
+        maxMinions += rule.setup?.minionDelta ?? 0;
+      } else if (!complete && this.placeable(r)) {
+        for (const x of apply(outsiders, rule)) outsiders.add(x);
+        maxMinions += rule.setup?.minionDelta ?? 0;
+      }
     }
+    return { outsiders, minMinions, maxMinions };
   }
 
-  private applyClaimConstraint(event: GameEvent): boolean {
-    const payload = event.payload as { claimedRole?: string } | undefined;
-    if (!payload?.claimedRole || !event.actorId) return false;
+  private compositionOk(complete: boolean): boolean {
+    const [tf, out, min, dem] = this.teamCount;
+    const demons = this.composition[T_DEMON];
+    const { outsiders, minMinions, maxMinions } = this.compositionTargets(complete);
+    if (complete) {
+      return dem === demons && min === minMinions && outsiders.has(out) && tf + out + min + dem === this.n;
+    }
+    let oMin = Infinity;
+    let oMax = -Infinity;
+    for (const x of outsiders) {
+      oMin = Math.min(oMin, x);
+      oMax = Math.max(oMax, x);
+    }
+    if (dem > demons || min > maxMinions || out > oMax) return false;
+    const tfMax = this.n - demons - minMinions - oMin;
+    const tfMin = this.n - demons - maxMinions - oMax;
+    if (tf > tfMax) return false;
+    const remaining = this.n - this.assignedCount;
+    const needed =
+      (demons - dem) + Math.max(0, minMinions - min) + Math.max(0, oMin - out) + Math.max(0, tfMin - tf);
+    return needed <= remaining;
+  }
 
-    // Confirmed claims lock down the player to that role
-    if (event.trust === 'confirmed') {
-      const domain = this.domains.find(d => d.playerId === event.actorId);
-      if (!domain) return false;
+  private corruptionCapacity(complete: boolean): number {
+    let cap = 0;
+    for (const r of this.corrupterRoles) {
+      if (this.used[r] || (!complete && this.placeable(r))) cap += this.roles[r].rule.corruptionCapacity ?? 0;
+    }
+    return cap;
+  }
 
-      let changed = false;
-      for (const roleId of [...domain.possibleRoles]) {
-        if (roleId !== payload.claimedRole) {
-          if (this.setEliminated(event.actorId, roleId, `Confirmed claim: ${payload.claimedRole}`)) {
-            changed = true;
+  private vortoxState(complete: boolean): 'yes' | 'maybe' | 'no' {
+    if (this.vortoxRole < 0) return 'no';
+    if (this.used[this.vortoxRole]) return 'yes';
+    return !complete && this.placeable(this.vortoxRole) ? 'maybe' : 'no';
+  }
+
+  // ---------------------------------------------------------------------------
+  // Search
+  // ---------------------------------------------------------------------------
+
+  private staticDomains(active: Uint8Array, pin?: [number, number]): number[][] {
+    const domains: number[][] = [];
+    for (let p = 0; p < this.n; p++) {
+      const d: number[] = [];
+      for (let r = 0; r < this.roles.length; r++) {
+        if (pin && pin[0] === p && pin[1] !== r) continue;
+        let ok = true;
+        for (const u of this.unary) {
+          if (u.player === p && active[u.ev] && !u.allowed[r]) {
+            ok = false;
+            break;
           }
         }
+        if (ok) d.push(r);
       }
-      return changed;
+      domains.push(d);
+    }
+    return domains;
+  }
+
+  private search(active: Uint8Array, pin?: [number, number]): SearchOutcome {
+    const domains = this.staticDomains(active, pin);
+    if (domains.some(d => d.length === 0)) return { kind: 'unsat' };
+    for (const d of domains) {
+      for (let i = d.length - 1; i > 0; i--) {
+        const j = Math.floor(this.rng() * (i + 1));
+        [d[i], d[j]] = [d[j], d[i]];
+      }
     }
 
+    // Seats sharing evidence (for the degree heuristic), and seats with no
+    // evidence at all, which are interchangeable and can be filled in a
+    // canonical order (symmetry breaking).
+    this.links = Array.from({ length: this.n }, () => new Set<number>());
+    const referenced = new Uint8Array(this.n);
+    let wholeCircle = false;
+    const link = (seats: number[]) => {
+      for (const a of seats) {
+        referenced[a] = 1;
+        for (const b of seats) if (a !== b) this.links[a].add(b);
+      }
+    };
+    for (const c of this.infos) {
+      if (!active[c.ev]) continue;
+      if (c.involved === null) wholeCircle = true;
+      else link([c.source, ...c.involved]);
+    }
+    for (const g of this.globals) if (active[g.ev]) link(g.refs);
+    this.freeSeats = [];
+    this.isFree = new Uint8Array(this.n);
+    for (let p = 0; p < this.n; p++) {
+      if (!wholeCircle && !referenced[p] && domains[p].length === this.roles.length) {
+        this.freeSeats.push(p);
+        this.isFree[p] = 1;
+      }
+    }
+    this.freeAssigned = 0;
+
+    this.active = active;
+    this.world = new Int16Array(this.n).fill(-1);
+    this.used = new Uint8Array(this.roles.length);
+    this.teamCount = [0, 0, 0, 0];
+    this.assignedCount = 0;
+    this.failing = new Map();
+    this.curReg = new Array(this.n).fill(null);
+    this.nodes = 0;
+    this.searchBudget = Math.min(this.options.nodeBudget, Math.max(0, this.options.totalBudget - this.totalNodes));
+
+    try {
+      const found = this.dfs(domains);
+      return found ? { kind: 'sat', world: this.world.slice(), free: [...this.freeSeats] } : { kind: 'unsat' };
+    } catch (e) {
+      if (e instanceof BudgetExceeded) return { kind: 'unknown' };
+      throw e;
+    } finally {
+      this.totalNodes += this.nodes;
+    }
+  }
+
+  private dfs(domains: number[][]): boolean {
+    if (++this.nodes > this.searchBudget) throw new BudgetExceeded();
+    if (this.assignedCount === this.n) return this.leafOk();
+
+    // Constrained seats first: smallest remaining domain, then most links to assigned seats.
+    let best = -1;
+    let bestSize = Infinity;
+    let bestLinks = -1;
+    for (let p = 0; p < this.n; p++) {
+      if (this.world[p] >= 0 || this.isFree[p]) continue;
+      let size = 0;
+      for (const r of domains[p]) if (!this.used[r]) size++;
+      if (size > bestSize) continue;
+      let linked = 0;
+      for (const q of this.links[p]) if (this.world[q] >= 0) linked++;
+      if (size < bestSize || linked > bestLinks) {
+        best = p;
+        bestSize = size;
+        bestLinks = linked;
+      }
+    }
+
+    // Interchangeable seats last, with strictly increasing role indexes.
+    let minRole = 0;
+    if (best < 0) {
+      best = this.freeSeats[this.freeAssigned];
+      if (this.freeAssigned > 0) minRole = this.world[this.freeSeats[this.freeAssigned - 1]] + 1;
+    }
+    if (bestSize === 0) return false;
+
+    const free = this.isFree[best] === 1;
+    for (const r of domains[best]) {
+      if (this.used[r] || r < minRole) continue;
+      const undo = this.assign(best, r);
+      if (undo !== null) {
+        if (free) this.freeAssigned++;
+        if (this.dfs(domains)) return true;
+        if (free) this.freeAssigned--;
+        this.unassign(best, r, undo);
+      }
+    }
     return false;
   }
 
-  private applyDeathConstraint(event: GameEvent): boolean {
-    // In Blood on the Clocktower, death changes alive status,
-    // but dead players keep their character identity!
+  /** Assigns and checks partial consistency. Returns an undo log, or null if inconsistent (already undone). */
+  private assign(p: number, r: number): [number, number][] | null {
+    this.world[p] = r;
+    this.used[r] = 1;
+    this.teamCount[this.roles[r].teamIdx]++;
+    this.assignedCount++;
+    const undo: [number, number][] = [];
+
+    const fail = () => {
+      this.unassign(p, r, undo);
+      return null;
+    };
+
+    if (!this.compositionOk(false)) return fail();
+
+    for (const gi of this.globalsBySeat[p]) {
+      const g = this.globals[gi];
+      if (this.active[g.ev] && !g.test(this.world, false)) return fail();
+    }
+    for (const gi of this.leafGlobals) {
+      const g = this.globals[gi];
+      if (this.active[g.ev] && !g.test(this.world, false)) return fail();
+    }
+
+    const vortox = this.vortoxState(false);
+    for (const ci of this.infosBySeat[p]) {
+      const c = this.infos[ci];
+      if (!this.active[c.ev] || this.world[c.source] < 0) continue;
+      if (c.involved!.some(s => this.world[s] < 0)) continue;
+      const verdict = this.judge(c, this.hasRedHerringRole(c) ? 'any' : -1, vortox);
+      if (verdict === 'impossible') return fail();
+      if (verdict === 'needs-corruption') {
+        let byNight = this.failing.get(c.night);
+        if (!byNight) this.failing.set(c.night, (byNight = new Map()));
+        byNight.set(c.source, (byNight.get(c.source) ?? 0) + 1);
+        undo.push([c.night, c.source]);
+      }
+    }
+
+    if (!this.corruptionFits(vortox)) return fail();
+    return undo;
+  }
+
+  private unassign(p: number, r: number, undo: [number, number][]): void {
+    for (const [night, source] of undo) {
+      const byNight = this.failing.get(night)!;
+      const left = byNight.get(source)! - 1;
+      if (left === 0) byNight.delete(source);
+      else byNight.set(source, left);
+    }
+    undo.length = 0;
+    this.world[p] = -1;
+    this.used[r] = 0;
+    this.teamCount[this.roles[r].teamIdx]--;
+    this.assignedCount--;
+    for (let i = 0; i < this.n; i++) if (this.world[i] < 0) this.curReg[i] = null;
+  }
+
+  /**
+   * Decides what an info constraint requires in the current world.
+   * 'ok': satisfied (or the source does not genuinely have the ability).
+   * 'needs-corruption': only consistent if the source is drunk/poisoned that night.
+   * 'impossible': cannot be satisfied at all.
+   */
+  private judge(
+    c: InfoConstraint,
+    redHerring: number | 'any',
+    vortox: 'yes' | 'maybe' | 'no'
+  ): 'ok' | 'needs-corruption' | 'impossible' {
+    const genuine = this.roles[this.world[c.source]].id === c.infoRole;
+    if (!genuine) return c.isPublic ? 'impossible' : 'ok';
+    const { canTrue, canFalse } = this.outcomes(c, redHerring);
+    if (c.isPublic) return canTrue ? 'ok' : 'impossible';
+    if (c.vortoxApplies && vortox === 'maybe') return 'ok';
+    const expectTrue = !(c.vortoxApplies && vortox === 'yes');
+    return (expectTrue ? canTrue : canFalse) ? 'ok' : 'needs-corruption';
+  }
+
+  /** Bounds-based check for whole-circle info such as the Chef. */
+  private wholeCircleFailures(vortox: 'yes' | 'maybe' | 'no'): Map<number, Set<number>> {
+    const extra = new Map<number, Set<number>>();
+    if (this.wholeCircleInfos.length === 0) return extra;
+    this.partialAlignments = [];
+    for (let s = 0; s < this.n; s++) {
+      const r = this.world[s];
+      this.partialAlignments.push(
+        r < 0 ? new Set<Alignment>(['good', 'evil']) : new Set(this.roles[r].regs.map(g => g.alignment))
+      );
+    }
+    for (const ci of this.wholeCircleInfos) {
+      const c = this.infos[ci];
+      if (!this.active[c.ev] || !c.spec.countRange || this.world[c.source] < 0) continue;
+      if (this.roles[this.world[c.source]].id !== c.infoRole) continue;
+      if (c.vortoxApplies && vortox === 'maybe') continue;
+      const [min, max] = c.spec.countRange(c.payload, this.partialView);
+      const value = c.payload.count ?? -1;
+      const canTrue = value >= min && value <= max;
+      const canFalse = !(min === max && min === value);
+      const expectTrue = !(c.vortoxApplies && vortox === 'yes');
+      if (!(expectTrue ? canTrue : canFalse)) {
+        if (!extra.has(c.night)) extra.set(c.night, new Set());
+        extra.get(c.night)!.add(c.source);
+      }
+    }
+    return extra;
+  }
+
+  private corruptionFits(vortox: 'yes' | 'maybe' | 'no'): boolean {
+    const cap = this.corruptionCapacity(false);
+    const extra = this.wholeCircleFailures(vortox);
+    const nights = new Set([...this.failing.keys(), ...extra.keys()]);
+    for (const night of nights) {
+      const sources = new Set([...(this.failing.get(night)?.keys() ?? []), ...(extra.get(night) ?? [])]);
+      if (sources.size > cap) return false;
+    }
+    return true;
+  }
+
+  /** Exact check of a complete world. */
+  private leafOk(): boolean {
+    if (!this.compositionOk(true)) return false;
+    for (const r of this.requiresRoles) {
+      if (!this.used[r]) continue;
+      for (const req of this.roles[r].rule.setup!.requiresInPlay!) {
+        const reqIdx = this.roleIndex.get(req);
+        if (reqIdx === undefined || !this.used[reqIdx]) return false;
+      }
+    }
+    for (const g of this.globals) {
+      if (this.active[g.ev] && !g.test(this.world, true)) return false;
+    }
+
+    const vortox = this.vortoxState(true);
+    const cap = this.corruptionCapacity(true);
+    const activeInfos = this.infos.filter(c => this.active[c.ev]);
+    const needsHerring = activeInfos.some(
+      c => this.hasRedHerringRole(c) && this.roles[this.world[c.source]].id === c.infoRole
+    );
+    const herrings = [-1];
+    if (needsHerring) {
+      for (let s = 0; s < this.n; s++) if (this.roles[this.world[s]].alignment === 'good') herrings.push(s);
+    }
+
+    for (const rh of herrings) {
+      const failing = new Map<number, Set<number>>();
+      let ok = true;
+      for (const c of activeInfos) {
+        const verdict = this.judge(c, rh, vortox);
+        if (verdict === 'impossible') {
+          ok = false;
+          break;
+        }
+        if (verdict === 'needs-corruption') {
+          if (!failing.has(c.night)) failing.set(c.night, new Set());
+          failing.get(c.night)!.add(c.source);
+        }
+      }
+      if (ok && [...failing.values()].every(s => s.size <= cap)) return true;
+    }
     return false;
   }
 
-  private applyExecutionConstraint(event: GameEvent): boolean {
-    const payload = event.payload as {
-      executedPlayerId?: string;
-      playerId?: string;
-      revealedRole?: string;
-    } | undefined;
-    const targetId = payload?.executedPlayerId || payload?.playerId;
-    if (!targetId || !payload?.revealedRole) return false;
+  // ---------------------------------------------------------------------------
+  // Public API
+  // ---------------------------------------------------------------------------
 
-    const domain = this.domains.find(d => d.playerId === targetId);
-    if (!domain) return false;
-
-    let changed = false;
-    for (const roleId of [...domain.possibleRoles]) {
-      if (roleId !== payload.revealedRole) {
-        if (this.setEliminated(targetId, roleId, `Executed and revealed as ${payload.revealedRole}`)) {
-          changed = true;
-        }
-      }
-    }
-    return changed;
+  private allActive(): Uint8Array {
+    return new Uint8Array(this.evidence.length).fill(1);
   }
 
-  private applyInfoConstraint(event: GameEvent): boolean {
-    const payload = event.payload as Record<string, unknown> | undefined;
-    if (!payload || typeof payload !== 'object') return false;
-
-    const type = String(payload['type'] || '');
-
-    switch (type) {
-      case 'empath':
-        return this.applyEmpathConstraint(event, payload);
-      case 'chef':
-        return this.applyChefConstraint(event, payload);
-      case 'washerwoman':
-      case 'librarian':
-      case 'investigator':
-        return this.applyDisjunctiveRoleConstraint(event, payload);
-      case 'fortune_teller':
-        return this.applyFortuneTellerConstraint(event, payload);
-      case 'slayer':
-        return this.applySlayerConstraint(event, payload);
-      case 'virgin':
-        return this.applyVirginConstraint(event, payload);
-      case 'undertaker':
-        return this.applyUndertakerConstraint(event, payload);
-      default:
-        return false;
-    }
-  }
-
-  /**
-   * Empath: learns how many of their 2 ALIVE neighbours in the circle are evil.
-   * Uses SeatingCircle with wrap-around (e.g. seat 8 -> seat 1).
-   */
-  private applyEmpathConstraint(event: GameEvent, payload: Record<string, unknown>): boolean {
-    const empathId = (payload['actorId'] || event.actorId) as string | undefined;
-    if (!empathId) return false;
-
-    const count = Number(payload['count'] !== undefined ? payload['count'] : (payload['isTrue'] === true ? 1 : 0));
-    const { aliveNeighbors } = SeatingCircle.getAliveNeighbors(this.players, empathId);
-
-    if (aliveNeighbors.length === 0) return false;
-
-    let changed = false;
-
-    // If count is 0: ALL alive neighbors are GOOD!
-    if (count === 0) {
-      for (const neighbor of aliveNeighbors) {
-        const domain = this.domains.find(d => d.playerId === neighbor.id);
-        if (domain) {
-          for (const roleId of [...domain.possibleRoles]) {
-            if (this.isEvilRole(roleId)) {
-              if (this.setEliminated(neighbor.id, roleId, 'Empath alive neighbor: 0 evil reading')) {
-                changed = true;
-              }
-            }
-          }
-        }
-      }
+  solve(): DeductionResult {
+    const R = this.roles.length;
+    const empty: DeductionResult = {
+      consistent: true,
+      possibleRoles: [],
+      alignments: [],
+      contradictions: [],
+      warnings: [...this.warnings],
+      incomplete: false
+    };
+    if (this.n === 0 || R === 0) return empty;
+    if (this.n < 5) {
+      empty.warnings.push('Deduction needs at least 5 players.');
+      return empty;
     }
 
-    // If count is 2 (and there are 2 distinct alive neighbors): ALL alive neighbors are EVIL!
-    if (count === 2 && aliveNeighbors.length === 2) {
-      for (const neighbor of aliveNeighbors) {
-        const domain = this.domains.find(d => d.playerId === neighbor.id);
-        if (domain) {
-          for (const roleId of [...domain.possibleRoles]) {
-            if (this.isGoodRole(roleId)) {
-              if (this.setEliminated(neighbor.id, roleId, 'Empath alive neighbor: 2 evil reading')) {
-                changed = true;
-              }
-            }
-          }
-        }
-      }
-    }
+    const active = this.allActive();
+    const possible = Array.from({ length: this.n }, () => new Uint8Array(R));
+    const unproven = Array.from({ length: this.n }, () => new Uint8Array(R));
+    const markWorld = (out: { world: Int16Array; free: number[] }) => {
+      out.world.forEach((r, p) => (possible[p][r] = 1));
+      // Interchangeable seats could have had any of each other's roles.
+      for (const p of out.free) for (const q of out.free) possible[p][out.world[q]] = 1;
+    };
+    let incomplete = false;
 
-    // If count is 1 with 2 alive neighbors:
-    // If one alive neighbor is confirmed good, the other MUST be evil!
-    // If one alive neighbor is confirmed evil, the other MUST be good!
-    if (count === 1 && aliveNeighbors.length === 2) {
-      const [n1, n2] = aliveNeighbors;
-      const d1 = this.domains.find(d => d.playerId === n1.id);
-      const d2 = this.domains.find(d => d.playerId === n2.id);
+    const base = this.search(active);
+    if (base.kind === 'sat') markWorld(base);
+    if (base.kind === 'unknown') incomplete = true;
 
-      if (d1 && d2) {
-        const d1OnlyGood = [...d1.possibleRoles].every(r => this.isGoodRole(r));
-        const d1OnlyEvil = [...d1.possibleRoles].every(r => this.isEvilRole(r));
-        const d2OnlyGood = [...d2.possibleRoles].every(r => this.isGoodRole(r));
-        const d2OnlyEvil = [...d2.possibleRoles].every(r => this.isEvilRole(r));
+    const domains = this.staticDomains(active);
+    const contradictions: DeductionResult['contradictions'] = [];
 
-        if (d1OnlyGood) {
-          // n2 must be evil
-          for (const roleId of [...d2.possibleRoles]) {
-            if (this.isGoodRole(roleId)) {
-              if (this.setEliminated(n2.id, roleId, 'Empath 1-evil pair deduction: neighbor confirmed good')) {
-                changed = true;
-              }
-            }
-          }
-        } else if (d1OnlyEvil) {
-          // n2 must be good
-          for (const roleId of [...d2.possibleRoles]) {
-            if (this.isEvilRole(roleId)) {
-              if (this.setEliminated(n2.id, roleId, 'Empath 1-evil pair deduction: neighbor confirmed evil')) {
-                changed = true;
-              }
-            }
-          }
-        }
-
-        if (d2OnlyGood) {
-          // n1 must be evil
-          for (const roleId of [...d1.possibleRoles]) {
-            if (this.isGoodRole(roleId)) {
-              if (this.setEliminated(n1.id, roleId, 'Empath 1-evil pair deduction: neighbor confirmed good')) {
-                changed = true;
-              }
-            }
-          }
-        } else if (d2OnlyEvil) {
-          // n1 must be good
-          for (const roleId of [...d1.possibleRoles]) {
-            if (this.isEvilRole(roleId)) {
-              if (this.setEliminated(n1.id, roleId, 'Empath 1-evil pair deduction: neighbor confirmed evil')) {
-                changed = true;
-              }
-            }
-          }
-        }
-      }
-    }
-
-    return changed;
-  }
-
-  /**
-   * Chef: learns how many pairs of evil players are adjacent in the circle.
-   * Circle wraps around from last seat to first seat!
-   */
-  private applyChefConstraint(event: GameEvent, payload: Record<string, unknown>): boolean {
-    const count = Number(payload['count']);
-    if (isNaN(count)) return false;
-
-    let changed = false;
-
-    // If count is 0: No two evil players are adjacent around the circle!
-    if (count === 0) {
-      for (const player of this.players) {
-        const domain = this.domains.find(d => d.playerId === player.id);
-        if (!domain) continue;
-
-        // If player is confirmed evil, their circular neighbors CANNOT be evil!
-        const isPlayerConfirmedEvil = [...domain.possibleRoles].every(r => this.isEvilRole(r));
-        if (isPlayerConfirmedEvil) {
-          const { clockwise, counterClockwise } = SeatingCircle.getImmediateNeighbors(this.players, player.id);
-          const neighbors = [clockwise, counterClockwise].filter((p): p is Player => p !== null);
-
-          for (const neighbor of neighbors) {
-            const nDomain = this.domains.find(d => d.playerId === neighbor.id);
-            if (nDomain) {
-              for (const roleId of [...nDomain.possibleRoles]) {
-                if (this.isEvilRole(roleId)) {
-                  if (this.setEliminated(neighbor.id, roleId, 'Chef 0-pairs: cannot be adjacent to confirmed evil player')) {
-                    changed = true;
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-
-    return changed;
-  }
-
-  /**
-   * Washerwoman / Librarian / Investigator:
-   * Learns that 1 of 2 players is a particular role.
-   */
-  private applyDisjunctiveRoleConstraint(event: GameEvent, payload: Record<string, unknown>): boolean {
-    const candidateIds = payload['candidatePlayerIds'] as string[] | undefined;
-    const roleId = payload['roleId'] as string | undefined;
-
-    if (!candidateIds || candidateIds.length !== 2 || !roleId) return false;
-
-    const [id1, id2] = candidateIds;
-    const domain1 = this.domains.find(d => d.playerId === id1);
-    const domain2 = this.domains.find(d => d.playerId === id2);
-
-    if (!domain1 || !domain2) return false;
-
-    let changed = false;
-
-    // If candidate 1 cannot be this role, candidate 2 MUST have it!
-    if (!domain1.possibleRoles.has(roleId)) {
-      if (domain2.possibleRoles.has(roleId)) {
-        for (const otherRoleId of [...domain2.possibleRoles]) {
-          if (otherRoleId !== roleId) {
-            if (this.setEliminated(id2, otherRoleId, `1-of-2 deduction: ${id1} cannot be ${roleId}`)) {
-              changed = true;
-            }
-          }
-        }
-      } else {
-        // Neither candidate can be the role -> contradiction
-        domain2.possibleRoles.clear();
-        changed = true;
-      }
-    }
-
-    // If candidate 2 cannot be this role, candidate 1 MUST have it!
-    if (!domain2.possibleRoles.has(roleId)) {
-      if (domain1.possibleRoles.has(roleId)) {
-        for (const otherRoleId of [...domain1.possibleRoles]) {
-          if (otherRoleId !== roleId) {
-            if (this.setEliminated(id1, otherRoleId, `1-of-2 deduction: ${id2} cannot be ${roleId}`)) {
-              changed = true;
-            }
-          }
-        }
-      } else {
-        // Neither candidate can be the role -> contradiction
-        domain1.possibleRoles.clear();
-        changed = true;
-      }
-    }
-
-    return changed;
-  }
-
-  /**
-   * Fortune Teller: choose 2 players, learns if either is a Demon.
-   */
-  private applyFortuneTellerConstraint(event: GameEvent, payload: Record<string, unknown>): boolean {
-    const candidateIds = (payload['candidatePlayerIds'] || [payload['targetPlayerId']]) as string[];
-    const isTrue = payload['isTrue'] ?? (payload['result'] === 'yes');
-
-    if (!candidateIds || candidateIds.length === 0) return false;
-
-    let changed = false;
-
-    // If result is 'no' / false: Neither player is a Demon!
-    if (isTrue === false || payload['result'] === 'no') {
-      for (const playerId of candidateIds) {
-        const domain = this.domains.find(d => d.playerId === playerId);
-        if (domain) {
-          for (const roleId of [...domain.possibleRoles]) {
-            if (this.getTeam(roleId) === 'demon') {
-              if (this.setEliminated(playerId, roleId, 'Fortune Teller "no" reading')) {
-                changed = true;
-              }
-            }
-          }
-        }
-      }
-    }
-
-    return changed;
-  }
-
-  /**
-   * Slayer: shoots a player. If Demon, target dies.
-   */
-  private applySlayerConstraint(event: GameEvent, payload: Record<string, unknown>): boolean {
-    const targetPlayerId = payload['targetPlayerId'] as string | undefined;
-    const targetDied = payload['targetDied'] === true || payload['isTrue'] === true;
-
-    if (!targetPlayerId) return false;
-
-    const domain = this.domains.find(d => d.playerId === targetPlayerId);
-    if (!domain) return false;
-
-    let changed = false;
-
-    if (targetDied) {
-      // Target was the Demon
-      for (const roleId of [...domain.possibleRoles]) {
-        if (this.getTeam(roleId) !== 'demon') {
-          if (this.setEliminated(targetPlayerId, roleId, 'Slayer shot killed player: confirmed Demon')) {
-            changed = true;
+    if (base.kind !== 'unsat') {
+      for (let p = 0; p < this.n; p++) {
+        for (const r of domains[p]) {
+          if (possible[p][r]) continue;
+          const out = this.search(active, [p, r]);
+          if (out.kind === 'sat') markWorld(out);
+          else if (out.kind === 'unknown') {
+            possible[p][r] = 1;
+            unproven[p][r] = 1;
+            incomplete = true;
           }
         }
       }
     } else {
-      // Target did not die -> Not the Demon
-      for (const roleId of [...domain.possibleRoles]) {
-        if (this.getTeam(roleId) === 'demon') {
-          if (this.setEliminated(targetPlayerId, roleId, 'Slayer shot failed: not the Demon')) {
-            changed = true;
-          }
+      const core = this.minimalConflict(active);
+      contradictions.push({
+        description: core.length
+          ? 'No starting grimoire fits all of this evidence together: ' + core.map(e => e.label).join('; ')
+          : 'No starting grimoire fits the setup rules for this role pool and player count.',
+        events: core.map(e => e.id)
+      });
+    }
+
+    const possibleRoles: RolePossibility[] = [];
+    const alignments: PlayerAlignment[] = [];
+    for (let p = 0; p < this.n; p++) {
+      const playerId = this.seatIds[p];
+      const count = possible[p].reduce((a, b) => a + b, 0);
+      let canBeGood = false;
+      let canBeEvil = false;
+      for (let r = 0; r < R; r++) {
+        const role = this.roles[r];
+        if (possible[p][r]) {
+          if (role.alignment === 'good') canBeGood = true;
+          else canBeEvil = true;
+          possibleRoles.push({
+            playerId,
+            roleId: role.id,
+            status: count === 1 && !unproven[p][r] ? 'confirmed' : 'possible',
+            reason: unproven[p][r] ? 'Not disproven (search limit reached)' : undefined
+          });
+        } else {
+          possibleRoles.push({
+            playerId,
+            roleId: role.id,
+            status: 'impossible',
+            reason: this.directReason(p, r, active) ?? 'Ruled out by the combined evidence'
+          });
         }
       }
+      alignments.push({ playerId, canBeGood, canBeEvil });
     }
 
-    return changed;
+    return {
+      consistent: base.kind !== 'unsat',
+      possibleRoles,
+      alignments,
+      contradictions,
+      warnings: [...this.warnings],
+      incomplete
+    };
   }
 
-  /**
-   * Virgin: when nominated, if nominator is Townsfolk, nominator executed immediately.
-   */
-  private applyVirginConstraint(event: GameEvent, payload: Record<string, unknown>): boolean {
-    const nominatorId = payload['nominatorPlayerId'] as string | undefined;
-    const virginId = (payload['virginPlayerId'] || event.actorId) as string | undefined;
-    const wasExecuted = payload['wasExecuted'] === true;
+  private directReason(p: number, r: number, active: Uint8Array): string | null {
+    for (const u of this.unary) if (u.player === p && active[u.ev] && !u.allowed[r]) return u.reason;
+    return null;
+  }
 
-    if (!nominatorId || !wasExecuted) return false;
-
-    let changed = false;
-
-    // Nominator must be Townsfolk
-    const nomDomain = this.domains.find(d => d.playerId === nominatorId);
-    if (nomDomain) {
-      for (const roleId of [...nomDomain.possibleRoles]) {
-        if (this.getTeam(roleId) !== 'townsfolk') {
-          if (this.setEliminated(nominatorId, roleId, 'Virgin nomination executed: nominator is Townsfolk')) {
-            changed = true;
-          }
-        }
-      }
+  /** Deletion-based minimal unsatisfiable subset of evidence. */
+  private minimalConflict(start: Uint8Array, pin?: [number, number]): EvidenceRef[] {
+    const active = start.slice();
+    for (let e = 0; e < active.length; e++) {
+      if (!active[e]) continue;
+      active[e] = 0;
+      const out = this.search(active, pin);
+      if (out.kind !== 'unsat') active[e] = 1; // e is needed for the conflict
     }
+    return this.evidence.filter((_, i) => active[i]).map(e => ({ id: e.id, label: e.label }));
+  }
 
-    // Target is confirmed Virgin
-    if (virginId) {
-      const vDomain = this.domains.find(d => d.playerId === virginId);
-      if (vDomain && vDomain.possibleRoles.has('virgin')) {
-        for (const roleId of [...vDomain.possibleRoles]) {
-          if (roleId !== 'virgin') {
-            if (this.setEliminated(virginId, roleId, 'Virgin ability triggered: confirmed Virgin')) {
-              changed = true;
-            }
-          }
-        }
-      }
+  /** Explains why `playerId` can or cannot be `roleId`. */
+  explain(playerId: string, roleId: string): Explanation {
+    const p = this.seatIndex.get(playerId);
+    const r = this.roleIndex.get(normalizeRoleId(roleId));
+    const who = this.name(playerId);
+    const what = this.roleName(roleId);
+    if (p === undefined || r === undefined) {
+      return { playerId, roleId, status: 'impossible', summary: `${what} is not in the role pool.`, evidence: [] };
     }
-
-    return changed;
-  }
-
-  /**
-   * Undertaker: learns executed player's role.
-   */
-  private applyUndertakerConstraint(event: GameEvent, payload: Record<string, unknown>): boolean {
-    const executedPlayerId = payload['executedPlayerId'] as string | undefined;
-    const revealedRole = payload['revealedRole'] as string | undefined;
-
-    if (!executedPlayerId || !revealedRole) return false;
-
-    const domain = this.domains.find(d => d.playerId === executedPlayerId);
-    if (!domain) return false;
-
-    let changed = false;
-    for (const roleId of [...domain.possibleRoles]) {
-      if (roleId !== revealedRole) {
-        if (this.setEliminated(executedPlayerId, roleId, `Undertaker learned: ${revealedRole}`)) {
-          changed = true;
-        }
-      }
+    const active = this.allActive();
+    const out = this.search(active, [p, r]);
+    if (out.kind === 'sat') {
+      const corrupt = this.describeWorldNeeds(out.world);
+      return {
+        playerId,
+        roleId,
+        status: 'possible',
+        summary: `${who} could be the ${what}.${corrupt}`,
+        evidence: []
+      };
     }
-    return changed;
-  }
-
-  private countSurvivingWorlds(): number {
-    if (this.domains.length === 0 || this.domains.some(d => d.possibleRoles.size === 0)) {
-      return 0;
+    if (out.kind === 'unknown') {
+      return {
+        playerId,
+        roleId,
+        status: 'possible',
+        summary: `Not disproven: the search limit was reached while checking ${who} as the ${what}.`,
+        evidence: []
+      };
     }
-    return this.domains.reduce((acc, d) => acc * d.possibleRoles.size, 1);
+    const core = this.minimalConflict(active, [p, r]);
+    const summary = core.length
+      ? `${who} cannot be the ${what}: that contradicts ${core.length === 1 ? 'this evidence' : 'these pieces of evidence taken together'}.`
+      : `${who} cannot be the ${what}: no legal setup for this player count and role pool allows it.`;
+    return { playerId, roleId, status: 'impossible', summary, evidence: core };
   }
 
-  private findContradictions(): Contradiction[] {
-    const contradictions: Contradiction[] = [];
-    for (const domain of this.domains) {
-      if (domain.possibleRoles.size === 0) {
-        const player = this.players.find(p => p.id === domain.playerId);
-        contradictions.push({
-          description: `${player?.name || 'Player'} has no logically possible roles remaining`,
-          events: []
-        });
-      }
+  /** One-line hint about what an example world needed (e.g. a poisoner). */
+  private describeWorldNeeds(world: Int16Array): string {
+    this.world = world;
+    this.used = new Uint8Array(this.roles.length);
+    world.forEach(r => (this.used[r] = 1));
+    this.assignedCount = this.n;
+    const vortox = this.vortoxState(true);
+    const needing = new Set<number>();
+    for (const c of this.infos) {
+      if (this.judge(c, this.hasRedHerringRole(c) ? 'any' : -1, vortox) === 'needs-corruption') needing.add(c.source);
     }
-    return contradictions;
+    if (needing.size === 0) return '';
+    const names = [...needing].map(s => this.name(this.seatIds[s])).join(', ');
+    return ` For example, if ${names} ${needing.size === 1 ? 'was' : 'were'} drunk or poisoned.`;
   }
+}
 
-  private findRequiredAssumptions(): RequiredAssumption[] {
-    return [];
-  }
+/** Convenience wrapper. */
+export function solve(input: SolverInput): DeductionResult {
+  return new DeductionEngine(input).solve();
 }

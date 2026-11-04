@@ -10,6 +10,7 @@ export interface GameState {
   selfPlayerId?: string | null;
   selfRole?: string | null;
   selfRoleCertain?: boolean;
+  assumeHonest?: boolean;
 }
 
 @Injectable({

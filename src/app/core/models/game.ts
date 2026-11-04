@@ -16,6 +16,7 @@ export interface Script {
   id: string;
   name: string;
   source: string;
+  author?: string;
   characters: ScriptCharacter[];
 }
 
@@ -35,55 +36,93 @@ export interface Player {
   seat: number;
   alive: boolean;
   notes?: string;
-  isSelf?: boolean;          // marks which player seat "you" occupy
-  selfRole?: string;         // the role you privately know (or think) you are
-  selfRoleCertain?: boolean; // false by default (Drunk edge case)
+  isSelf?: boolean;
 }
 
+/**
+ * How much a claim should be trusted by the solver.
+ *  - asserted:  taken at face value *if* the claimant is good (see "assume good players are honest").
+ *  - doubted:   possibly a bluff even from a good player; adds no constraint.
+ *  - confirmed: known to be the player's true character.
+ *  - false:     known NOT to be the player's true character.
+ */
 export type ClaimTrust = 'asserted' | 'confirmed' | 'doubted' | 'false';
+
+export type GameEventKind = 'claim' | 'death' | 'execution' | 'resurrection' | 'info' | 'note';
+
+export type GamePhase = 'setup' | 'first-night' | 'day' | 'nomination' | 'execution' | 'other-night';
 
 export interface GameEvent {
   id: string;
   gameId: string;
   night: number;
-  phase: 'setup' | 'first-night' | 'day' | 'nomination' | 'execution' | 'other-night';
+  phase: GamePhase;
   actorId?: string;
-  kind: string;
+  kind: GameEventKind | string;
   payload: unknown;
   trust: ClaimTrust;
   createdAt: string;
+  note?: string;
 }
+
+export interface ClaimPayload {
+  roleId: string;
+}
+
+export interface PlayerPayload {
+  playerId: string;
+}
+
+export interface ExecutionPayload {
+  playerId: string;
+  /** True if the execution ended the game. Defaults to false (play continued). */
+  gameEnded?: boolean;
+}
+
+export type PossibilityStatus = 'possible' | 'confirmed' | 'impossible';
 
 export interface RolePossibility {
   playerId: string;
   roleId: string;
-  status: 'possible' | 'confirmed' | 'impossible';
+  status: PossibilityStatus;
+  /** Short reason, available immediately for directly-eliminated roles. */
   reason?: string;
-  requiredAssumptions?: string[];
 }
 
-export interface PossibleWorld {
-  roleAssignments: Record<string, string | null>;
-  alignment: Record<string, 'good' | 'evil' | 'unknown'>;
-  drunkOrPoisoned: Set<string>;
-  dead: Set<string>;
-  oncePerGameUsed: Record<string, boolean>;
-  status: 'valid' | 'contradicted';
+export interface PlayerAlignment {
+  playerId: string;
+  canBeGood: boolean;
+  canBeEvil: boolean;
 }
 
 export interface Contradiction {
   description: string;
+  /** Event IDs (or synthetic evidence IDs) involved. */
   events: string[];
 }
 
-export interface RequiredAssumption {
-  description: string;
-  affects: string[];
+export interface DeductionResult {
+  /** False when no starting grimoire is consistent with the evidence. */
+  consistent: boolean;
+  possibleRoles: RolePossibility[];
+  alignments: PlayerAlignment[];
+  contradictions: Contradiction[];
+  /** Notes about roles the engine models only approximately, unsupported input, etc. */
+  warnings: string[];
+  /** True if the search budget ran out, so some "possible" entries are unproven. */
+  incomplete: boolean;
 }
 
-export interface DeductionResult {
-  possibleRoles: RolePossibility[];
-  survivingWorldCount: number;
-  contradictions: Contradiction[];
-  requiredAssumptions: RequiredAssumption[];
+export interface EvidenceRef {
+  id: string;
+  label: string;
+}
+
+export interface Explanation {
+  playerId: string;
+  roleId: string;
+  status: PossibilityStatus;
+  summary: string;
+  /** A minimal set of evidence that together rules the assignment out. */
+  evidence: EvidenceRef[];
 }

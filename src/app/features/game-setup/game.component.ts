@@ -37,8 +37,8 @@ class NewGameDialog {}
     MatDialogModule
   ],
   template: `
-    <div class="page">
-      <h1 mat-title>Game</h1>
+    <main class="page">
+      <h1>Game</h1>
 
       @if (hasGame() && script(); as s) {
         <mat-card>
@@ -56,7 +56,7 @@ class NewGameDialog {}
         <mat-card>
           <mat-card-header>
             <mat-card-title>Start Game</mat-card-title>
-            <mat-card-subtitle>Script: {{ script()?.name || 'Trouble Brewing' }}</mat-card-subtitle>
+            <mat-card-subtitle>Role pool: {{ script()?.name || 'Trouble Brewing' }} (change on the Scripts tab)</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
             <mat-form-field appearance="outline" class="full-width">
@@ -66,31 +66,18 @@ class NewGameDialog {}
           </mat-card-content>
           <mat-card-actions>
             <button mat-raised-button color="primary" (click)="createGame()">
-              <mat-icon>play_arrow</mat-icon> Start Game
+              <mat-icon aria-hidden="true">play_arrow</mat-icon> Start game
             </button>
           </mat-card-actions>
         </mat-card>
       }
 
       @if (hasGame()) {
-        <mat-card>
-          <mat-card-header>
-            <mat-card-title>Quick Actions</mat-card-title>
-          </mat-card-header>
-          <mat-card-actions>
-            <button mat-button color="primary" (click)="addRandomClaim()">
-              <mat-icon>chat</mat-icon> Add Test Claim
-            </button>
-            <button mat-button color="warn" (click)="addRandomDeath()">
-              <mat-icon>cancel</mat-icon> Add Test Death
-            </button>
-            <button mat-button color="accent" (click)="confirmNewGame()">
-              <mat-icon>restart_alt</mat-icon> New Game
-            </button>
-          </mat-card-actions>
-        </mat-card>
+        <button mat-stroked-button (click)="confirmNewGame()">
+          <mat-icon aria-hidden="true">restart_alt</mat-icon> New game
+        </button>
       }
-    </div>
+    </main>
   `,
   styles: [`
     .page {
@@ -104,11 +91,6 @@ class NewGameDialog {}
     }
     .full-width {
       width: 100%;
-    }
-    mat-card-actions {
-      justify-content: center;
-      gap: 8px;
-      flex-wrap: wrap;
     }
   `]
 })
@@ -127,21 +109,6 @@ export class GameComponent {
   createGame(): void {
     const count = Math.max(5, Math.min(15, Number(this.playerCount) || 8));
     this.gameState.createGame('Game 1', count);
-  }
-
-  addRandomClaim(): void {
-    const currentPlayers = this.players();
-    const currentScript = this.script();
-    if (currentPlayers.length > 0 && currentScript && currentScript.characters.length > 0) {
-      this.gameState.addClaim(currentPlayers[0].id, currentScript.characters[0].id);
-    }
-  }
-
-  addRandomDeath(): void {
-    const alive = this.alivePlayers();
-    if (alive.length > 0) {
-      this.gameState.addDeath(alive[0].id, 1);
-    }
   }
 
   confirmNewGame(): void {

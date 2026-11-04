@@ -13,6 +13,6 @@ export const TROUBLE_BREWING_SCRIPT: Script = {
     'washerwoman', 'librarian', 'investigator', 'chef', 'empath',
     'fortuneteller', 'undertaker', 'monk', 'ravenkeeper', 'virgin',
     'slayer', 'soldier', 'mayor', 'butler', 'drunk', 'recluse', 'saint',
-    'poisoner', 'spy', 'scarlet_woman', 'baron', 'imp'
+    'poisoner', 'spy', 'scarletwoman', 'baron', 'imp'
   ])
 };

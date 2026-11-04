@@ -1,183 +1,139 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { GameStateService } from '../../core/services/game-state.service';
+import { ScriptImportService } from '../../core/script/script-import.service';
 import { TROUBLE_BREWING_SCRIPT } from '../../core/constants/trouble-brewing';
+import { Script } from '../../core/models/game';
 
-interface Wc25Script {
-  id: string;
-  name: string;
-  author: string;
-  filename: string;
-}
+const WC25_IDS = [
+  '1daymore', 'beautifulhouse', 'binarysupernovae', 'buyersremorse', 'deadcouncil', 'deadpeople',
+  'djinnsbargain', 'offwizard', 'phantomdetectives', 'riverstyx', 'seat7', 'stowedaway',
+  'trainedkiller', 'warrens', 'witchhunt', 'wonders'
+];
 
 @Component({
   selector: 'app-scripts',
-  imports: [MatCardModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule],
+  imports: [MatButtonModule, MatCardModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressSpinnerModule],
   template: `
-    <div class="page">
-      <h1 mat-title>Scripts</h1>
+    <main class="page">
+      <h1>Scripts</h1>
+      <p class="intro">A script only chooses which characters can be in play. Deduction rules belong to the characters.</p>
+      <p>Current role pool: <strong>{{ gameState.script()?.name ?? 'Trouble Brewing' }}</strong> ({{ gameState.activeRoles().length }} characters)</p>
 
-      <!-- Official Script -->
-      <mat-card class="script-card" (click)="loadTroubleBrewing()">
-        <mat-card-header>
-          <mat-icon mat-card-avatar>menu_book</mat-icon>
-          <mat-card-title>Trouble Brewing</mat-card-title>
-          <mat-card-subtitle>Official BotC script</mat-card-subtitle>
-        </mat-card-header>
-        <mat-card-content>
-          <p>24 characters including all Townsfolk, Outsiders, Minions, and the Ogre Demon.</p>
-        </mat-card-content>
-        @if (isTroubleBrewingActive()) {
-          <mat-card-actions>
-            <button mat-button color="primary" disabled>
-              <mat-icon>check_circle</mat-icon> Active Script
-            </button>
-          </mat-card-actions>
-        } @else {
-          <mat-card-actions>
-            <button mat-raised-button color="primary">
-              <mat-icon>file_download</mat-icon> Select Script
-            </button>
-          </mat-card-actions>
+      <h2>Bundled</h2>
+      <ul class="list">
+        @for (s of bundled(); track s.id) {
+          <li class="item">
+            <div>
+              <div class="name">{{ s.name }}</div>
+              <div class="meta">{{ s.author ? 'by ' + s.author + ' · ' : '' }}{{ s.characters.length }} characters</div>
+            </div>
+            @if (activeId() === s.id) {
+              <span class="active"><mat-icon aria-hidden="true">check_circle</mat-icon> Active</span>
+            } @else {
+              <button mat-stroked-button (click)="use(s)" [attr.aria-label]="'Use ' + s.name">Use</button>
+            }
+          </li>
         }
-      </mat-card>
-
-      <!-- WC25 Championship Scripts -->
-      <h2>WC25 Championship Scripts</h2>
-      @if (loadingWc25()) {
-        <mat-spinner diameter="40"></mat-spinner>
-      } @else {
-        @for (script of wc25Scripts(); track script.id) {
-          <mat-card class="script-card" (click)="loadWc25Script(script)">
-            <mat-card-header>
-              <mat-icon mat-card-avatar>trophy</mat-icon>
-              <mat-card-title>{{ script.name }}</mat-card-title>
-              <mat-card-subtitle>by {{ script.author }} • WC25</mat-card-subtitle>
-            </mat-card-header>
-            <mat-card-actions>
-              @if (isActiveWc25Script(script)) {
-                <button mat-button color="primary" disabled>
-                  <mat-icon>check_circle</mat-icon> Active Script
-                </button>
-              } @else {
-                <button mat-raised-button color="primary">
-                  <mat-icon>file_download</mat-icon> Select Script
-                </button>
-              }
-            </mat-card-actions>
-          </mat-card>
-        }
+      </ul>
+      @if (loading()) {
+        <mat-spinner diameter="32" aria-label="Loading scripts" />
       }
-    </div>
+
+      <h2>Import</h2>
+      <mat-card>
+        <mat-card-content>
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Paste script JSON</mat-label>
+            <textarea matInput rows="5" [value]="pasted()" (input)="pasted.set($any($event.target).value)"></textarea>
+            <mat-hint>Official format from the Script Tool, e.g. [{{ '{' }}"id":"_meta","name":"My Script"{{ '}' }}, "chef", "imp", ...]</mat-hint>
+          </mat-form-field>
+          <div class="import-actions">
+            <button mat-flat-button [disabled]="!pasted().trim()" (click)="importText()">Import pasted JSON</button>
+            <label class="file">
+              <input type="file" accept=".json,application/json" (change)="importFile($event)" />
+              <span>or choose a .json file</span>
+            </label>
+          </div>
+          @if (error(); as e) {
+            <p class="error" role="alert">{{ e }}</p>
+          }
+          @for (w of importWarnings(); track w) {
+            <p class="note">{{ w }}</p>
+          }
+        </mat-card-content>
+      </mat-card>
+    </main>
   `,
-  styles: [`
-    .page {
-      padding: 16px;
-    }
-    h1 {
-      margin-top: 0;
-    }
-    h2 {
-      margin-top: 24px;
-      margin-bottom: 16px;
-    }
-    .script-card {
-      cursor: pointer;
-      transition: box-shadow 0.2s;
-      margin-bottom: 16px;
-    }
-    .script-card:hover {
-      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-    }
-    mat-card-actions {
-      padding: 8px 16px;
-    }
-  `]
+  styles: `
+    .page { padding: 16px; }
+    h1 { margin-top: 0; }
+    h2 { font-size: 1.15rem; margin: 24px 0 8px; }
+    .intro, .meta, .note { color: #5f6368; font-size: 0.9rem; }
+    .list { list-style: none; padding: 0; margin: 0; }
+    .item { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid #e0e0e0; }
+    .name { font-weight: 500; }
+    .active { display: inline-flex; align-items: center; gap: 4px; color: #146c2e; font-weight: 500; }
+    .full { width: 100%; }
+    .import-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 12px; }
+    .error { color: #b3261e; }
+  `
 })
 export class ScriptsComponent {
-  private gameState = inject(GameStateService);
+  protected readonly gameState = inject(GameStateService);
+  private readonly importer = inject(ScriptImportService);
 
-  readonly script = this.gameState.script;
-  readonly isTroubleBrewingActive = computed(() => this.script()?.id === 'trouble-brewing');
+  protected readonly wc25 = signal<Script[]>([]);
+  protected readonly loading = signal(true);
+  protected readonly pasted = signal('');
+  protected readonly error = signal<string | null>(null);
+  protected readonly importWarnings = signal<string[]>([]);
 
-  loadingWc25 = signal(true);
-  wc25Scripts = signal<Wc25Script[]>([]);
+  protected readonly bundled = computed(() => [TROUBLE_BREWING_SCRIPT, ...this.wc25()]);
+  protected readonly activeId = computed(() => this.gameState.script()?.id ?? TROUBLE_BREWING_SCRIPT.id);
 
   constructor() {
-    this.loadWc25Scripts();
+    this.loadWc25();
   }
 
-  async loadWc25Scripts(): Promise<void> {
-    try {
-      const scripts: Wc25Script[] = [];
-      const wc25ScriptIds = [
-        '1daymore', 'beautifulhouse', 'binarysupernovae', 'buyersremorse',
-        'deadcouncil', 'deadpeople', 'djinnsbargain', 'offwizard',
-        'phantomdetectives', 'riverstyx', 'seat7', 'stowedaway',
-        'trainedkiller', 'warrens', 'witchhunt', 'wonders'
-      ];
-
-      for (const id of wc25ScriptIds) {
-        try {
-          const response = await fetch(`scripts/wc25/${id}.json`);
-          if (response.ok) {
-            const data = await response.json();
-            const meta = data.find((item: unknown) => {
-              if (typeof item !== 'object' || item === null) return false;
-              const obj = item as Record<string, unknown>;
-              return obj['id'] === '_meta';
-            });
-            if (meta) {
-              const metaObj = meta as Record<string, unknown>;
-              scripts.push({
-                id: `wc25-${id}`,
-                name: metaObj['name'] as string,
-                author: metaObj['author'] as string,
-                filename: id
-              });
-            }
-          }
-        } catch {
-          // Skip scripts that fail to load
-        }
-      }
-
-      this.wc25Scripts.set(scripts);
-    } finally {
-      this.loadingWc25.set(false);
-    }
+  private async loadWc25(): Promise<void> {
+    const results = await Promise.allSettled(
+      WC25_IDS.map(id => this.importer.fetchBundled(`assets/scripts/wc25/${id}.json`, `wc25-${id}`))
+    );
+    this.wc25.set(results.flatMap(r => (r.status === 'fulfilled' ? [r.value] : [])));
+    this.loading.set(false);
   }
 
-  async loadTroubleBrewing(): Promise<void> {
-    try {
-      const response = await fetch('scripts/trouble-brewing.json');
-      if (response.ok) {
-        const json = await response.text();
-        await this.gameState.importScript(json);
-        return;
-      }
-    } catch {
-      // Fallback to bundled constant
-    }
-    this.gameState.setScript(TROUBLE_BREWING_SCRIPT);
+  protected use(script: Script): void {
+    this.gameState.setScript(script);
   }
 
-  async loadWc25Script(script: Wc25Script): Promise<void> {
+  protected importText(): void {
+    this.tryImport(() => this.importer.parse(this.pasted()));
+  }
+
+  protected async importFile(event: Event): Promise<void> {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    const text = await file.text();
+    this.tryImport(() => this.importer.parse(text));
+  }
+
+  private tryImport(parse: () => ReturnType<ScriptImportService['parse']>): void {
     try {
-      const response = await fetch(`scripts/wc25/${script.filename}.json`);
-      if (response.ok) {
-        const json = await response.text();
-        await this.gameState.importScript(json);
-      }
+      const { script, warnings } = parse();
+      this.gameState.setScript(script);
+      this.error.set(null);
+      this.importWarnings.set([`Imported "${script.name}" (${script.characters.length} characters).`, ...warnings]);
+      this.pasted.set('');
     } catch (e) {
-      console.error('Failed to load WC25 script:', e);
+      this.error.set(e instanceof Error ? e.message : String(e));
+      this.importWarnings.set([]);
     }
-  }
-
-  isActiveWc25Script(script: Wc25Script): boolean {
-    return this.script()?.id === script.id;
   }
 }
