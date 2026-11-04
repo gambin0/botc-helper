@@ -87,6 +87,8 @@ interface RoleInfo {
   alignment: Alignment;
   regs: readonly Registration[];
   rule: RoleRule;
+  /** How many seats may hold this character (Witch Hunt's Witches, Village Idiots). */
+  maxCopies: number;
 }
 
 interface Evidence {
@@ -133,6 +135,8 @@ type SearchOutcome = { kind: 'sat'; world: Int16Array; free: number[] } | { kind
 
 class BudgetExceeded extends Error {}
 
+const BABYSITTER: Registration = { alignment: 'evil', team: 'demon', roleId: 'lilmonsta' };
+
 /** Small deterministic PRNG so results are reproducible. */
 function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
@@ -169,8 +173,15 @@ export class DeductionEngine {
   // Role groups
   private setupModifierRoles: number[] = [];
   private corrupterRoles: number[] = [];
+  private extraCopyDrunkRoles: number[] = [];
   private requiresRoles: number[] = [];
   private vortoxRole = -1;
+  /** Lycanthrope: grants a Faux Paw. */
+  private fauxPawRole = -1;
+  /** Fibbin (Fabled): extra false information allowed across the game. */
+  private gameWideFalseInfo = 0;
+  /** Lil' Monsta: a Demon that no player holds. */
+  private unseatedDemon = -1;
   private maxMinionsEver = 0;
   private ambiguousRole: boolean[] = [];
 
@@ -189,11 +200,15 @@ export class DeductionEngine {
   private freeSeats: number[] = [];
   private isFree = new Uint8Array(0);
   private freeAssigned = 0;
+  /** While filling interchangeable seats, roles below this index can no longer be placed. */
+  private freeFloor = -1;
 
   // Evaluation scratch state for InfoView
   private curReg: (Registration | null)[] = [];
   private curAlive: boolean[] = [];
   private curRedHerring = -1;
+  /** Lycanthrope's Faux Paw: a good player who registers as evil. */
+  private curFauxPaw = -1;
   private readonly view: InfoView;
   private readonly partialView: PartialInfoView;
   private partialAlignments: Set<Alignment>[] = [];
@@ -229,7 +244,8 @@ export class DeductionEngine {
     this.view = {
       seats: this.seatIds,
       isAlive: id => engine.curAlive[engine.seatIndex.get(id) ?? -1] ?? false,
-      alignment: id => engine.regOf(id).alignment,
+      alignment: id =>
+        engine.curFauxPaw >= 0 && engine.seatIndex.get(id) === engine.curFauxPaw ? 'evil' : engine.regOf(id).alignment,
       team: id => engine.regOf(id).team,
       registersAsRole: (id, roleId) => {
         const reg = engine.regOf(id);
@@ -254,6 +270,8 @@ export class DeductionEngine {
       if (this.roleIndex.has(id)) continue;
       const registered = RoleRegistry.get(id);
       const team = registered?.team ?? char.team;
+      // Fabled such as the Fibbin change the rules without occupying a seat.
+      this.gameWideFalseInfo += getRoleRule(id).gameWideFalseInfo ?? 0;
       if (!SEAT_TEAMS.includes(team)) continue; // Travellers, Fabled and Loric are not seat roles
       const info: RoleInfo = {
         id,
@@ -262,7 +280,8 @@ export class DeductionEngine {
         teamIdx: TEAM_INDEX[team]!,
         alignment: teamAlignment(team),
         regs: registrationsFor(id, team),
-        rule: getRoleRule(id)
+        rule: getRoleRule(id),
+        maxCopies: Math.max(1, char.maxCopies ?? getRoleRule(id).maxCopies ?? 1)
       };
       this.roleIndex.set(id, this.roles.length);
       this.roles.push(info);
@@ -274,17 +293,22 @@ export class DeductionEngine {
       }
       if (r.rule.setup?.requiresInPlay) this.requiresRoles.push(i);
       if (r.rule.corruptionCapacity) this.corrupterRoles.push(i);
+      if (r.rule.extraCopiesDrunk && r.maxCopies > 1) this.extraCopyDrunkRoles.push(i);
       if (r.rule.falsifiesTownsfolkInfo) this.vortoxRole = i;
+      if (r.rule.unseated && r.teamIdx === T_DEMON) this.unseatedDemon = i;
+      if (r.rule.grantsFauxPaw) this.fauxPawRole = i;
       this.ambiguousRole[i] = r.regs.length > 1;
     });
 
     this.maxMinionsEver =
       this.composition[T_MINION] +
+      (this.unseatedDemon >= 0 ? 1 : 0) +
       this.setupModifierRoles.reduce((sum, r) => sum + Math.max(0, this.roles[r].rule.setup?.minionDelta ?? 0), 0);
 
     const [, , minions] = this.composition;
-    const count = (t: number) => this.roles.filter(r => r.teamIdx === t).length;
-    if (count(T_DEMON) === 0) this.warnings.push('The role pool has no Demon.');
+    const count = (t: number) =>
+      this.roles.filter(r => r.teamIdx === t && !r.rule.unseated).reduce((n, r) => n + r.maxCopies, 0);
+    if (count(T_DEMON) === 0 && this.unseatedDemon < 0) this.warnings.push('The role pool has no Demon.');
     if (count(T_MINION) < minions) this.warnings.push(`The role pool has fewer than ${minions} Minions.`);
   }
 
@@ -302,6 +326,10 @@ export class DeductionEngine {
     const id = normalizeRoleId(roleId);
     const idx = this.roleIndex.get(id);
     return idx !== undefined ? this.roles[idx].name : (RoleRegistry.get(id)?.name ?? roleId);
+  }
+
+  private unseatedDemonInPool(): boolean {
+    return this.roles.some(r => r.rule.unseated && r.team === 'demon');
   }
 
   private teamOfAnyRole(roleId: string): Team | null {
@@ -435,7 +463,9 @@ export class DeductionEngine {
       this.addUnary(
         ev,
         seat,
-        this.maskWhere(r => r.team === 'demon' || r.id === 'saint'),
+        this.maskWhere(
+          r => r.team === 'demon' || r.id === 'saint' || (r.team === 'minion' && this.unseatedDemonInPool())
+        ),
         'The game ended on their execution, so they were the Demon (or Saint)'
       );
       return;
@@ -550,37 +580,49 @@ export class DeductionEngine {
   /**
    * Returns which truth values the info can take in the current (partial)
    * world, over all ways ambiguous characters may register.
-   * redHerring: a seat index, -1 for none, or 'any' to let any good target be it.
+   * redHerring / fauxPaw: a seat index, -1 for none, or 'any' to let any good involved player be it.
    */
-  private outcomes(c: InfoConstraint, redHerring: number | 'any'): { canTrue: boolean; canFalse: boolean } {
+  private outcomes(
+    c: InfoConstraint,
+    redHerring: number | 'any',
+    fauxPaw: number | 'any' = -1
+  ): { canTrue: boolean; canFalse: boolean } {
     if (c.alwaysFalse) return { canTrue: false, canFalse: true };
     const seats = c.involved ?? this.seatIds.map((_, i) => i);
     this.curAlive = c.alive;
     const ambiguous: number[] = [];
+    // With Lil' Monsta in play, the babysitting Minion "is the Demon".
+    const babysitter = this.unseatedDemon >= 0 && this.teamCount[T_DEMON] === 0;
+    const regsOf = (s: number): readonly Registration[] => {
+      const role = this.roles[this.world[s]];
+      return babysitter && role.teamIdx === T_MINION ? [...role.regs, BABYSITTER] : role.regs;
+    };
     for (const s of seats) {
-      const r = this.world[s];
-      this.curReg[s] = this.roles[r].regs[0];
-      if (this.ambiguousRole[r]) ambiguous.push(s);
+      const regs = regsOf(s);
+      this.curReg[s] = regs[0];
+      if (regs.length > 1) ambiguous.push(s);
     }
-    const herrings: number[] =
-      redHerring === 'any'
-        ? [-1, ...seats.filter(s => this.roles[this.world[s]].alignment === 'good')]
-        : [redHerring];
+    const goodSeats = () => seats.filter(s => this.roles[this.world[s]].alignment === 'good');
+    const herrings: number[] = redHerring === 'any' ? [-1, ...goodSeats()] : [redHerring];
+    const paws: number[] = fauxPaw === 'any' ? [-1, ...goodSeats()] : [fauxPaw];
 
     let canTrue = false;
     let canFalse = false;
     const recurse = (k: number): boolean => {
       if (k === ambiguous.length) {
         for (const rh of herrings) {
-          this.curRedHerring = rh;
-          if (c.spec.check(c.payload, this.seatIds[c.source], this.view)) canTrue = true;
-          else canFalse = true;
-          if (canTrue && canFalse) return true;
+          for (const fp of paws) {
+            this.curRedHerring = rh;
+            this.curFauxPaw = fp;
+            if (c.spec.check(c.payload, this.seatIds[c.source], this.view)) canTrue = true;
+            else canFalse = true;
+            if (canTrue && canFalse) return true;
+          }
         }
         return false;
       }
       const s = ambiguous[k];
-      for (const reg of this.roles[this.world[s]].regs) {
+      for (const reg of regsOf(s)) {
         this.curReg[s] = reg;
         if (recurse(k + 1)) return true;
       }
@@ -588,6 +630,7 @@ export class DeductionEngine {
     };
     recurse(0);
     this.curRedHerring = -1;
+    this.curFauxPaw = -1;
     return { canTrue, canFalse };
   }
 
@@ -595,13 +638,24 @@ export class DeductionEngine {
     return getRoleRule(c.infoRole).hasRedHerring === true;
   }
 
+  /** During search: could a Faux Paw exist in this world? */
+  private fauxPawMode(complete: boolean): 'any' | -1 {
+    if (this.fauxPawRole < 0) return -1;
+    return this.used[this.fauxPawRole] || (!complete && this.placeable(this.fauxPawRole)) ? 'any' : -1;
+  }
+
   // ---------------------------------------------------------------------------
   // Composition
   // ---------------------------------------------------------------------------
 
+  /** All copies of role r are already seated. */
+  private full(r: number): boolean {
+    return this.used[r] >= this.roles[r].maxCopies;
+  }
+
   /** Can role r still appear given the current partial assignment? */
   private placeable(r: number): boolean {
-    if (this.used[r] || this.assignedCount >= this.n) return false;
+    if (this.full(r) || this.assignedCount >= this.n || r < this.freeFloor) return false;
     const t = this.roles[r].teamIdx;
     if (t === T_DEMON) return this.teamCount[T_DEMON] < this.composition[T_DEMON];
     if (t === T_MINION) return this.teamCount[T_MINION] < this.maxMinionsEver;
@@ -641,8 +695,12 @@ export class DeductionEngine {
     const [tf, out, min, dem] = this.teamCount;
     const demons = this.composition[T_DEMON];
     const { outsiders, minMinions, maxMinions } = this.compositionTargets(complete);
+    // Lil' Monsta: no Demon seat, one extra Minion.
+    const unseated = this.unseatedDemon >= 0;
     if (complete) {
-      return dem === demons && min === minMinions && outsiders.has(out) && tf + out + min + dem === this.n;
+      if (tf + out + min + dem !== this.n || !outsiders.has(out)) return false;
+      if (dem === demons) return min === minMinions;
+      return unseated && dem === 0 && min === minMinions + 1;
     }
     let oMin = Infinity;
     let oMax = -Infinity;
@@ -650,14 +708,68 @@ export class DeductionEngine {
       oMin = Math.min(oMin, x);
       oMax = Math.max(oMax, x);
     }
-    if (dem > demons || min > maxMinions || out > oMax) return false;
+    if (dem > demons || min > maxMinions + (unseated && dem === 0 ? 1 : 0) || out > oMax) return false;
+    // Either layout has the same number of evil seats, so Townsfolk bounds are unchanged.
     const tfMax = this.n - demons - minMinions - oMin;
     const tfMin = this.n - demons - maxMinions - oMax;
     if (tf > tfMax) return false;
     const remaining = this.n - this.assignedCount;
-    const needed =
-      (demons - dem) + Math.max(0, minMinions - min) + Math.max(0, oMin - out) + Math.max(0, tfMin - tf);
-    return needed <= remaining;
+    const evilNeeded = Math.max(0, demons + minMinions - dem - min);
+    const needed = (unseated ? evilNeeded : demons - dem + Math.max(0, minMinions - min)) +
+      Math.max(0, oMin - out) + Math.max(0, tfMin - tf);
+    if (needed > remaining) return false;
+    return this.freeCapacityOk([
+      Math.max(0, tfMin - tf),
+      Math.max(0, oMin - out),
+      unseated ? 0 : Math.max(0, minMinions - min),
+      unseated ? 0 : demons - dem
+    ]);
+  }
+
+  /**
+   * Village Idiot: with 2+ copies in play, one of them is drunk all game, so
+   * false info from a single Village Idiot needs no other explanation.
+   */
+  private drunkCopyRole(c: InfoConstraint, complete: boolean): number {
+    const r = this.world[c.source];
+    if (r < 0 || !this.extraCopyDrunkRoles.includes(r)) return -1;
+    if (this.used[r] >= 2 || (!complete && this.placeable(r))) return r;
+    return -1;
+  }
+
+  /** "Requires X in play" (Huntsman → Damsel) is still achievable. */
+  private requirementsPlaceable(): boolean {
+    let targets: ReturnType<DeductionEngine['compositionTargets']> | null = null;
+    for (const r of this.requiresRoles) {
+      if (!this.used[r]) continue;
+      for (const req of this.roles[r].rule.setup!.requiresInPlay!) {
+        const q = this.roleIndex.get(req);
+        if (q === undefined) return false;
+        if (this.used[q]) continue;
+        if (!this.placeable(q)) return false;
+        // There must also be room on the required role's team.
+        targets ??= this.compositionTargets(false);
+        const t = this.roles[q].teamIdx;
+        if (t === T_OUTSIDER && this.teamCount[T_OUTSIDER] >= Math.max(...targets.outsiders)) return false;
+        if (t === T_MINION && this.teamCount[T_MINION] >= targets.maxMinions + (this.unseatedDemon >= 0 ? 1 : 0)) return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * While filling interchangeable seats in canonical order, only roles at or
+   * above the floor remain. Checks each team can still reach its minimum.
+   */
+  private freeCapacityOk(needed: readonly number[]): boolean {
+    if (this.freeFloor < 0) return true;
+    const avail = [0, 0, 0, 0];
+    for (let r = this.freeFloor; r < this.roles.length; r++) {
+      const role = this.roles[r];
+      if (role.rule.unseated) continue;
+      avail[role.teamIdx] += role.maxCopies - this.used[r];
+    }
+    return needed.every((need, t) => need <= avail[t]);
   }
 
   private corruptionCapacity(complete: boolean): number {
@@ -683,6 +795,7 @@ export class DeductionEngine {
     for (let p = 0; p < this.n; p++) {
       const d: number[] = [];
       for (let r = 0; r < this.roles.length; r++) {
+        if (this.roles[r].rule.unseated) continue;
         if (pin && pin[0] === p && pin[1] !== r) continue;
         let ok = true;
         for (const u of this.unary) {
@@ -735,6 +848,7 @@ export class DeductionEngine {
       }
     }
     this.freeAssigned = 0;
+    this.freeFloor = -1;
 
     this.active = active;
     this.world = new Int16Array(this.n).fill(-1);
@@ -768,7 +882,7 @@ export class DeductionEngine {
     for (let p = 0; p < this.n; p++) {
       if (this.world[p] >= 0 || this.isFree[p]) continue;
       let size = 0;
-      for (const r of domains[p]) if (!this.used[r]) size++;
+      for (const r of domains[p]) if (!this.full(r)) size++;
       if (size > bestSize) continue;
       let linked = 0;
       for (const q of this.links[p]) if (this.world[q] >= 0) linked++;
@@ -783,13 +897,16 @@ export class DeductionEngine {
     let minRole = 0;
     if (best < 0) {
       best = this.freeSeats[this.freeAssigned];
-      if (this.freeAssigned > 0) minRole = this.world[this.freeSeats[this.freeAssigned - 1]] + 1;
+      // Non-decreasing (not strictly increasing) so duplicated characters can repeat.
+      if (this.freeAssigned > 0) minRole = this.world[this.freeSeats[this.freeAssigned - 1]];
     }
     if (bestSize === 0) return false;
 
     const free = this.isFree[best] === 1;
+    const prevFloor = this.freeFloor;
     for (const r of domains[best]) {
-      if (this.used[r] || r < minRole) continue;
+      if (this.full(r) || r < minRole) continue;
+      if (free) this.freeFloor = r;
       const undo = this.assign(best, r);
       if (undo !== null) {
         if (free) this.freeAssigned++;
@@ -798,13 +915,14 @@ export class DeductionEngine {
         this.unassign(best, r, undo);
       }
     }
+    this.freeFloor = prevFloor;
     return false;
   }
 
   /** Assigns and checks partial consistency. Returns an undo log, or null if inconsistent (already undone). */
   private assign(p: number, r: number): [number, number][] | null {
     this.world[p] = r;
-    this.used[r] = 1;
+    this.used[r]++;
     this.teamCount[this.roles[r].teamIdx]++;
     this.assignedCount++;
     const undo: [number, number][] = [];
@@ -815,6 +933,7 @@ export class DeductionEngine {
     };
 
     if (!this.compositionOk(false)) return fail();
+    if (!this.requirementsPlaceable()) return fail();
 
     for (const gi of this.globalsBySeat[p]) {
       const g = this.globals[gi];
@@ -830,8 +949,9 @@ export class DeductionEngine {
       const c = this.infos[ci];
       if (!this.active[c.ev] || this.world[c.source] < 0) continue;
       if (c.involved!.some(s => this.world[s] < 0)) continue;
-      const verdict = this.judge(c, this.hasRedHerringRole(c) ? 'any' : -1, vortox);
+      const verdict = this.judge(c, this.hasRedHerringRole(c) ? 'any' : -1, vortox, this.fauxPawMode(false));
       if (verdict === 'impossible') return fail();
+      if (verdict === 'needs-corruption' && this.drunkCopyRole(c, false) >= 0) continue;
       if (verdict === 'needs-corruption') {
         let byNight = this.failing.get(c.night);
         if (!byNight) this.failing.set(c.night, (byNight = new Map()));
@@ -853,7 +973,7 @@ export class DeductionEngine {
     }
     undo.length = 0;
     this.world[p] = -1;
-    this.used[r] = 0;
+    this.used[r]--;
     this.teamCount[this.roles[r].teamIdx]--;
     this.assignedCount--;
     for (let i = 0; i < this.n; i++) if (this.world[i] < 0) this.curReg[i] = null;
@@ -868,11 +988,12 @@ export class DeductionEngine {
   private judge(
     c: InfoConstraint,
     redHerring: number | 'any',
-    vortox: 'yes' | 'maybe' | 'no'
+    vortox: 'yes' | 'maybe' | 'no',
+    fauxPaw: number | 'any' = -1
   ): 'ok' | 'needs-corruption' | 'impossible' {
     const genuine = this.roles[this.world[c.source]].id === c.infoRole;
     if (!genuine) return c.isPublic ? 'impossible' : 'ok';
-    const { canTrue, canFalse } = this.outcomes(c, redHerring);
+    const { canTrue, canFalse } = this.outcomes(c, redHerring, fauxPaw);
     if (c.isPublic) return canTrue ? 'ok' : 'impossible';
     if (c.vortoxApplies && vortox === 'maybe') return 'ok';
     const expectTrue = !(c.vortoxApplies && vortox === 'yes');
@@ -883,11 +1004,12 @@ export class DeductionEngine {
   private wholeCircleFailures(vortox: 'yes' | 'maybe' | 'no'): Map<number, Set<number>> {
     const extra = new Map<number, Set<number>>();
     if (this.wholeCircleInfos.length === 0) return extra;
+    const pawPossible = this.fauxPawMode(false) === 'any';
     this.partialAlignments = [];
     for (let s = 0; s < this.n; s++) {
       const r = this.world[s];
       this.partialAlignments.push(
-        r < 0 ? new Set<Alignment>(['good', 'evil']) : new Set(this.roles[r].regs.map(g => g.alignment))
+        r < 0 || pawPossible ? new Set<Alignment>(['good', 'evil']) : new Set(this.roles[r].regs.map(g => g.alignment))
       );
     }
     for (const ci of this.wholeCircleInfos) {
@@ -912,11 +1034,22 @@ export class DeductionEngine {
     const cap = this.corruptionCapacity(false);
     const extra = this.wholeCircleFailures(vortox);
     const nights = new Set([...this.failing.keys(), ...extra.keys()]);
+    const sizes: number[] = [];
     for (const night of nights) {
       const sources = new Set([...(this.failing.get(night)?.keys() ?? []), ...(extra.get(night) ?? [])]);
-      if (sources.size > cap) return false;
+      sizes.push(sources.size);
     }
-    return true;
+    return this.withinCorruption(sizes, cap);
+  }
+
+  /**
+   * Each night allows `cap` false sources; the Fibbin allows a few extra
+   * across the whole game.
+   */
+  private withinCorruption(perNight: number[], cap: number): boolean {
+    let excess = 0;
+    for (const size of perNight) excess += Math.max(0, size - cap);
+    return excess <= this.gameWideFalseInfo;
   }
 
   /** Exact check of a complete world. */
@@ -944,21 +1077,35 @@ export class DeductionEngine {
       for (let s = 0; s < this.n; s++) if (this.roles[this.world[s]].alignment === 'good') herrings.push(s);
     }
 
-    for (const rh of herrings) {
+    const paws = [-1];
+    if (this.fauxPawRole >= 0 && this.used[this.fauxPawRole]) {
+      for (let s = 0; s < this.n; s++) if (this.roles[this.world[s]].alignment === 'good') paws.push(s);
+    }
+
+    for (const rh of herrings) for (const fp of paws) {
       const failing = new Map<number, Set<number>>();
+      const add = (night: number, source: number) => {
+        if (!failing.has(night)) failing.set(night, new Set());
+        failing.get(night)!.add(source);
+      };
+      const drunkCopyFails: InfoConstraint[] = [];
       let ok = true;
       for (const c of activeInfos) {
-        const verdict = this.judge(c, rh, vortox);
+        const verdict = this.judge(c, rh, vortox, fp);
         if (verdict === 'impossible') {
           ok = false;
           break;
         }
-        if (verdict === 'needs-corruption') {
-          if (!failing.has(c.night)) failing.set(c.night, new Set());
-          failing.get(c.night)!.add(c.source);
-        }
+        if (verdict !== 'needs-corruption') continue;
+        if (this.drunkCopyRole(c, true) >= 0) drunkCopyFails.push(c);
+        else add(c.night, c.source);
       }
-      if (ok && [...failing.values()].every(s => s.size <= cap)) return true;
+      // Only one Village Idiot is the drunk one; any other false Village Idiot needs poisoning.
+      if (new Set(drunkCopyFails.map(c => c.source)).size > 1) {
+        const [first] = drunkCopyFails;
+        for (const c of drunkCopyFails) if (c.source !== first.source) add(c.night, c.source);
+      }
+      if (ok && this.withinCorruption([...failing.values()].map(s => s.size), cap)) return true;
     }
     return false;
   }
@@ -1047,6 +1194,7 @@ export class DeductionEngine {
       let canBeEvil = false;
       for (let r = 0; r < R; r++) {
         const role = this.roles[r];
+        if (role.rule.unseated) continue;
         if (possible[p][r]) {
           if (role.alignment === 'good') canBeGood = true;
           else canBeEvil = true;
@@ -1141,12 +1289,14 @@ export class DeductionEngine {
   private describeWorldNeeds(world: Int16Array): string {
     this.world = world;
     this.used = new Uint8Array(this.roles.length);
-    world.forEach(r => (this.used[r] = 1));
+    world.forEach(r => this.used[r]++);
     this.assignedCount = this.n;
     const vortox = this.vortoxState(true);
     const needing = new Set<number>();
     for (const c of this.infos) {
-      if (this.judge(c, this.hasRedHerringRole(c) ? 'any' : -1, vortox) === 'needs-corruption') needing.add(c.source);
+      if (this.judge(c, this.hasRedHerringRole(c) ? 'any' : -1, vortox, this.fauxPawMode(true)) === 'needs-corruption') {
+        needing.add(c.source);
+      }
     }
     if (needing.size === 0) return '';
     const names = [...needing].map(s => this.name(this.seatIds[s])).join(', ');

@@ -87,7 +87,9 @@ export function parseScript(input: unknown, fallbackId?: string): ParsedScript {
     if (!TEAMS.includes(team as Team)) {
       throw new ScriptParseError(`Character "${name}" has unknown team "${team}".`);
     }
-    characters.push({ id, name, team: team as Team, ability });
+    const special = Array.isArray(obj?.['special']) ? (obj!['special'] as { name?: unknown }[]) : [];
+    const duplicates = special.some(sp => sp?.name === 'bag-duplicate');
+    characters.push({ id, name, team: team as Team, ability, ...(duplicates ? { maxCopies: 15 } : {}) });
     warnings.push(`${name} is a homebrew character: the solver only applies generic rules to it.`);
   }
 

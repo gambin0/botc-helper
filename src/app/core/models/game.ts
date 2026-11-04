@@ -10,6 +10,8 @@ export interface ScriptCharacter {
   reminders?: string[];
   setup?: boolean;
   jinxes?: unknown[];
+  /** More than one player may hold this character (script "bag-duplicate"). */
+  maxCopies?: number;
 }
 
 export interface Script {

@@ -57,7 +57,12 @@ export function setupModifiers(characters: readonly ScriptCharacter[]): SetupMod
   const result: SetupModifierSummary[] = [];
   for (const c of characters) {
     const id = normalizeRoleId(c.id);
-    const setup = getRoleRule(id).setup;
+    const rule = getRoleRule(id);
+    if (rule.unseated) {
+      result.push({ roleId: id, name: RoleRegistry.get(id)?.name ?? c.name, effect: 'no Demon seat, +1 Minion' });
+      continue;
+    }
+    const setup = rule.setup;
     if (!setup) continue;
     const effects: string[] = [];
     if (setup.anyOutsiderCount) {

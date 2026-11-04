@@ -19,7 +19,7 @@ describe('setup counts', () => {
     ]);
     const pool = RoleRegistry.toScriptCharacters(['godfather', 'balloonist', 'lilmonsta', 'kazali', 'chef']);
     expect(setupModifiers(pool).map(m => m.effect)).toEqual([
-      '−1 or +1 Outsider', '+0 or +1 Outsider', '+1 Minion', 'any number of Outsiders'
+      '−1 or +1 Outsider', '+0 or +1 Outsider', 'no Demon seat, +1 Minion', 'any number of Outsiders'
     ]);
   });
 });

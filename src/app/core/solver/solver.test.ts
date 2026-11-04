@@ -410,6 +410,61 @@ describe('scripts are just role pools', () => {
     expect(possibleRoles(r, 'p2').sort()).toEqual(['cerenovus', 'vortox']);
   });
 
+  it('Lycanthrope: the Faux Paw is a good player who registers as evil', () => {
+    const base = ['steward', 'chef', 'empath', 'noble', 'knight', 'pixie', 'klutz', 'cerenovus', 'imp'];
+    const input = (ids: string[]) => ({
+      characters: pool(ids), players: players(7), self: me('p1', 'empath'),
+      events: [info('p1', { type: 'empath', count: 2 })], options: { assumeGoodPlayersHonest: false }
+    });
+    // Without the Lycanthrope both neighbours must be evil (and the setup itself is valid).
+    const without = solve(input(base));
+    expect(without.consistent).toBe(true);
+    expect(can(without, 'p2', 'chef')).toBe(false);
+    // With it, one of them may be the good Faux Paw.
+    expect(can(solve(input([...base, 'lycanthrope'])), 'p2', 'chef')).toBe(true);
+  });
+
+  it('Fibbin allows one piece of false information per game, not per night', () => {
+    const ids = ['steward', 'chef', 'empath', 'noble', 'knight', 'pixie', 'klutz', 'cerenovus', 'imp'];
+    const events = [
+      claim('p2', 'imp', 'confirmed'),
+      claim('p3', 'cerenovus', 'confirmed'),
+      info('p1', { type: 'steward', player: 'p2' }, 1)
+    ];
+    const self = me('p1', 'steward');
+    expect(solve({ characters: pool(ids), players: players(7), self, events }).consistent).toBe(false);
+    const withFibbin = pool([...ids, 'fibbin']);
+    expect(solve({ characters: withFibbin, players: players(7), self, events }).consistent).toBe(true);
+    // A second false reading on another night is one too many.
+    const twice = [...events, claim('p4', 'noble', 'confirmed'), info('p4', { type: 'noble', players: ['p1', 'p5', 'p6'] }, 2)];
+    expect(solve({ characters: withFibbin, players: players(7), self, events: twice }).consistent).toBe(false);
+  });
+
+  it('logs Shugenja, Village Idiot and Balloonist info', () => {
+    const ids = ['shugenja', 'villageidiot', 'balloonist', 'chef', 'empath', 'noble', 'knight', 'klutz', 'cerenovus', 'imp'];
+    const base = { characters: pool(ids), players: players(7), options: { assumeGoodPlayersHonest: false } };
+    // Shugenja in seat 1: closest evil is clockwise, so seat 2 being the Imp fits and seat 7 alone does not.
+    const shu = solve({ ...base, self: me('p1', 'shugenja'), events: [claim('p7', 'imp', 'confirmed'), info('p1', { type: 'shugenja', yes: true })] });
+    expect(can(shu, 'p2', 'cerenovus')).toBe(true);
+    expect(can(shu, 'p6', 'cerenovus')).toBe(false);
+    // The Village Idiot sees a confirmed Chef as evil. That is only possible if you are the drunk
+    // extra Village Idiot, so it fits while another Village Idiot could be in play...
+    const chef = claim('p2', 'chef', 'confirmed');
+    const reading = info('p1', { type: 'villageidiot', player: 'p2', yes: true });
+    const vi = solve({ ...base, self: me('p1', 'villageidiot'), events: [chef, reading] });
+    expect(vi.consistent).toBe(true);
+    expect(vi.ignoredEvidence).toEqual([]);
+    // ...and contradicts the evidence once nobody else can be a Village Idiot.
+    const others = [['p3', 'empath'], ['p4', 'noble'], ['p5', 'knight'], ['p6', 'imp'], ['p7', 'cerenovus']]
+      .map(([p, r]) => claim(p, r, 'confirmed'));
+    const alone = solve({ ...base, self: me('p1', 'villageidiot'), events: [chef, ...others, reading] });
+    expect(alone.consistent).toBe(false);
+    // Balloonist: tonight's player is a different type from last night's Townsfolk.
+    const bal = solve({ ...base, self: me('p1', 'balloonist'), events: [claim('p2', 'chef', 'confirmed'), info('p1', { type: 'balloonist', players: ['p2', 'p3'] })] });
+    expect(can(bal, 'p3', 'empath')).toBe(false);
+    expect(can(bal, 'p3', 'imp')).toBe(true);
+  });
+
   it('handles 15 players with lots of evidence in reasonable time', () => {
     const ps = players(15);
     const started = Date.now();

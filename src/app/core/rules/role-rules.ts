@@ -48,6 +48,16 @@ export interface RoleRule {
   corruptionCapacity?: number;
   /** Vortox: all Townsfolk information is false. */
   falsifiesTownsfolkInfo?: boolean;
+  /** A character no player holds (Lil' Monsta). */
+  unseated?: boolean;
+  /** How many seats may hold this character (default 1). */
+  maxCopies?: number;
+  /** Village Idiot: if there are extra copies, one of them is drunk. */
+  extraCopiesDrunk?: boolean;
+  /** Lycanthrope: one good player (the Faux Paw) registers as evil. */
+  grantsFauxPaw?: boolean;
+  /** Fibbin: this many pieces of false information are allowed across the game. */
+  gameWideFalseInfo?: number;
   /** Fortune Teller: one good player registers as the Demon to them. */
   hasRedHerring?: boolean;
   /**
@@ -90,8 +100,9 @@ const ROLE_RULES: Record<string, RoleRule> = {
     approximation: 'Evil players sitting in a line is not enforced.'
   },
   lilmonsta: {
-    setup: { minionDelta: 1 },
-    approximation: "Lil' Monsta is treated as a seated Demon; babysitting is not modelled."
+    // No player holds Lil' Monsta: there is one extra Minion instead, and the
+    // babysitting Minion registers as the Demon. Handled by the solver.
+    unseated: true
   },
   huntsman: { setup: { requiresInPlay: ['damsel'] } },
   choirboy: { setup: { requiresInPlay: ['king'] } },
@@ -114,6 +125,8 @@ const ROLE_RULES: Record<string, RoleRule> = {
   // --- Information modifiers ---
   vortox: { falsifiesTownsfolkInfo: true },
   fortuneteller: { hasRedHerring: true },
+  lycanthrope: { grantsFauxPaw: true },
+  fibbin: { gameWideFalseInfo: 1 },
 
   // --- Known gaps ---
   imp: { approximation: 'Star-passing is not modelled: roles shown are starting characters.' },
@@ -121,7 +134,7 @@ const ROLE_RULES: Record<string, RoleRule> = {
   legion: { approximation: 'Multiple Legion players are not modelled.' },
   atheist: { approximation: 'Games with no evil characters are not modelled.' },
   summoner: { approximation: 'Games that start with no Demon are not modelled.' },
-  villageidiot: { approximation: 'Extra Village Idiots are not modelled.' },
+  villageidiot: { maxCopies: 3, extraCopiesDrunk: true },
   marionette: { approximation: 'The Marionette neighbouring the Demon is not enforced.' }
 };
 

@@ -269,6 +269,55 @@ const SPECS: InfoSpec[] = [
   }
 ];
 
+/** Steps to the nearest evil player going one way round the circle (Infinity if none). */
+function stepsToEvil(seats: readonly string[], from: string, dir: 1 | -1, isEvil: (id: string) => boolean): number {
+  const n = seats.length;
+  const idx = seats.indexOf(from);
+  for (let k = 1; k < n; k++) {
+    if (isEvil(seats[(((idx + dir * k) % n) + n) % n])) return k;
+  }
+  return Infinity;
+}
+
+SPECS.push(
+  {
+    roleId: 'shugenja',
+    prompt: 'You start knowing if your closest evil player is clockwise or anti-clockwise. Clockwise means towards higher seat numbers.',
+    fields: [{ key: 'yes', kind: 'boolean', label: 'Closest evil player is', trueLabel: 'Clockwise (higher seats)', falseLabel: 'Anti-clockwise (lower seats)' }],
+    involved: () => 'all',
+    check: (p, src, v) => {
+      const isEvil = (id: string) => id !== src && v.alignment(id) === 'evil';
+      const cw = stepsToEvil(v.seats, src, 1, isEvil);
+      const ccw = stepsToEvil(v.seats, src, -1, isEvil);
+      if (cw === ccw) return true; // equidistant: the info is arbitrary
+      return (cw < ccw) === !!p.yes;
+    },
+    describe: p => `learnt their closest evil player is ${p.yes ? 'clockwise' : 'anti-clockwise'}`
+  },
+  {
+    roleId: 'villageidiot',
+    prompt: 'Each night, choose a player: you learn their alignment.',
+    fields: [
+      { key: 'player', kind: 'player', label: 'Player chosen' },
+      { key: 'yes', kind: 'boolean', label: 'Alignment shown', trueLabel: 'Evil', falseLabel: 'Good' }
+    ],
+    involved: p => (p.player ? [p.player] : []),
+    check: (p, _src, v) => !!p.player && (v.alignment(p.player) === 'evil') === !!p.yes,
+    describe: (p, name) => `learnt ${name(p.player)} is ${p.yes ? 'EVIL' : 'good'}`
+  },
+  {
+    roleId: 'balloonist',
+    prompt: 'Each night, you learn a player of a different character type than last night. Enter last night\'s and tonight\'s players.',
+    fields: [{ key: 'players', kind: 'players', count: 2, label: 'Shown (1 = last night, 2 = tonight)' }],
+    involved: p => p.players ?? [],
+    check: (p, _src, v) => {
+      const ids = pair(p);
+      return !!ids && v.team(ids[0]) !== v.team(ids[1]);
+    },
+    describe: (p, name) => `was shown ${name(p.players?.[0])} then ${name(p.players?.[1])} (different character types)`
+  }
+);
+
 const SPEC_MAP = new Map(SPECS.map(s => [s.roleId, s]));
 
 export function getInfoSpec(roleId: string): InfoSpec | undefined {
