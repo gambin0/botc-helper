@@ -6,7 +6,9 @@ import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { GameStateService } from '../../core/services/game-state.service';
-import { SetupCountsComponent } from './setup-counts.component';
+import { ThemeService } from '../../core/services/theme.service';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { SetupCountsComponent } from '../../shared/setup-counts/setup-counts.component';
 
 @Component({
   selector: 'app-new-game-dialog',
@@ -34,6 +36,7 @@ class NewGameDialog {}
     MatInputModule,
     MatIconModule,
     MatDialogModule,
+    MatButtonToggleModule,
     SetupCountsComponent
   ],
   template: `
@@ -74,6 +77,21 @@ class NewGameDialog {}
         </mat-card>
       }
 
+      <mat-card>
+        <mat-card-content>
+          <h2 class="setting">Appearance</h2>
+          <mat-button-toggle-group
+            aria-label="Appearance"
+            [value]="theme.mode()"
+            (change)="theme.setMode($event.value)"
+          >
+            <mat-button-toggle value="system">System</mat-button-toggle>
+            <mat-button-toggle value="light">Light</mat-button-toggle>
+            <mat-button-toggle value="dark">Dark</mat-button-toggle>
+          </mat-button-toggle-group>
+        </mat-card-content>
+      </mat-card>
+
       @if (hasGame()) {
         <button mat-stroked-button (click)="confirmNewGame()">
           <mat-icon aria-hidden="true">restart_alt</mat-icon> New game
@@ -91,6 +109,10 @@ class NewGameDialog {}
     mat-card {
       margin-bottom: 16px;
     }
+    .setting {
+      font-size: 1rem;
+      margin: 0 0 8px;
+    }
     .full-width {
       width: 100%;
     }
@@ -99,6 +121,7 @@ class NewGameDialog {}
 export class GameComponent {
   private gameState = inject(GameStateService);
   private dialog = inject(MatDialog);
+  protected readonly theme = inject(ThemeService);
 
   readonly script = this.gameState.script;
   readonly game = this.gameState.game;

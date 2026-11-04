@@ -29,9 +29,9 @@ import { compositionFor, setupModifiers } from '../../core/rules/setup';
     .cell { border-radius: 8px; padding: 8px 4px; text-align: center; }
     dt { font-size: 0.75rem; font-weight: 500; }
     dd { margin: 0; font-size: 1.5rem; font-weight: 700; }
-    .good { background: #e8f0fe; color: #0b3d91; }
-    .evil { background: #fce8e6; color: #8c1d18; }
-    .note { color: #5f6368; font-size: 0.85rem; margin: 8px 0 4px; }
+    .good { background: var(--app-good-bg); color: var(--app-good-fg); }
+    .evil { background: var(--app-evil-bg); color: var(--app-evil-fg); }
+    .note { color: var(--app-muted); font-size: 0.85rem; margin: 8px 0 4px; }
     .mods { margin: 0; padding-left: 20px; font-size: 0.9rem; }
   `
 })

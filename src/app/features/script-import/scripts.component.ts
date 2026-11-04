@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal, viewChild } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -9,6 +9,7 @@ import { GameStateService } from '../../core/services/game-state.service';
 import { ScriptImportService } from '../../core/script/script-import.service';
 import { TROUBLE_BREWING_SCRIPT } from '../../core/constants/trouble-brewing';
 import { Script } from '../../core/models/game';
+import { RolePickerComponent } from './role-picker.component';
 
 const WC25_IDS = [
   '1daymore', 'beautifulhouse', 'binarysupernovae', 'buyersremorse', 'deadcouncil', 'deadpeople',
@@ -18,7 +19,7 @@ const WC25_IDS = [
 
 @Component({
   selector: 'app-scripts',
-  imports: [MatButtonModule, MatCardModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressSpinnerModule],
+  imports: [MatButtonModule, MatCardModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressSpinnerModule, RolePickerComponent],
   template: `
     <main class="page">
       <h1>Scripts</h1>
@@ -44,6 +45,40 @@ const WC25_IDS = [
       @if (loading()) {
         <mat-spinner diameter="32" aria-label="Loading scripts" />
       }
+
+      <h2>Your custom pools</h2>
+      @if (gameState.customScripts().length === 0) {
+        <p class="meta">None yet. Build one below.</p>
+      } @else {
+        <ul class="list">
+          @for (s of gameState.customScripts(); track s.id) {
+            <li class="item">
+              <div>
+                <div class="name">{{ s.name }}</div>
+                <div class="meta">{{ s.characters.length }} characters</div>
+              </div>
+              <div class="buttons">
+                @if (activeId() === s.id) {
+                  <span class="active"><mat-icon aria-hidden="true">check_circle</mat-icon> Active</span>
+                } @else {
+                  <button mat-stroked-button (click)="use(s)" [attr.aria-label]="'Use ' + s.name">Use</button>
+                }
+                <button mat-button (click)="edit(s)" [attr.aria-label]="'Edit ' + s.name">Edit</button>
+                @if (confirmDelete() === s.id) {
+                  <button mat-button class="danger" (click)="remove(s.id)" [attr.aria-label]="'Confirm delete ' + s.name">Confirm delete</button>
+                } @else {
+                  <button mat-button (click)="confirmDelete.set(s.id)" [attr.aria-label]="'Delete ' + s.name">Delete</button>
+                }
+              </div>
+            </li>
+          }
+        </ul>
+      }
+
+      <details class="builder" [open]="builderOpen()" (toggle)="builderOpen.set($any($event.target).open)">
+        <summary><h2 class="inline">Build a custom role pool</h2></summary>
+        <app-role-picker [scripts]="startOptions()" />
+      </details>
 
       <h2>Import</h2>
       <mat-card>
@@ -74,14 +109,19 @@ const WC25_IDS = [
     .page { padding: 16px; }
     h1 { margin-top: 0; }
     h2 { font-size: 1.15rem; margin: 24px 0 8px; }
-    .intro, .meta, .note { color: #5f6368; font-size: 0.9rem; }
+    .intro, .meta, .note { color: var(--app-muted); font-size: 0.9rem; }
     .list { list-style: none; padding: 0; margin: 0; }
-    .item { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid #e0e0e0; }
+    .item { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--app-border); }
     .name { font-weight: 500; }
-    .active { display: inline-flex; align-items: center; gap: 4px; color: #146c2e; font-weight: 500; }
+    .active { display: inline-flex; align-items: center; gap: 4px; color: var(--app-ok-fg); font-weight: 500; }
     .full { width: 100%; }
     .import-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 12px; }
-    .error { color: #b3261e; }
+    .error { color: var(--app-danger-fg); }
+    .buttons { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px; }
+    .danger { color: var(--app-danger-fg); }
+    .builder { margin-top: 24px; }
+    .builder summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; }
+    .inline { display: inline; margin: 0; }
   `
 })
 export class ScriptsComponent {
@@ -95,6 +135,10 @@ export class ScriptsComponent {
   protected readonly importWarnings = signal<string[]>([]);
 
   protected readonly bundled = computed(() => [TROUBLE_BREWING_SCRIPT, ...this.wc25()]);
+  protected readonly startOptions = computed(() => [...this.bundled(), ...this.gameState.customScripts()]);
+  protected readonly builderOpen = signal(false);
+  protected readonly confirmDelete = signal<string | null>(null);
+  private readonly picker = viewChild(RolePickerComponent);
   protected readonly activeId = computed(() => this.gameState.script()?.id ?? TROUBLE_BREWING_SCRIPT.id);
 
   constructor() {
@@ -111,6 +155,16 @@ export class ScriptsComponent {
 
   protected use(script: Script): void {
     this.gameState.setScript(script);
+  }
+
+  protected edit(script: Script): void {
+    this.builderOpen.set(true);
+    this.picker()?.load(script, true);
+  }
+
+  protected remove(id: string): void {
+    this.gameState.deleteCustomScript(id);
+    this.confirmDelete.set(null);
   }
 
   protected importText(): void {

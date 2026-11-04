@@ -38,28 +38,28 @@ import { MatIconModule } from '@angular/material/icon';
       display: flex;
       justify-content: space-around;
       align-items: center;
-      background: white;
-      border-top: 1px solid #e0e0e0;
+      background: var(--mat-sys-surface-container);
+      border-top: 1px solid var(--app-border);
       padding: 8px 0;
       z-index: 100;
-      box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+      box-shadow: 0 -2px 10px rgb(0 0 0 / 0.15);
     }
     .nav-item {
       display: flex;
       flex-direction: column;
       align-items: center;
       text-decoration: none;
-      color: #666;
+      color: var(--app-muted);
       font-size: 12px;
       padding: 4px 8px;
       transition: color 0.2s;
       min-width: 0;
     }
     .nav-item:hover {
-      color: #3f51b5;
+      color: var(--app-accent);
     }
     .nav-item.active {
-      color: #3f51b5;
+      color: var(--app-accent);
       font-weight: bold;
     }
     .nav-item mat-icon {

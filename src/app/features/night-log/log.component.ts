@@ -51,12 +51,12 @@ const ICONS: Record<string, string> = {
   styles: `
     .page { padding: 16px; }
     h1 { margin-top: 0; }
-    .intro { color: #5f6368; font-size: 0.9rem; }
+    .intro { color: var(--app-muted); font-size: 0.9rem; }
     .events { list-style: none; padding: 0; margin: 0; }
-    .event { display: flex; align-items: flex-start; gap: 12px; padding: 8px 0; border-bottom: 1px solid #e0e0e0; }
+    .event { display: flex; align-items: flex-start; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--app-border); }
     .icon { margin-top: 2px; flex-shrink: 0; }
     .text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-    .meta { font-size: 0.8rem; color: #5f6368; margin-top: 2px; }
+    .meta { font-size: 0.8rem; color: var(--app-muted); margin-top: 2px; }
   `
 })
 export class LogComponent {

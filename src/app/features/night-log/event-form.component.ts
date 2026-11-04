@@ -122,7 +122,7 @@ const TRUST_OPTIONS: { value: ClaimTrust; label: string; hint: string }[] = [
     .full { width: 100%; }
     .radios { display: flex; flex-direction: column; margin-bottom: 12px; }
     .radio-label { font-weight: 500; margin-top: 4px; }
-    .hint { color: #5f6368; font-size: 0.85em; }
+    .hint { color: var(--app-muted); font-size: 0.85em; }
   `
 })
 export class EventFormComponent {

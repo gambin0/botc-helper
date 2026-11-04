@@ -31,8 +31,8 @@ import { RoleRegistry } from '../../core/roles/role-registry';
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      background: #e0e0e0;
-      color: #424242;
+      background: var(--app-surface-alt);
+      color: var(--mat-sys-on-surface);
       font-weight: 600;
     }
   `

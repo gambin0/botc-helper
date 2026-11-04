@@ -145,19 +145,19 @@ interface PlayerRow {
     .page { padding: 16px; }
     h1 { margin-top: 0; }
     .summary { margin-bottom: 16px; }
-    .summary.bad { border: 2px solid #b3261e; }
+    .summary.bad { border: 2px solid var(--app-danger-border); }
     .status { display: flex; align-items: center; gap: 8px; font-weight: 600; }
-    .note { color: #5f6368; font-size: 0.85rem; }
+    .note { color: var(--app-muted); font-size: 0.85rem; }
     .section { font-size: 0.95rem; margin: 8px 0 4px; }
     .roles, .impossible { list-style: none; padding: 0; margin: 0; }
     .role { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
     .role.confirmed { font-weight: 700; }
     .align { font-weight: 600; margin-right: 8px; }
-    .align-good { color: #0b57d0; }
-    .align-evil { color: #b3261e; }
+    .align-good { color: var(--app-good-fg); }
+    .align-evil { color: var(--app-evil-fg); }
     .imp-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-    .reason, .why { font-size: 0.85rem; color: #444; margin-bottom: 6px; }
-    .why { background: #f3f3f3; border-radius: 8px; padding: 8px; }
+    .reason, .why { font-size: 0.85rem; color: var(--app-muted); margin-bottom: 6px; }
+    .why { background: var(--app-surface-alt); border-radius: 8px; padding: 8px; }
     .why p { margin: 0 0 4px; }
     details { margin-top: 8px; }
     summary { cursor: pointer; padding: 6px 0; }

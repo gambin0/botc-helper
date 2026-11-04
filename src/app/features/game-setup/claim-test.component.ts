@@ -92,15 +92,15 @@ const VERDICT_LABEL: Record<WhatIfVerdict, string> = {
   styles: `
     .panel { margin-top: 12px; }
     summary { cursor: pointer; font-weight: 500; min-height: 44px; display: flex; align-items: center; }
-    .note, .small { color: #5f6368; font-size: 0.85rem; }
-    .warn { color: #8c1d18; font-size: 0.85rem; }
+    .note, .small { color: var(--app-muted); font-size: 0.85rem; }
+    .warn { color: var(--app-danger-fg); font-size: 0.85rem; }
     .row { display: flex; gap: 8px; }
     .grow { flex: 1; }
     .night { width: 96px; }
     .result { margin-top: 12px; padding: 12px; border-radius: 8px; border-left: 6px solid; }
-    .result.quiet { border-color: #146c2e; background: #e6f4ea; }
-    .result.reveals { border-color: #7a5900; background: #fef7e0; }
-    .result.exposed, .result.contradiction { border-color: #b3261e; background: #fce8e6; }
+    .result.quiet { border-color: var(--app-ok-border); background: var(--app-ok-bg); }
+    .result.reveals { border-color: var(--app-warn-border); background: var(--app-warn-bg); }
+    .result.exposed, .result.contradiction { border-color: var(--app-danger-border); background: var(--app-danger-bg); }
     .verdict { font-size: 1.05rem; margin: 0 0 4px; }
     .sub { font-size: 0.95rem; margin: 12px 0 4px; }
     ul { margin: 0; padding-left: 20px; }

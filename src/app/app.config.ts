@@ -5,6 +5,7 @@ import { provideAnimations } from '@angular/platform-browser/animations';
 import { routes } from './app.routes';
 import { GameStateService } from './core/services/game-state.service';
 import { DatabaseService } from './core/storage/database.service';
+import { ThemeService } from './core/services/theme.service';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -14,6 +15,7 @@ export const appConfig: ApplicationConfig = {
     provideAppInitializer(async () => {
       const db = inject(DatabaseService);
       const gameState = inject(GameStateService);
+      inject(ThemeService); // apply the saved appearance before first render
       await db.init();
       await gameState.loadCurrentGame();
     })

@@ -69,16 +69,16 @@ const RATING_LABEL: Record<BluffRating, string> = { safe: 'Not in play', possibl
     .guide { margin-top: 12px; }
     summary { cursor: pointer; font-weight: 500; min-height: 44px; display: flex; align-items: center; }
     .focus { font-weight: 500; }
-    .note, .why, .team { color: #5f6368; font-size: 0.85rem; }
+    .note, .why, .team { color: var(--app-muted); font-size: 0.85rem; }
     .sub { font-size: 1rem; margin: 16px 0 8px; }
     .full { width: 100%; margin-bottom: 8px; }
     .bluffs { list-style: none; padding: 0; margin: 0; }
-    .bluffs li { padding: 6px 0; border-bottom: 1px solid #e0e0e0; }
+    .bluffs li { padding: 6px 0; border-bottom: 1px solid var(--app-border); }
     .badge { display: inline-block; min-width: 104px; margin-right: 8px; padding: 1px 6px; border-radius: 4px;
-             font-size: 0.75rem; font-weight: 700; text-align: center; color: #fff; }
-    .badge.safe { background: #146c2e; }
-    .badge.possible { background: #7a5900; }
-    .badge.avoid { background: #b3261e; }
+             font-size: 0.75rem; font-weight: 700; text-align: center; color: var(--app-badge-fg); }
+    .badge.safe { background: var(--app-badge-safe); }
+    .badge.possible { background: var(--app-badge-possible); }
+    .badge.avoid { background: var(--app-badge-avoid); }
   `
 })
 export class RoleGuideComponent {

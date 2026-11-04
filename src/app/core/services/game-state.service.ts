@@ -51,6 +51,8 @@ export class GameStateService {
    * persisted: it is masked again after every reload.
    */
   readonly revealSelf = signal(false);
+  /** Role pools the user built with the custom picker. */
+  readonly customScripts = signal<Script[]>([]);
   /** Not-in-play characters the Storyteller showed you as the Demon. */
   readonly demonBluffs = signal<string[]>([]);
 
@@ -160,6 +162,18 @@ export class GameStateService {
   selectRoles(roleIds: string[]): void {
     this.customRoles.set(RoleRegistry.toScriptCharacters(roleIds));
     this.persistState();
+  }
+
+  /** Saves (or replaces, by ID) a custom role pool and makes it active. */
+  saveCustomScript(script: Script): void {
+    this.customScripts.update(list => [...list.filter(s => s.id !== script.id), script]);
+    this.db.saveCustomScripts(this.customScripts());
+    this.setScript(script);
+  }
+
+  deleteCustomScript(id: string): void {
+    this.customScripts.update(list => list.filter(s => s.id !== id));
+    this.db.saveCustomScripts(this.customScripts());
   }
 
   setDemonBluffs(roleIds: string[]): void {
@@ -320,6 +334,7 @@ export class GameStateService {
   // ---------------------------------------------------------------------------
 
   async loadCurrentGame(): Promise<boolean> {
+    this.customScripts.set(await this.db.listCustomScripts());
     try {
       const saved = await this.db.getGameState();
       if (!saved) {

@@ -123,20 +123,20 @@ import { RevealToggleComponent } from '../../shared/reveal-toggle/reveal-toggle.
     .page { padding: 16px; }
     h1 { margin-top: 0; }
     .card { margin-bottom: 16px; }
-    .conflict { border-left: 6px solid #b3261e; background: #fce8e6; color: #3c0d0a; padding: 12px; border-radius: 8px; margin-bottom: 16px; }
-    .conflict a { color: #8c1d18; font-weight: 500; }
-    .card.self { outline: 3px solid #6750a4; }
+    .conflict { border-left: 6px solid var(--app-danger-border); background: var(--app-danger-bg); color: var(--mat-sys-on-surface); padding: 12px; border-radius: 8px; margin-bottom: 16px; }
+    .conflict a { color: var(--app-danger-fg); font-weight: 500; }
+    .card.self { outline: 3px solid var(--app-accent); }
     .head { display: flex; align-items: center; gap: 12px; }
     .seat {
       display: inline-flex; align-items: center; justify-content: center;
       width: 40px; height: 40px; border-radius: 50%;
-      background: #3f51b5; color: #fff; font-weight: 700; flex-shrink: 0;
+      background: var(--app-accent); color: var(--app-on-accent); font-weight: 700; flex-shrink: 0;
     }
     .name { flex: 1; }
     .actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
     .actions button { flex: 1; min-width: 120px; min-height: 44px; }
     .reveal { display: block; margin-bottom: 12px; }
-    .private { border: 2px dashed #6750a4; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+    .private { border: 2px dashed var(--app-accent); border-radius: 8px; padding: 12px; margin-bottom: 12px; }
     .full { width: 100%; }
     .summary { margin: 8px 0 4px; font-weight: 500; }
     .roles { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 4px 12px; }

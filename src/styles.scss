@@ -1,8 +1,64 @@
-@import '@angular/material/prebuilt-themes/indigo-pink.css';
+@use '@angular/material' as mat;
+
+// Material 3 theme that follows `color-scheme`: light and dark values are
+// emitted with light-dark(), so switching the scheme recolours everything.
+html {
+  color-scheme: light dark;
+  @include mat.theme((
+    color: (
+      primary: mat.$violet-palette,
+      tertiary: mat.$rose-palette,
+      theme-type: color-scheme
+    ),
+    typography: Roboto,
+    density: 0
+  ));
+
+  // App tokens for status colours Material does not provide.
+  // Every pair meets WCAG AA contrast in its own scheme.
+  --app-muted: var(--mat-sys-on-surface-variant);
+  --app-border: var(--mat-sys-outline-variant);
+  --app-surface-alt: var(--mat-sys-surface-container-high);
+  --app-accent: var(--mat-sys-primary);
+  --app-on-accent: var(--mat-sys-on-primary);
+
+  --app-good-bg: light-dark(#e8f0fe, #1b2a44);
+  --app-good-fg: light-dark(#0b3d91, #aecbfa);
+  --app-evil-bg: light-dark(#fce8e6, #44201d);
+  --app-evil-fg: light-dark(#8c1d18, #f6aea9);
+
+  --app-ok-bg: light-dark(#e6f4ea, #15301d);
+  --app-ok-border: light-dark(#146c2e, #6dd58c);
+  --app-ok-fg: light-dark(#146c2e, #6dd58c);
+  --app-warn-bg: light-dark(#fef7e0, #3a2f0b);
+  --app-warn-border: light-dark(#7a5900, #f0c94b);
+  --app-danger-bg: light-dark(#fce8e6, #44201d);
+  --app-danger-border: light-dark(#b3261e, #f2b8b5);
+  --app-danger-fg: light-dark(#8c1d18, #f6aea9);
+
+  // Solid badges: white text on these in light, dark text in dark.
+  --app-badge-fg: light-dark(#ffffff, #1f1f1f);
+  --app-badge-safe: light-dark(#146c2e, #6dd58c);
+  --app-badge-possible: light-dark(#7a5900, #f0c94b);
+  --app-badge-avoid: light-dark(#b3261e, #f2b8b5);
+}
+
+// Explicit choices from the Appearance setting.
+html.theme-light { color-scheme: light; }
+html.theme-dark { color-scheme: dark; }
 
 html, body {
   height: 100%;
   margin: 0;
   padding: 0;
   font-family: Roboto, "Helvetica Neue", sans-serif;
+}
+
+body {
+  background: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+}
+
+a {
+  color: var(--mat-sys-primary);
 }

@@ -40,6 +40,24 @@ export class DatabaseService {
     }
   }
 
+  /** Custom role pools the user has saved. */
+  async listCustomScripts(): Promise<Script[]> {
+    try {
+      const raw = localStorage.getItem('custom_scripts');
+      return raw ? (JSON.parse(raw) as Script[]) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  async saveCustomScripts(scripts: Script[]): Promise<void> {
+    try {
+      localStorage.setItem('custom_scripts', JSON.stringify(scripts));
+    } catch (e) {
+      console.warn('Failed to save custom role pools:', e);
+    }
+  }
+
   async getCurrentScriptId(): Promise<string | null> {
     try {
       return localStorage.getItem('current_script_id');
