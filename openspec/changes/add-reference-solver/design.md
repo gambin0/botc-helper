@@ -63,7 +63,7 @@ Let `n` be the player count and `[T, O, M, D] = baseComposition(n)`. Build the r
 
 A role list is legal when all of the following hold:
 - It has exactly `n` roles.
-- **Outsider count.** Start with the set `{O}`. For each role in the list with `rule.setup`: if `anyOutsiderCount`, the set becomes `{0, 1, …, n}`; otherwise, if `outsiderDelta` is set, the set becomes `{ max(0, x + d) : x in set, d in outsiderDelta }`. The list's Outsider count must be in the final set. Apply the modifiers one after another; the order does not matter for the current data.
+- **Outsider count.** If any role in the list has `anyOutsiderCount`, any Outsider count is allowed. Otherwise, pick one value from `outsiderDelta` for each distinct role in the list that has it, add them up, and clamp **once**: the allowed counts are `{ max(0, O + sum) }` over every combination of picks. Do not clamp after each role. That makes the result depend on the order of the roles: with base 0, Godfather (±1) then Baron (+2) would give {2, 3} instead of the correct {1, 3}.
 - **Minion count.** `minMinions = M + sum of rule.setup.minionDelta over roles in the list`.
 - **Demon count.** Normally the list has exactly `D` Demons (always 1) and exactly `minMinions` Minions. **Lil' Monsta exception:** if a role with `rule.unseated` and team `demon` is in the pool, a list may instead have 0 Demons and exactly `minMinions + 1` Minions.
 - The Townsfolk count is whatever remains. There is no separate Townsfolk target.
@@ -132,9 +132,9 @@ The seating fits if **some** red herring choice and **some** Faux Paw choice mak
 - **Player count:** 5–7.
 - **Role pool:** choose roles from the list below so that each team has at least the base count for that player count, plus 1–3 extra roles. The pool must hold at most 10 seated roles. Include Fibbin (a non-seated Fabled character) in about 10% of games.
   - Townsfolk: washerwoman, librarian, investigator, chef, empath, fortuneteller, undertaker, ravenkeeper, virgin, slayer, steward, noble, knight, seamstress, shugenja, villageidiot, balloonist, grandmother, sage, dreamer, lycanthrope.
-  - Outsiders: drunk, recluse, saint, butler, mutant.
+  - Outsiders: drunk, recluse, saint, butler, mutant, hermit.
   - Minions: poisoner, spy, scarletwoman, baron, godfather, widow, mastermind.
-  - Demons: imp, nodashii, vortox. Add lilmonsta in about 10% of games, and only alongside at least one of these, so the pool always has a seatable Demon.
+  - Demons: imp, nodashii, vortox, fanggu, vigormortis (the last two and the Hermit change the Outsider count, so order-dependent setup bugs are reachable at 5–7 players). Add lilmonsta in about 10% of games, and only alongside at least one of these, so the pool always has a seatable Demon.
   - Fabled (not seated): fibbin.
 
   All of these IDs were checked in `RoleRegistry` when this change was written, and each has the team listed above.

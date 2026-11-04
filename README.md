@@ -82,6 +82,23 @@ Role data is sourced from the official [BotC Release repository](https://github.
 
 The app supports importing official BotC script JSON files. The bundled "Trouble Brewing" script is included in `src/assets/scripts/`.
 
+## Checking the deduction engine
+
+`src/app/core/solver/reference/` holds a brute-force **reference solver** that lists every starting grimoire for small games (5–7 players, at most 10 seatable roles). It shares the rule data with the engine but none of its search code. Two checks run as part of `npm test`:
+
+- **Differential:** on random games, the engine and the reference must agree on whether the evidence is consistent and on every player's possible roles.
+- **Generated truth:** for games generated from a known grimoire, the engine must never rule out a player's true role.
+
+For longer runs, use the fuzz command. It writes each failure, already minimized, to a JSON file:
+
+```bash
+npm run fuzz -- run --seed 5 --games 1000 --profile vortox   # profiles: npm run fuzz -- profiles
+npm run fuzz -- show fuzz-runs/vortox-5/failures/diff-5-12.json
+REF_SOLVER_GAMES=2000 npx vitest run src/app/core/solver/reference   # bigger npm-test checks
+```
+
+To run every profile, use `bash scripts/fuzz-campaign.sh`. It filters out failures already explained by a recorded engine bug, so only new ones are written. Disagreements are recorded in `src/app/core/solver/reference/FINDINGS.md`, each with an expected-failure test in `regressions.test.ts`. `CAMPAIGN.md` in the same folder explains the campaign and how to triage new failures. The semantics the reference follows are written out in `openspec/changes/add-reference-solver/design.md`.
+
 ## License
 
 MIT

@@ -1,42 +1,51 @@
 # Tasks
 
-Ground rules for every task: do not edit `src/app/core/solver/solver.ts` or any file under `src/app/core/rules/` or `src/app/core/roles/`. All new code goes in `src/app/core/solver/reference/`. Follow `design.md` Section 4 exactly when deciding whether a grimoire fits; if it seems wrong or unclear, write the question in `FINDINGS.md` rather than guessing. Run `npm test` and `npm run typecheck:test` after each group, and both must pass.
+Groups 1–5 are the tooling. Group 6 runs the fuzz campaign. It was first planned as work for a cheaper agent. A pilot showed the failures were almost all repeats of a known bug, so it became a script with an automatic known-bug filter (`scripts/fuzz-campaign.sh`). Group 7 is review.
+
+Ground rules for every task: do not edit `src/app/core/solver/solver.ts` or anything under `src/app/core/rules/` or `src/app/core/roles/`. Run `npm test` and `npm run typecheck:test` after each group; both must pass.
 
 ## 1. Reference solver: setup and enumeration
 
-- [ ] 1.1 Create `src/app/core/solver/reference/reference-solver.ts` that builds the role pool (design Decision 3: normalized IDs, teams, `maxCopies`, seat-only roles, Fibbin allowance). Verify with a test in `reference-solver.test.ts` that a Trouble Brewing pool yields 22 seatable roles and that adding `fibbin` gives an allowance of 1 without adding a seat role.
-- [ ] 1.2 Implement legal role-list enumeration (Decision 3: Outsider set, Minion count, Lil' Monsta exception, `requiresInPlay`). Verify with tests:
-  - 5 players, TB pool: every list has 3 Townsfolk, 0 Outsiders, 1 Minion and 1 Demon, except lists with the Baron, which have 1 Townsfolk and 2 Outsiders;
-  - a pool with `lilmonsta` produces some lists with 0 Demons and 2 Minions;
-  - a pool with `huntsman` never produces a list with the Huntsman and no Damsel.
-- [ ] 1.3 Implement `enumerateWorlds` (distinct seatings of each list, no duplicates for repeated roles) with the 2,000,000-seating guard. Verify with a test that a 5-player pool with exactly 3 Townsfolk, 1 Minion and 1 Demon yields 5! = 120 seatings, and that a pool with 2 copies of `villageidiot` allowed produces no duplicate seatings.
+- [x] 1.1 Build the role pool in `reference/reference-solver.ts` (Decision 3). Verified by the `role pool and setup` tests in `reference-solver.test.ts` (22 seatable TB roles; Fibbin adds an allowance, not a seat).
+- [x] 1.2 Legal role lists: Outsider changes summed and clamped once, Minion count, Lil' Monsta exception, `requiresInPlay`. Verified by the 5-player Baron, Lil' Monsta and Huntsman tests.
+- [x] 1.3 Distinct seatings with per-seat filters and the 2,000,000-seating guard. Verified by the 5! and Village Idiot duplicate-seating tests.
 
 ## 2. Reference solver: evidence
 
-- [ ] 2.1 Implement self-knowledge and claims in `worldFits` (design 4a and the claim part of 4b, including the Drunk rule and the honesty option). Verify with `reference-solver.test.ts` cases mirroring the `claims` block of `solver.test.ts`: the same inputs give the same possible-role sets.
-- [ ] 2.2 Implement deaths, resurrections and executions (rest of 4b: the alive snapshot, game-ended, Demon survived, Saint survived). Verify with cases mirroring the `public abilities and executions` block of `solver.test.ts`. Use 5–7 players instead of 8 where needed to keep them fast, and work out the expected answers again for the smaller game.
-- [ ] 2.3 Implement info judging, registrations, red herring and Faux Paw (4c, 4e, 4f). Verify with cases mirroring the `information and reliability` block of `solver.test.ts` at 7 players or fewer, plus a test that a Spy can register differently to two info events on the same night.
-- [ ] 2.4 Implement the false-info budget (4d: per-night distinct seats, capacity from distinct roles, Fibbin allowance, Village Idiot drunk copy tried each way). Verify with the Fibbin case from `solver.test.ts` and a test where two Village Idiots each give false info: it fits if one of them is drunk and the other is poisoned by a Poisoner, and does not fit without the Poisoner.
-- [ ] 2.5 Implement `referenceSolve` (consistent flag plus per-player possible sets). Verify that the scenarios in `specs/solver-verification/spec.md` under "Reference solver lists possibilities exhaustively" pass as tests.
+- [x] 2.1 Self-knowledge and claims (4a, 4b). Verified by the `claims` tests.
+- [x] 2.2 Deaths, executions, Saint and Demon survival (4b). Verified by the `public abilities and executions` tests.
+- [x] 2.3 Info judging, per-event registrations, red herring, Faux Paw (4c, 4e, 4f). Verified by the `information` tests, including the Spy registering differently to two abilities.
+- [x] 2.4 False-info budget, Fibbin, Village Idiot drunk copy tried each way (4d). Verified by the `false-info budget` tests.
+- [x] 2.5 `referenceSolve`, `worldFits`, `legalRoleLists`. Verified by the `spec scenarios` and `worldFits` tests.
 
 ## 3. Game generator
 
-- [ ] 3.1 Create `game-generator.ts` with `generateGame(seed, index)` as in design Decision 5, using a seeded PRNG and never `Math.random`. Verify with a test that the same (seed, index) gives a deep-equal input twice, that 1,000 generated games all have 5–7 players and at most 10 seatable roles, and that every role ID used exists in `RoleRegistry`.
-- [ ] 3.2 Add `generateTrueGame(seed, index)` for the generated-truth check, which returns `{ input, truth }` (Decision 6). Verify with a test that `worldFits(input, truth)` is true for 300 generated games.
-- [ ] 3.3 Measure: log how long `referenceSolve` takes on 300 generated games and confirm the slowest is under 1 second. If not, tighten the generator (smaller pools or fewer players) rather than adding pruning to the reference. Record the timing in `FINDINGS.md` under a "Performance" heading.
+- [x] 3.1 `reference/game-generator.ts`: seeded `generateGame` with pool profiles and shuffled pool order. Verified by `game-generator.test.ts` (deterministic; 5–7 players; ≤10 seatable roles; known role IDs; forced profile roles present).
+- [x] 3.2 `generateTrueGame`: evidence built one event at a time, each event kept only if the true grimoire still fits. Verified by `game-generator.test.ts` (truth always fits).
+- [x] 3.3 Performance measured: slowest generated game about 1 s, typical 15 ms; recorded in `FINDINGS.md`.
 
-## 4. Checks
+## 4. Checks and fuzz command
 
-- [ ] 4.1 Create `differential.test.ts` as in Decision 6, with `N` from `REF_SOLVER_GAMES` (default chosen so the run stays under 30 seconds), an explicit timeout, a printed count of skipped games, and failure output that includes the seed, the index and the input JSON. Verify by running `npm test`. Deliberately break the reference (for example, ignore asserted claims), confirm the test fails with a useful message, then undo the break.
-- [ ] 4.2 Create `generated-truth.test.ts` as in Decision 6, with the same `N` and timeout handling. Verify by running `npm test` and by running `REF_SOLVER_GAMES=2000 npx vitest run src/app/core/solver/reference`.
-- [ ] 4.3 For every disagreement found in 4.1 or 4.2, follow design Decision 7: minimize it, decide which side is wrong, add an `it.fails` case to `regressions.test.ts` if it is the engine, add a `FINDINGS.md` entry, and add the (seed, index) to `KNOWN_DISAGREEMENTS`. Verify that `npm test` passes and that every `it.fails` case has a matching `FINDINGS.md` entry. If there are no disagreements, say so in `FINDINGS.md`.
+- [x] 4.1 `reference/checks.ts`: `differentialCheck`, `truthCheck`, `minimize`. `differential.test.ts` and `generated-truth.test.ts` run them in `npm test` (150 and 300 games, `REF_SOLVER_GAMES` overrides), skipping `known-disagreements.ts`.
+- [x] 4.2 `scripts/fuzz.ts` (`npm run fuzz`), with `run`, `show`, `replay` and `profiles` subcommands. Each failure is written as a minimized JSON file. Verified by running each subcommand; it found F-002 within 300 games.
+- [x] 4.3 Recorded the findings made while building: F-001 (Village Idiot drunk copy) and F-002 (Outsider modifier order). Each has an `it.fails` test in `regressions.test.ts` and an entry in `FINDINGS.md`; default-seed duplicates are listed in `known-disagreements.ts`. Verified: `npm test` passes with 2 expected failures.
 
-## 5. Wrap-up
+## 5. Documentation
 
-- [ ] 5.1 Add a short section to `README.md` on what the reference checks do, how to run a longer fuzzing run with `REF_SOLVER_GAMES`, and where findings are recorded. Verify the documented command runs as written.
-- [ ] 5.2 Final check: `git diff --stat master` shows changes only under `src/app/core/solver/reference/`, `README.md` and this change's `tasks.md`. `npm test` and `npm run typecheck:test` both pass, and the full test run takes under 60 seconds longer than before this change.
+- [x] 5.1 README section "Checking the deduction engine". Verified that the documented commands run.
+- [x] 5.2 `reference/CAMPAIGN.md`: how to run the campaign, the known-bug filter, and the triage steps.
+- [x] 5.3 Known-bug filter: `explainByKnownBug` in `checks.ts` re-runs a failure with each recorded bug's workaround. It is used by the fuzz command and by both `npm test` checks. Verified by the filter test in `regressions.test.ts`.
+
+## 6. Fuzz campaign
+
+- [x] 6.1 Run `bash scripts/fuzz-campaign.sh`, triage every new failure as described in `CAMPAIGN.md`, and fill in its Results table. Verify that no failure files are left untriaged and that `npm test` passes.
+
+## 7. Review (Claude)
+
+- [ ] 7.1 Review the findings. Every `open` finding has an `it.fails` test, and a workaround in `checks.ts` where possible. Verify that `npm test` passes.
+- [ ] 7.2 Final check: `git diff --stat master` shows changes only to the new reference folder, `scripts/fuzz.ts`, `scripts/fuzz-campaign.sh`, `README.md`, `package.json`/`package-lock.json` (tsx), `tsconfig.spec.json`, `.gitignore` and this change's files.
 
 ## Workflow follow-up
 
-- A stronger model or the user reviews `FINDINGS.md` and decides which engine fixes to make in a separate change.
-- Archive this change once the review is done.
+- Fixing the engine bugs (F-001, F-002 and any confirmed later) is a separate change.
+- Archive this change after review.
