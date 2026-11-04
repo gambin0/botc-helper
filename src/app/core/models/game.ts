@@ -107,6 +107,11 @@ export interface DeductionResult {
   possibleRoles: RolePossibility[];
   alignments: PlayerAlignment[];
   contradictions: Contradiction[];
+  /**
+   * Evidence set aside to resolve contradictions; the possibilities are
+   * deduced from everything else.
+   */
+  ignoredEvidence: EvidenceRef[];
   /** Notes about roles the engine models only approximately, unsupported input, etc. */
   warnings: string[];
   /** True if the search budget ran out, so some "possible" entries are unproven. */

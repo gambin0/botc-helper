@@ -2,6 +2,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import {
   ClaimTrust,
   DeductionResult,
+  EvidenceRef,
   Explanation,
   Game,
   GameEvent,
@@ -26,6 +27,7 @@ const EMPTY_RESULT: DeductionResult = {
   possibleRoles: [],
   alignments: [],
   contradictions: [],
+  ignoredEvidence: [],
   warnings: [],
   incomplete: false
 };
@@ -44,6 +46,11 @@ export class GameStateService {
   readonly selfRoleCertain = signal<boolean>(false);
   /** Treat asserted claims from good players as truthful (see SolverOptions). */
   readonly assumeHonest = signal<boolean>(true);
+  /**
+   * Whether your private character is shown on screen. Deliberately not
+   * persisted: it is masked again after every reload.
+   */
+  readonly revealSelf = signal(false);
   /** Not-in-play characters the Storyteller showed you as the Demon. */
   readonly demonBluffs = signal<string[]>([]);
 
@@ -102,6 +109,25 @@ export class GameStateService {
       demonBluffs: team === 'demon' ? this.demonBluffs() : []
     });
   });
+
+  /** Evidence label that respects "hide my character". */
+  evidenceLabel(ref: EvidenceRef): string {
+    return ref.id === 'self' && !this.revealSelf() ? 'Your private character (hidden)' : ref.label;
+  }
+
+  /** Warnings with your own character masked while it is hidden. */
+  readonly visibleWarnings = computed(() =>
+    this.deductions().warnings.map(w =>
+      w.startsWith('Your character (') && !this.revealSelf() ? w.replace(/^Your character \([^)]*\)/, 'Your character') : w
+    )
+  );
+
+  /** Contradiction descriptions with your own character masked while hidden. */
+  readonly visibleContradictions = computed(() =>
+    this.deductions().contradictions.map(c =>
+      this.revealSelf() ? c.description : c.description.replace(/You were told you are the [^;]*/g, 'Your private character (hidden)')
+    )
+  );
 
   roleName(roleId: string | null | undefined): string {
     if (!roleId) return 'unknown';

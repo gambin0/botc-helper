@@ -11,6 +11,8 @@ import { GameStateService } from '../../core/services/game-state.service';
 import { Player } from '../../core/models/game';
 import { CharacterImageComponent } from '../../shared/character-image/character-image.component';
 import { RoleGuideComponent } from './role-guide.component';
+import { ClaimTestComponent } from './claim-test.component';
+import { RevealToggleComponent } from '../../shared/reveal-toggle/reveal-toggle.component';
 
 @Component({
   selector: 'app-players',
@@ -24,7 +26,9 @@ import { RoleGuideComponent } from './role-guide.component';
     MatInputModule,
     MatSelectModule,
     CharacterImageComponent,
-    RoleGuideComponent
+    RoleGuideComponent,
+    ClaimTestComponent,
+    RevealToggleComponent
   ],
   template: `
     <main class="page">
@@ -32,6 +36,21 @@ import { RoleGuideComponent } from './role-guide.component';
       @if (cards().length === 0) {
         <p>No players. Start a game first.</p>
         <a mat-flat-button routerLink="/game">Go to game setup</a>
+      }
+      @if (!gameState.deductions().consistent) {
+        <div class="conflict" role="alert">
+          <strong>The evidence contradicts itself.</strong>
+          @if (gameState.deductions().ignoredEvidence.length > 0) {
+            Possibilities below ignore:
+            @for (e of gameState.deductions().ignoredEvidence; track e.id) {
+              <em>{{ gameState.evidenceLabel(e) }}</em>{{ $last ? '.' : ';' }}
+            }
+          }
+          <a routerLink="/deduce">See details</a>
+        </div>
+      }
+      @for (warning of selfWarnings(); track warning) {
+        <p class="conflict">{{ warning }}</p>
       }
       @for (card of cards(); track card.player.id) {
         <mat-card class="card" [class.self]="card.isSelf">
@@ -57,9 +76,13 @@ import { RoleGuideComponent } from './role-guide.component';
 
             @if (card.isSelf) {
               <div class="private">
+                <app-reveal-toggle class="reveal" />
                 <mat-form-field appearance="outline" class="full">
                   <mat-label>Character I was shown (private)</mat-label>
                   <mat-select [value]="gameState.selfRole()" (selectionChange)="gameState.setSelfRole($event.value, gameState.selfRoleCertain())">
+                    <mat-select-trigger>
+                      {{ gameState.revealSelf() ? gameState.roleName(gameState.selfRole()) : 'Hidden' }}
+                    </mat-select-trigger>
                     <mat-option [value]="null">Not set</mat-option>
                     @for (r of gameState.activeRoles(); track r.id) {
                       <mat-option [value]="r.id">{{ r.name }} ({{ r.team }})</mat-option>
@@ -70,22 +93,27 @@ import { RoleGuideComponent } from './role-guide.component';
                   <mat-checkbox [checked]="gameState.selfRoleCertain()" (change)="gameState.setSelfRole(role, $event.checked)">
                     I'm certain (I can't be the Drunk, Lunatic or Marionette)
                   </mat-checkbox>
-                  <app-role-guide [roleId]="role" />
+                  <app-role-guide [roleId]="role" [masked]="!gameState.revealSelf()" />
                 }
+                <app-claim-test />
               </div>
             }
 
-            <p class="summary">
-              {{ card.possible.length }} possible character{{ card.possible.length === 1 ? '' : 's' }}
-            </p>
-            <ul class="roles">
-              @for (roleId of card.possible; track roleId) {
-                <li>
-                  <app-character-image [roleId]="roleId" [size]="24" />
-                  {{ gameState.roleName(roleId) }}
-                </li>
-              }
-            </ul>
+            @if (card.isSelf && !gameState.revealSelf()) {
+              <p class="summary">Your possible characters are hidden.</p>
+            } @else {
+              <p class="summary">
+                {{ card.possible.length }} possible character{{ card.possible.length === 1 ? '' : 's' }}
+              </p>
+              <ul class="roles">
+                @for (roleId of card.possible; track roleId) {
+                  <li>
+                    <app-character-image [roleId]="roleId" [size]="24" />
+                    {{ gameState.roleName(roleId) }}
+                  </li>
+                }
+              </ul>
+            }
           </mat-card-content>
         </mat-card>
       }
@@ -95,6 +123,8 @@ import { RoleGuideComponent } from './role-guide.component';
     .page { padding: 16px; }
     h1 { margin-top: 0; }
     .card { margin-bottom: 16px; }
+    .conflict { border-left: 6px solid #b3261e; background: #fce8e6; color: #3c0d0a; padding: 12px; border-radius: 8px; margin-bottom: 16px; }
+    .conflict a { color: #8c1d18; font-weight: 500; }
     .card.self { outline: 3px solid #6750a4; }
     .head { display: flex; align-items: center; gap: 12px; }
     .seat {
@@ -105,6 +135,7 @@ import { RoleGuideComponent } from './role-guide.component';
     .name { flex: 1; }
     .actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
     .actions button { flex: 1; min-width: 120px; min-height: 44px; }
+    .reveal { display: block; margin-bottom: 12px; }
     .private { border: 2px dashed #6750a4; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
     .full { width: 100%; }
     .summary { margin: 8px 0 4px; font-weight: 500; }
@@ -126,6 +157,11 @@ export class PlayersComponent {
         .map(r => r.roleId)
     }));
   });
+
+  /** Warnings about your own character, e.g. it is not on the current script. */
+  protected readonly selfWarnings = computed(() =>
+    this.gameState.visibleWarnings().filter(w => w.startsWith('Your character'))
+  );
 
   protected rename(player: Player, event: Event): void {
     const name = (event.target as HTMLInputElement).value.trim();

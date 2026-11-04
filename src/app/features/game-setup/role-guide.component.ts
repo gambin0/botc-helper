@@ -18,7 +18,10 @@ const RATING_LABEL: Record<BluffRating, string> = { safe: 'Not in play', possibl
   imports: [MatFormFieldModule, MatSelectModule],
   template: `
     <details class="guide">
-      <summary>How to play the {{ roleName() }}</summary>
+      <summary>How to play {{ masked() ? 'your character' : 'the ' + roleName() }}</summary>
+      @if (masked()) {
+        <p class="note">Your character is hidden. Use "Show my character" to see tips and bluffs.</p>
+      } @else {
       <p class="focus">{{ tips().focus }}</p>
       @if (!specific()) {
         <p class="note">General advice for {{ team() }} characters.</p>
@@ -59,6 +62,7 @@ const RATING_LABEL: Record<BluffRating, string> = { safe: 'Not in play', possibl
           }
         </ul>
       }
+      }
     </details>
   `,
   styles: `
@@ -80,6 +84,8 @@ const RATING_LABEL: Record<BluffRating, string> = { safe: 'Not in play', possibl
 export class RoleGuideComponent {
   protected readonly gameState = inject(GameStateService);
   readonly roleId = input.required<string>();
+  /** Hide everything that would reveal the character. */
+  readonly masked = input(true);
   protected readonly ratingLabel = RATING_LABEL;
 
   protected readonly team = computed(

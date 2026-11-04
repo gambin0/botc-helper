@@ -7,9 +7,12 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { GameStateService } from '../../core/services/game-state.service';
 import { Explanation, RolePossibility } from '../../core/models/game';
 import { CharacterImageComponent } from '../../shared/character-image/character-image.component';
+import { RevealToggleComponent } from '../../shared/reveal-toggle/reveal-toggle.component';
 
 interface PlayerRow {
   id: string;
+  /** Your own row while your character is hidden. */
+  masked: boolean;
   name: string;
   seat: number;
   alive: boolean;
@@ -20,7 +23,7 @@ interface PlayerRow {
 
 @Component({
   selector: 'app-deduce',
-  imports: [MatButtonModule, MatCardModule, MatExpansionModule, MatIconModule, MatSlideToggleModule, CharacterImageComponent],
+  imports: [MatButtonModule, MatCardModule, MatExpansionModule, MatIconModule, MatSlideToggleModule, CharacterImageComponent, RevealToggleComponent],
   template: `
     <main class="page">
       <h1>Deductions</h1>
@@ -33,8 +36,16 @@ interface PlayerRow {
               <p class="status"><mat-icon aria-hidden="true">check_circle</mat-icon> The evidence is consistent.</p>
             } @else {
               <p class="status"><mat-icon aria-hidden="true">error</mat-icon> Contradiction</p>
-              @for (c of result().contradictions; track c.description) {
-                <p>{{ c.description }}</p>
+              @for (c of gameState.visibleContradictions(); track c) {
+                <p>{{ c }}</p>
+              }
+              @if (result().ignoredEvidence.length > 0) {
+                <p>To keep deducing, this is being set aside (the most recent entry in the conflict). Fix or delete it (log entries on the Log tab, your character on the Players tab):</p>
+                <ul>
+                  @for (e of result().ignoredEvidence; track e.id) {
+                    <li><strong>{{ gameState.evidenceLabel(e) }}</strong></li>
+                  }
+                </ul>
               }
             }
             @if (result().incomplete) {
@@ -47,11 +58,11 @@ interface PlayerRow {
               Information only counts if its source really has that ability and is not drunk or poisoned.
               Roles shown are starting characters.
             </p>
-            @if (result().warnings.length > 0) {
+            @if (gameState.visibleWarnings().length > 0) {
               <details>
-                <summary>Modelling notes ({{ result().warnings.length }})</summary>
+                <summary>Notes ({{ gameState.visibleWarnings().length }})</summary>
                 <ul>
-                  @for (w of result().warnings; track w) {
+                  @for (w of gameState.visibleWarnings(); track w) {
                     <li>{{ w }}</li>
                   }
                 </ul>
@@ -66,10 +77,19 @@ interface PlayerRow {
               <mat-expansion-panel-header>
                 <mat-panel-title>{{ row.seat }}. {{ row.name }}@if (!row.alive) { (dead)}</mat-panel-title>
                 <mat-panel-description>
-                  <span class="align" [class]="'align-' + row.alignment.toLowerCase()">{{ row.alignment }}</span>
-                  {{ row.possible.length }} possible
+                  @if (row.masked) {
+                    <span class="align">You (hidden)</span>
+                  } @else {
+                    <span class="align" [class]="'align-' + row.alignment.toLowerCase()">{{ row.alignment }}</span>
+                    {{ row.possible.length }} possible
+                  }
                 </mat-panel-description>
               </mat-expansion-panel-header>
+
+              @if (row.masked) {
+                <p>Your character is hidden so nobody can read it off your screen.</p>
+                <app-reveal-toggle />
+              } @else {
 
               <h2 class="section">Possible</h2>
               <ul class="roles">
@@ -114,6 +134,7 @@ interface PlayerRow {
                   </ul>
                 </details>
               }
+              }
             </mat-expansion-panel>
           }
         </mat-accordion>
@@ -153,6 +174,8 @@ export class DeduceComponent {
 
   protected readonly rows = computed<PlayerRow[]>(() => {
     const result = this.result();
+    const selfId = this.gameState.selfPlayerId();
+    const reveal = this.gameState.revealSelf();
     return this.gameState.players().map(p => {
       const roles = result.possibleRoles.filter(r => r.playerId === p.id);
       const align = result.alignments.find(a => a.playerId === p.id);
@@ -163,6 +186,7 @@ export class DeduceComponent {
           : align.canBeGood ? 'Good' : 'Evil';
       return {
         id: p.id,
+        masked: p.id === selfId && !reveal,
         name: p.name,
         seat: p.seat,
         alive: p.alive,

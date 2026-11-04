@@ -347,6 +347,25 @@ describe('contradictions and explanations', () => {
     expect(r.contradictions[0].events.sort()).toEqual([c1.id, c2.id].sort());
   });
 
+  it('keeps deducing after a contradiction by setting aside the latest conflicting evidence', () => {
+    const c1 = claim('p1', 'imp', 'confirmed');
+    const c2 = claim('p2', 'imp', 'confirmed');
+    const r = run({ players: players(8), events: [c1, claim('p3', 'chef', 'confirmed'), c2] });
+    expect(r.consistent).toBe(false);
+    expect(r.ignoredEvidence.map(e => e.id)).toEqual([c2.id]);
+    // Deductions still come from the remaining evidence.
+    expect(possibleRoles(r, 'p1')).toEqual(['imp']);
+    expect(possibleRoles(r, 'p3')).toEqual(['chef']);
+    expect(possibleRoles(r, 'p2').length).toBeGreaterThan(10);
+  });
+
+  it('warns and recovers when your character is not in the role pool', () => {
+    const r = run({ players: players(8), self: me('p1', 'vortox') });
+    expect(r.warnings.some(w => w.includes('not in the current role pool'))).toBe(true);
+    expect(r.ignoredEvidence.map(e => e.id)).toEqual(['self']);
+    expect(possibleRoles(r, 'p2').length).toBe(TB_IDS.length);
+  });
+
   it('explains an impossible assignment with the evidence responsible', () => {
     const fortune = info('p1', { type: 'fortuneteller', players: ['p2', 'p3'], yes: false });
     const engine = new DeductionEngine({

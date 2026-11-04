@@ -347,6 +347,11 @@ export class DeductionEngine {
       const seat = this.seatIndex.get(self.playerId)!;
       const believed = normalizeRoleId(self.roleId);
       const believedTeam = this.teamOfAnyRole(believed);
+      if (believedTeam && !this.roleIndex.has(believed)) {
+        this.warnings.push(
+          `Your character (${this.roleName(believed)}) is not in the current role pool. Did you change scripts?`
+        );
+      }
       if (believedTeam) {
         const ev = this.addEvidence(
           'self',
@@ -973,6 +978,7 @@ export class DeductionEngine {
       possibleRoles: [],
       alignments: [],
       contradictions: [],
+      ignoredEvidence: [],
       warnings: [...this.warnings],
       incomplete: false
     };
@@ -991,15 +997,33 @@ export class DeductionEngine {
       for (const p of out.free) for (const q of out.free) possible[p][out.world[q]] = 1;
     };
     let incomplete = false;
+    const contradictions: DeductionResult['contradictions'] = [];
+    const ignoredEvidence: EvidenceRef[] = [];
 
-    const base = this.search(active);
+    // On a contradiction, set aside the most recent piece of evidence in a
+    // minimal conflicting set and keep deducing from the rest, so one
+    // mistake does not wipe out every deduction.
+    let base = this.search(active);
+    for (let round = 0; base.kind === 'unsat' && round < 5; round++) {
+      const core = this.minimalConflictIndexes(active);
+      const refs = core.map(i => ({ id: this.evidence[i].id, label: this.evidence[i].label }));
+      contradictions.push({
+        description: core.length
+          ? 'No starting grimoire fits all of this evidence together: ' + refs.map(e => e.label).join('; ')
+          : 'No starting grimoire fits the setup rules for this role pool and player count.',
+        events: refs.map(e => e.id)
+      });
+      if (core.length === 0) break;
+      const drop = core[core.length - 1];
+      active[drop] = 0;
+      ignoredEvidence.push(refs[refs.length - 1]);
+      base = this.search(active);
+    }
     if (base.kind === 'sat') markWorld(base);
     if (base.kind === 'unknown') incomplete = true;
 
-    const domains = this.staticDomains(active);
-    const contradictions: DeductionResult['contradictions'] = [];
-
     if (base.kind !== 'unsat') {
+      const domains = this.staticDomains(active);
       for (let p = 0; p < this.n; p++) {
         for (const r of domains[p]) {
           if (possible[p][r]) continue;
@@ -1012,14 +1036,6 @@ export class DeductionEngine {
           }
         }
       }
-    } else {
-      const core = this.minimalConflict(active);
-      contradictions.push({
-        description: core.length
-          ? 'No starting grimoire fits all of this evidence together: ' + core.map(e => e.label).join('; ')
-          : 'No starting grimoire fits the setup rules for this role pool and player count.',
-        events: core.map(e => e.id)
-      });
     }
 
     const possibleRoles: RolePossibility[] = [];
@@ -1053,10 +1069,11 @@ export class DeductionEngine {
     }
 
     return {
-      consistent: base.kind !== 'unsat',
+      consistent: contradictions.length === 0,
       possibleRoles,
       alignments,
       contradictions,
+      ignoredEvidence,
       warnings: [...this.warnings],
       incomplete
     };
@@ -1067,8 +1084,8 @@ export class DeductionEngine {
     return null;
   }
 
-  /** Deletion-based minimal unsatisfiable subset of evidence. */
-  private minimalConflict(start: Uint8Array, pin?: [number, number]): EvidenceRef[] {
+  /** Deletion-based minimal unsatisfiable subset of evidence, as evidence indexes in log order. */
+  private minimalConflictIndexes(start: Uint8Array, pin?: [number, number]): number[] {
     const active = start.slice();
     for (let e = 0; e < active.length; e++) {
       if (!active[e]) continue;
@@ -1076,7 +1093,11 @@ export class DeductionEngine {
       const out = this.search(active, pin);
       if (out.kind !== 'unsat') active[e] = 1; // e is needed for the conflict
     }
-    return this.evidence.filter((_, i) => active[i]).map(e => ({ id: e.id, label: e.label }));
+    return [...active.keys()].filter(i => active[i]);
+  }
+
+  private minimalConflict(start: Uint8Array, pin?: [number, number]): EvidenceRef[] {
+    return this.minimalConflictIndexes(start, pin).map(i => ({ id: this.evidence[i].id, label: this.evidence[i].label }));
   }
 
   /** Explains why `playerId` can or cannot be `roleId`. */

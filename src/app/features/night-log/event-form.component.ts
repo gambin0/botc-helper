@@ -9,7 +9,8 @@ import { MatRadioModule } from '@angular/material/radio';
 import { MatSelectModule } from '@angular/material/select';
 import { GameStateService } from '../../core/services/game-state.service';
 import { ClaimTrust } from '../../core/models/game';
-import { InfoField, InfoPayload, InfoSpec, allInfoSpecs } from '../../core/rules/info-specs';
+import { InfoPayload, InfoSpec, allInfoSpecs } from '../../core/rules/info-specs';
+import { InfoFieldsComponent, isInfoComplete } from '../../shared/info-fields/info-fields.component';
 
 type EntryKind = 'claim' | 'info' | 'death' | 'execution';
 
@@ -30,7 +31,8 @@ const TRUST_OPTIONS: { value: ClaimTrust; label: string; hint: string }[] = [
     MatIconModule,
     MatInputModule,
     MatRadioModule,
-    MatSelectModule
+    MatSelectModule,
+    InfoFieldsComponent
   ],
   template: `
     <mat-card class="card">
@@ -94,67 +96,7 @@ const TRUST_OPTIONS: { value: ClaimTrust; label: string; hint: string }[] = [
               }
             </mat-form-field>
             @if (spec(); as s) {
-              @if (s.noneOption) {
-                <mat-checkbox [checked]="!!info().none" (change)="setInfo('none', $event.checked)">{{ s.noneOption }}</mat-checkbox>
-              }
-              @if (!info().none) {
-                @for (field of s.fields; track field.key) {
-                  @switch (field.kind) {
-                    @case ('players') {
-                      @for (i of indexes(field); track i) {
-                        <mat-form-field appearance="outline" class="full">
-                          <mat-label>{{ field.label }} #{{ i + 1 }}</mat-label>
-                          <mat-select [value]="info().players?.[i]" (selectionChange)="setInfoPlayer(i, $event.value)">
-                            @for (p of players(); track p.id) {
-                              <mat-option [value]="p.id">{{ p.seat }}. {{ p.name }}</mat-option>
-                            }
-                          </mat-select>
-                        </mat-form-field>
-                      }
-                    }
-                    @case ('player') {
-                      <mat-form-field appearance="outline" class="full">
-                        <mat-label>{{ field.label }}</mat-label>
-                        <mat-select [value]="info().player" (selectionChange)="setInfo('player', $event.value)">
-                          @for (p of players(); track p.id) {
-                            <mat-option [value]="p.id">{{ p.seat }}. {{ p.name }}</mat-option>
-                          }
-                        </mat-select>
-                      </mat-form-field>
-                    }
-                    @case ('role') {
-                      <mat-form-field appearance="outline" class="full">
-                        <mat-label>{{ field.label }}</mat-label>
-                        <mat-select [value]="info()[field.key]" (selectionChange)="setInfo(field.key, $event.value)">
-                          @for (r of rolesFor(field); track r.id) {
-                            <mat-option [value]="r.id">{{ r.name }}</mat-option>
-                          }
-                        </mat-select>
-                      </mat-form-field>
-                    }
-                    @case ('number') {
-                      <mat-form-field appearance="outline" class="full">
-                        <mat-label>{{ field.label }}</mat-label>
-                        <input
-                          matInput
-                          type="number"
-                          [min]="field.min"
-                          [max]="field.max"
-                          [value]="info().count ?? ''"
-                          (input)="setInfo('count', toNumber($event))"
-                        />
-                      </mat-form-field>
-                    }
-                    @case ('boolean') {
-                      <mat-radio-group class="radios" [attr.aria-label]="field.label" [value]="info().yes" (change)="setInfo('yes', $event.value)">
-                        <span class="radio-label">{{ field.label }}</span>
-                        <mat-radio-button [value]="true">{{ field.trueLabel }}</mat-radio-button>
-                        <mat-radio-button [value]="false">{{ field.falseLabel }}</mat-radio-button>
-                      </mat-radio-group>
-                    }
-                  }
-                }
-              }
+              <app-info-fields [spec]="s" [(info)]="info" />
             }
           }
           @case ('execution') {
@@ -223,49 +165,15 @@ export class EventFormComponent {
     switch (this.kind()) {
       case 'claim':
         return !!this.claimRole();
-      case 'info': {
-        const spec = this.spec();
-        const info = this.info();
-        if (!spec) return false;
-        if (info.none) return true;
-        return spec.fields.every(f => {
-          switch (f.kind) {
-            case 'players': return (info.players ?? []).filter(Boolean).length === f.count && new Set(info.players).size === f.count;
-            case 'player': return !!info.player;
-            case 'role': return !!info[f.key];
-            case 'number': return info.count !== undefined && !Number.isNaN(info.count) && info.count >= f.min && info.count <= f.max;
-            case 'boolean': return info.yes !== undefined;
-          }
-        });
-      }
+      case 'info':
+        return isInfoComplete(this.spec(), this.info());
       default:
         return true;
     }
   });
 
-  protected indexes(field: InfoField): number[] {
-    return field.kind === 'players' ? Array.from({ length: field.count }, (_, i) => i) : [];
-  }
-
-  protected rolesFor(field: InfoField) {
-    const teams = field.kind === 'role' ? field.teams : undefined;
-    return teams ? this.roles().filter(r => teams.includes(r.team)) : this.roles();
-  }
-
   protected toNumber(event: Event): number {
     return Number((event.target as HTMLInputElement).value);
-  }
-
-  protected setInfo<K extends keyof InfoPayload>(key: K, value: InfoPayload[K]): void {
-    this.info.update(info => ({ ...info, [key]: value }));
-  }
-
-  protected setInfoPlayer(index: number, playerId: string): void {
-    this.info.update(info => {
-      const players = [...(info.players ?? [])];
-      players[index] = playerId;
-      return { ...info, players };
-    });
   }
 
   protected submit(): void {
