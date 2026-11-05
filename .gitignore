@@ -23,3 +23,7 @@ Thumbs.db
 
 # Fuzz runner output
 /fuzz-runs/
+
+# Playwright
+/test-results/
+/playwright-report/

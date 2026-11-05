@@ -1,0 +1,192 @@
+{
+  "game": {
+    "id": "sample",
+    "name": "Sample game",
+    "scriptId": "trouble-brewing",
+    "playerCount": 7,
+    "createdAt": "2026-11-05T00:00:00.000Z",
+    "updatedAt": "2026-11-05T00:00:00.000Z"
+  },
+  "script": null,
+  "players": [
+    {
+      "id": "p1",
+      "gameId": "sample",
+      "name": "Ana",
+      "seat": 1,
+      "alive": true
+    },
+    {
+      "id": "p2",
+      "gameId": "sample",
+      "name": "Ben",
+      "seat": 2,
+      "alive": true
+    },
+    {
+      "id": "p3",
+      "gameId": "sample",
+      "name": "Cal",
+      "seat": 3,
+      "alive": true
+    },
+    {
+      "id": "p4",
+      "gameId": "sample",
+      "name": "Dee",
+      "seat": 4,
+      "alive": true
+    },
+    {
+      "id": "p5",
+      "gameId": "sample",
+      "name": "Eve",
+      "seat": 5,
+      "alive": true
+    },
+    {
+      "id": "p6",
+      "gameId": "sample",
+      "name": "Fay",
+      "seat": 6,
+      "alive": true
+    },
+    {
+      "id": "p7",
+      "gameId": "sample",
+      "name": "Gus",
+      "seat": 7,
+      "alive": true
+    }
+  ],
+  "events": [
+    {
+      "id": "e1",
+      "gameId": "sample",
+      "night": 1,
+      "phase": "day",
+      "kind": "claim",
+      "payload": {
+        "roleId": "chef"
+      },
+      "trust": "asserted",
+      "createdAt": "2026-11-05T00:00:00.000Z",
+      "actorId": "p2"
+    },
+    {
+      "id": "e2",
+      "gameId": "sample",
+      "night": 1,
+      "phase": "day",
+      "kind": "claim",
+      "payload": {
+        "roleId": "slayer"
+      },
+      "trust": "asserted",
+      "createdAt": "2026-11-05T00:00:00.000Z",
+      "actorId": "p3"
+    },
+    {
+      "id": "e3",
+      "gameId": "sample",
+      "night": 1,
+      "phase": "day",
+      "kind": "claim",
+      "payload": {
+        "roleId": "fortuneteller"
+      },
+      "trust": "asserted",
+      "createdAt": "2026-11-05T00:00:00.000Z",
+      "actorId": "p4"
+    },
+    {
+      "id": "e4",
+      "gameId": "sample",
+      "night": 1,
+      "phase": "day",
+      "kind": "claim",
+      "payload": {
+        "roleId": "soldier"
+      },
+      "trust": "asserted",
+      "createdAt": "2026-11-05T00:00:00.000Z",
+      "actorId": "p5"
+    },
+    {
+      "id": "e5",
+      "gameId": "sample",
+      "night": 1,
+      "phase": "first-night",
+      "kind": "info",
+      "payload": {
+        "type": "chef",
+        "count": 0
+      },
+      "trust": "asserted",
+      "createdAt": "2026-11-05T00:00:00.000Z",
+      "actorId": "p2"
+    },
+    {
+      "id": "e6",
+      "gameId": "sample",
+      "night": 1,
+      "phase": "first-night",
+      "kind": "info",
+      "payload": {
+        "type": "fortuneteller",
+        "players": [
+          "p6",
+          "p7"
+        ],
+        "yes": false
+      },
+      "trust": "asserted",
+      "createdAt": "2026-11-05T00:00:00.000Z",
+      "actorId": "p4"
+    },
+    {
+      "id": "e7",
+      "gameId": "sample",
+      "night": 2,
+      "phase": "day",
+      "kind": "death",
+      "payload": {
+        "playerId": "p6"
+      },
+      "trust": "asserted",
+      "createdAt": "2026-11-05T00:00:00.000Z"
+    },
+    {
+      "id": "e8",
+      "gameId": "sample",
+      "night": 2,
+      "phase": "execution",
+      "kind": "execution",
+      "payload": {
+        "playerId": "p7",
+        "gameEnded": false
+      },
+      "trust": "confirmed",
+      "createdAt": "2026-11-05T00:00:00.000Z"
+    },
+    {
+      "id": "e9",
+      "gameId": "sample",
+      "night": 3,
+      "phase": "other-night",
+      "kind": "info",
+      "payload": {
+        "type": "slayer",
+        "player": "p5",
+        "yes": false
+      },
+      "trust": "asserted",
+      "createdAt": "2026-11-05T00:00:00.000Z",
+      "actorId": "p3"
+    }
+  ],
+  "selfPlayerId": "p1",
+  "selfRole": "empath",
+  "selfRoleCertain": true,
+  "assumeHonest": true
+}

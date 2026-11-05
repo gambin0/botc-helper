@@ -22,7 +22,14 @@ import {
   teamAlignment
 } from '../rules/role-rules';
 import { InfoPayload, InfoSpec, InfoView, PartialInfoView, getInfoSpec } from '../rules/info-specs';
-import { claimRole, describeEvent, executionEndedGame, infoPayload, targetPlayer } from '../rules/events';
+import {
+  claimRole,
+  describeEvent,
+  executionEndedGame,
+  infoPayload,
+  namesYesterdaysExecution,
+  targetPlayer
+} from '../rules/events';
 import { baseComposition } from '../rules/setup';
 import { chronologicalOrder } from '../rules/timeline';
 
@@ -129,8 +136,8 @@ interface InfoConstraint {
 /** Deaths, executions and information in game order (rules/timeline.ts). */
 type Step =
   | { kind: 'info'; info: number }
-  | { kind: 'death' | 'resurrection'; seat: number }
-  | { kind: 'execution'; seat: number; ended: boolean; ev: number };
+  | { kind: 'death' | 'resurrection'; seat: number; night: number }
+  | { kind: 'execution'; seat: number; ended: boolean; ev: number; night: number };
 
 /** One possible history of the Demon for a complete grimoire. */
 interface DemonTimeline {
@@ -486,7 +493,7 @@ export class DeductionEngine {
           this.compileClaim(event, label);
           break;
         case 'info':
-          this.compileInfo(event, label, alive);
+          this.compileInfo(event, label, alive, events);
           break;
       }
       for (let k = before; k < this.infos.length; k++) infosOf[i].push(k);
@@ -498,10 +505,16 @@ export class DeductionEngine {
       const event = events[i];
       const seat = seatOf(event);
       if ((event.kind === 'death' || event.kind === 'resurrection') && seat !== undefined) {
-        this.steps.push({ kind: event.kind, seat });
+        this.steps.push({ kind: event.kind, seat, night: event.night });
         moved ||= event.kind === 'death';
       } else if (event.kind === 'execution' && seat !== undefined) {
-        this.steps.push({ kind: 'execution', seat, ended: executionEndedGame(event), ev: executionEv.get(i) ?? -1 });
+        this.steps.push({
+          kind: 'execution',
+          seat,
+          ended: executionEndedGame(event),
+          ev: executionEv.get(i) ?? -1,
+          night: event.night
+        });
         moved = true;
       }
       for (const info of infosOf[i]) {
@@ -613,7 +626,7 @@ export class DeductionEngine {
     return ev;
   }
 
-  private compileInfo(event: GameEvent, label: string, alive: boolean[]): void {
+  private compileInfo(event: GameEvent, label: string, alive: boolean[], events: readonly GameEvent[]): void {
     const payload = infoPayload(event);
     const source = this.seatIndex.get(event.actorId ?? '');
     if (!payload || source === undefined) return;
@@ -637,6 +650,21 @@ export class DeductionEngine {
       }
     }
     const ev = this.addEvidence(event.id, label);
+    // An Undertaker (even a drunk one) always knows who was executed: naming
+    // anyone else means the source is not genuinely the Undertaker.
+    if (spec.aboutExecution && !namesYesterdaysExecution(event, events)) {
+      const who = this.name(payload.player);
+      this.addUnary(
+        ev,
+        source,
+        this.maskWhere(r => r.id !== spec.roleId),
+        `${label}, but ${who} was not executed the day before`
+      );
+      this.warnings.push(
+        `${this.name(event.actorId)}'s ${this.roleName(spec.roleId)} info names ${who}, who was not executed the day ` +
+          `before night ${event.night}. A real ${this.roleName(spec.roleId)} would know who was executed, so they are treated as not the ${this.roleName(spec.roleId)}. Log the execution if it is missing.`
+      );
+    }
     this.infos.push({
       ev,
       source,
@@ -1276,7 +1304,6 @@ export class DeductionEngine {
   private fittingDemonsNow(firstOnly: boolean): number[] {
     const base = this.world;
     const vortox = this.vortoxState(true);
-    const cap = this.corruptionCapacity(true);
     const needsHerring = this.infos.some(
       c => this.active[c.ev] && this.hasRedHerringRole(c) && this.roles[base[c.source]].id === c.infoRole
     );
@@ -1295,7 +1322,7 @@ export class DeductionEngine {
       for (const timeline of this.demonTimelines()) {
         if (this.endDemonPin >= 0 && timeline.demonNow !== this.endDemonPin) continue;
         if (found.includes(timeline.demonNow)) continue;
-        if (this.timelineFits(timeline, herrings, paws, vortox, cap)) {
+        if (this.timelineFits(base, timeline, herrings, paws, vortox)) {
           found.push(timeline.demonNow);
           if (firstOnly) break;
         }
@@ -1309,11 +1336,11 @@ export class DeductionEngine {
 
   /** Judges every active info against the grimoire as it stood at the time. */
   private timelineFits(
+    base: Int16Array,
     timeline: DemonTimeline,
     herrings: number[],
     paws: number[],
-    vortox: 'yes' | 'maybe' | 'no',
-    cap: number
+    vortox: 'yes' | 'maybe' | 'no'
   ): boolean {
     for (const rh of herrings) for (const fp of paws) {
       const failing = new Map<number, Set<number>>();
@@ -1336,7 +1363,7 @@ export class DeductionEngine {
         if (this.drunkCopyRole(c, true) >= 0) drunkCopyFails.push(c);
         else add(c.night, c.source);
       }
-      if (ok && this.drunkCopyChoiceFits(failing, drunkCopyFails, cap)) return true;
+      if (ok && this.drunkCopyChoiceFits(base, failing, drunkCopyFails)) return true;
     }
     return false;
   }
@@ -1458,14 +1485,67 @@ export class DeductionEngine {
    * poisoning. Any copy may be the drunk one, so try each copy that gave
    * false info (per role that has drunk extra copies).
    */
+  /** Is this seat alive during night `night`? Deaths and active executions before that night count. */
+  private aliveOnNight(seat: number, night: number): boolean {
+    let alive = true;
+    for (const st of this.steps) {
+      if (st.kind === 'info' || st.seat !== seat || st.night >= night) continue;
+      if (st.kind === 'execution' && st.ev >= 0 && !this.active[st.ev]) continue;
+      alive = st.kind === 'resurrection';
+    }
+    return alive;
+  }
+
+  /**
+   * Exact corruption budget for a complete grimoire: can drunkenness and
+   * poisoning explain the false sources on each night?
+   * - Each corrupting character covers its capacity of distinct players per
+   *   night; one that corrupts only while alive covers nobody after it died.
+   * - The Widow covers one player, the same one all game, while she lives.
+   * - The Fibbin allows that many uncovered sources in the whole game.
+   * (The Village Idiot's drunk copy is handled by the caller.)
+   */
+  private leafBudgetFits(base: Int16Array, byNight: Map<number, Set<number>>): boolean {
+    const perNight: { seat: number; rule: RoleRule }[] = [];
+    const widows: { seat: number; rule: RoleRule }[] = [];
+    for (const r of this.corrupterRoles) {
+      if (!this.used[r]) continue;
+      const c = { seat: base.indexOf(r), rule: this.roles[r].rule };
+      (c.rule.corruptsOneForGame ? widows : perNight).push(c);
+    }
+    const working = (c: { seat: number; rule: RoleRule }, night: number) =>
+      !c.rule.corruptsWhileAlive || this.aliveOnNight(c.seat, night);
+    const capacity = (night: number) =>
+      perNight.reduce((sum, c) => sum + (working(c, night) ? c.rule.corruptionCapacity! : 0), 0);
+
+    const fits = (targets: number[]): boolean => {
+      let excess = 0;
+      for (const [night, sources] of byNight) {
+        let size = sources.size;
+        for (let k = 0; k < widows.length; k++) {
+          const t = targets[k];
+          const covered = targets.some((u, j) => j < k && u === t && working(widows[j], night));
+          if (t >= 0 && !covered && sources.has(t) && working(widows[k], night)) size--;
+        }
+        excess += Math.max(0, size - capacity(night));
+      }
+      return excess <= this.gameWideFalseInfo;
+    };
+    if (widows.length === 0) return fits([]);
+    const candidates = [-1, ...new Set([...byNight.values()].flatMap(s => [...s]))];
+    const choose = (chosen: number[]): boolean =>
+      chosen.length === widows.length ? fits(chosen) : candidates.some(t => choose([...chosen, t]));
+    return choose([]);
+  }
+
   private drunkCopyChoiceFits(
+    base: Int16Array,
     failing: Map<number, Set<number>>,
-    drunkCopyFails: InfoConstraint[],
-    cap: number
+    drunkCopyFails: InfoConstraint[]
   ): boolean {
     const byRole = new Map<number, number[]>();
     for (const c of drunkCopyFails) {
-      const r = this.world[c.source];
+      const r = base[c.source];
       const sources = byRole.get(r) ?? [];
       if (!sources.includes(c.source)) sources.push(c.source);
       byRole.set(r, sources);
@@ -1480,7 +1560,7 @@ export class DeductionEngine {
           if (!sizes.has(c.night)) sizes.set(c.night, new Set());
           sizes.get(c.night)!.add(c.source);
         }
-        return this.withinCorruption([...sizes.values()].map(s => s.size), cap);
+        return this.leafBudgetFits(base, sizes);
       }
       return groups[k].some(source => choose(k + 1, new Set([...freed, source])));
     };

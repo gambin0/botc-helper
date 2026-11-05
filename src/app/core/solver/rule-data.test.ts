@@ -1,0 +1,90 @@
+import { describe, expect, it } from 'vitest';
+import { ClaimTrust, GameEvent } from '../models/game';
+import { RoleRegistry } from '../roles/role-registry';
+import { InfoPayload } from '../rules/info-specs';
+import { referenceSolve } from './reference/reference-solver';
+import { makePlayers } from './reference/game-generator';
+import { SolverInput, solve } from './solver';
+
+/**
+ * Rule-data fixes the fuzzer cannot catch on its own (both solvers share the
+ * rule data): a dead Poisoner, the Widow's single poisoned player, and
+ * Undertaker info naming someone who was not executed.
+ * Every scenario runs on both the engine and the brute-force reference.
+ */
+
+// 7 players: 5 Townsfolk, 0 Outsiders, 1 Minion, 1 Demon. No Drunk, Spy or Recluse,
+// so false info can only come from poisoning.
+const TOWN = ['empath', 'chef', 'monk', 'soldier', 'mayor', 'undertaker', 'slayer', 'butler'];
+const withMinion = (minion: string) => [...TOWN, minion, 'imp'];
+
+let seq = 0;
+const ev = (kind: string, night: number, extra: Partial<GameEvent>): GameEvent => ({
+  id: `r${++seq}`, gameId: 'g', night, phase: 'day', kind, payload: {}, trust: 'asserted', createdAt: '', ...extra
+});
+const claim = (actorId: string, roleId: string, trust: ClaimTrust = 'confirmed') => ev('claim', 1, { actorId, payload: { roleId }, trust });
+const execution = (playerId: string, night: number) => ev('execution', night, { payload: { playerId, gameEnded: false } });
+const info = (actorId: string, payload: InfoPayload, night: number) => ev('info', night, { actorId, payload });
+
+// Both of the Empath's neighbours (P2, P7) evil is impossible with P5 confirmed as the
+// only Minion, and a Chef count of 3 is impossible with 2 evil players: both are false info.
+const empathWrong = (night: number) => info('p1', { type: 'empath', count: 2 }, night);
+const chefWrong = (night: number) => info('p4', { type: 'chef', count: 3 }, night);
+
+interface Outcome {
+  consistent: boolean;
+  can(playerId: string, roleId: string): boolean;
+}
+
+function both(pool: string[], events: GameEvent[]): Outcome[] {
+  const input: SolverInput = { characters: RoleRegistry.toScriptCharacters(pool), players: makePlayers(7), events };
+  const engine = solve(input);
+  const ref = referenceSolve(input);
+  return [
+    {
+      consistent: engine.consistent,
+      can: (p, r) => engine.possibleRoles.some(x => x.playerId === p && x.roleId === r && x.status !== 'impossible')
+    },
+    { consistent: ref.consistent, can: (p, r) => ref.possible.get(p)!.has(r) }
+  ];
+}
+
+describe.each([0, 1])('rule data (%s = engine, reference)', which => {
+  const run = (pool: string[], events: GameEvent[]) => both(pool, events)[which];
+
+  it('a Poisoner executed on day 1 cannot poison on night 2', () => {
+    const base = [claim('p1', 'empath'), claim('p5', 'poisoner')];
+    expect(run(withMinion('poisoner'), [...base, execution('p5', 1), empathWrong(2)]).consistent).toBe(false);
+    // Executed after that night's info: still alive when it poisoned.
+    expect(run(withMinion('poisoner'), [...base, empathWrong(2), execution('p5', 2)]).consistent).toBe(true);
+  });
+
+  it('the Widow poisons one player for the whole game', () => {
+    const twoPlayers = (minion: string) => [claim('p1', 'empath'), claim('p4', 'chef'), claim('p5', minion), chefWrong(1), empathWrong(2)];
+    expect(run(withMinion('widow'), twoPlayers('widow')).consistent).toBe(false);
+    // A Poisoner can choose a different player each night.
+    expect(run(withMinion('poisoner'), twoPlayers('poisoner')).consistent).toBe(true);
+    // The same player wrong on two nights: the Widow's one poisoned player.
+    expect(run(withMinion('widow'), [claim('p1', 'empath'), claim('p5', 'widow'), empathWrong(1), empathWrong(2)]).consistent).toBe(true);
+  });
+
+  it('Undertaker info must name the player executed the day before', () => {
+    const named = info('p1', { type: 'undertaker', player: 'p3', roleId: 'imp' }, 2);
+    const noExecution = run(withMinion('poisoner'), [claim('p1', 'undertaker', 'asserted'), named]);
+    expect(noExecution.can('p1', 'undertaker')).toBe(false);
+    expect(noExecution.can('p1', 'poisoner')).toBe(true);
+    const executed = run(withMinion('poisoner'), [claim('p1', 'undertaker', 'asserted'), execution('p3', 1), named]);
+    expect(executed.can('p1', 'undertaker')).toBe(true);
+  });
+});
+
+describe('rule data warnings', () => {
+  it('warns when Undertaker info names someone who was not executed', () => {
+    const r = solve({
+      characters: RoleRegistry.toScriptCharacters(withMinion('poisoner')),
+      players: makePlayers(7),
+      events: [info('p1', { type: 'undertaker', player: 'p3', roleId: 'imp' }, 2)]
+    });
+    expect(r.warnings.some(w => w.includes('was not executed'))).toBe(true);
+  });
+});

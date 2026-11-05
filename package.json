@@ -10,7 +10,8 @@
     "test:watch": "vitest",
     "typecheck:test": "tsc --noEmit -p tsconfig.spec.json",
     "fuzz": "tsx scripts/fuzz.ts",
-    "bench:solver": "esbuild scripts/bench-solver.ts --bundle --platform=node --format=esm --outfile=dist/bench/bench-solver.mjs --log-level=warning && node dist/bench/bench-solver.mjs"
+    "bench:solver": "esbuild scripts/bench-solver.ts --bundle --platform=node --format=esm --outfile=dist/bench/bench-solver.mjs --log-level=warning && node dist/bench/bench-solver.mjs",
+    "test:a11y": "playwright test"
   },
   "private": true,
   "packageManager": "npm@10.9.9",
@@ -36,6 +37,8 @@
     "@angular/build": "^22.2.5",
     "@angular/cli": "^22.2.5",
     "@angular/compiler-cli": "^22.2.0",
+    "@axe-core/playwright": "^4.14.0",
+    "@playwright/test": "^1.64.1",
     "@types/node": "^26.6.6",
     "autoprefixer": "^10.6.2",
     "postcss": "^8.5.32",

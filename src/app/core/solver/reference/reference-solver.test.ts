@@ -170,7 +170,7 @@ describe('reference: information', () => {
   });
 
   it('uses alive neighbours at the time of the reading', () => {
-    const base = { characters: NO_POISONER, players: makePlayers(7), self: me('p1', 'empath') };
+    const base = { characters: NO_POISONER, players: makePlayers(6), self: me('p1', 'empath') };
     const after = run({ ...base, events: [death('p2'), info('p1', { type: 'empath', count: 0 })] });
     expect(can(after, 'p2', 'imp')).toBe(true);
     expect(can(after, 'p3', 'imp')).toBe(false);

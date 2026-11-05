@@ -70,6 +70,12 @@ export interface InfoSpec {
   publicWhen?(payload: InfoPayload): boolean;
   /** Label for an alternative "nothing to show" result (Librarian: no Outsiders). */
   noneOption?: string;
+  /**
+   * The Undertaker: the info is about the player executed the day before, so a
+   * genuine Undertaker (even a drunk one) can only name that player. See
+   * `namesYesterdaysExecution` in rules/events.ts.
+   */
+  aboutExecution?: boolean;
   describe(payload: InfoPayload, name: (playerId?: string) => string, role: (roleId?: string) => string): string;
 }
 
@@ -181,7 +187,7 @@ const SPECS: InfoSpec[] = [
     describe: (p, name) =>
       `chose ${name(p.players?.[0])} and ${name(p.players?.[1])}: ${p.yes ? 'YES' : 'no'}`
   },
-  roleOfPlayer('undertaker', 'You learn which character died by execution today.'),
+  { ...roleOfPlayer('undertaker', 'You learn which character died by execution today.'), aboutExecution: true },
   roleOfPlayer('ravenkeeper', 'If you die at night, you choose a player and learn their character.'),
   roleOfPlayer('grandmother', 'You start knowing a good player and their character.', ['townsfolk', 'outsider']),
   {

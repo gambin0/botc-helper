@@ -87,9 +87,10 @@ The engine warns about these (`approximation` in `role-rules.ts`), but they matt
 
 The reference solver shares `role-rules.ts` and `info-specs.ts` with the engine, so a rule written wrong in either is wrong in both and goes unnoticed. Noticed while reading:
 
-- [ ] **Corruption capacity ignores whether the corrupter is alive.** A dead Poisoner still allows a poisoned player each night. This is too lenient: it leaves extra roles possible but never wrongly rules one out.
-- [ ] **The Widow gets capacity every night,** but she poisons one player once per game. Also too lenient.
-- [ ] **Undertaker info is not tied to an execution.** The form takes any player.
+- [x] **A dead corrupter no longer poisons.** The Poisoner, Widow, No Dashii and Pukka (`corruptsWhileAlive`) cover nobody on nights after they died. An execution on day N or a death on night N stops them from night N+1, since the Poisoner acts before the Imp kills. Other corrupters keep the old, lenient rule: some, such as the Sweetheart, work by dying.
+- [x] **The Widow poisons one player for the whole game** (`corruptsOneForGame`), while she lives. False info from two different players on different nights now needs more than a Widow.
+- [x] **Undertaker info must name the player executed the day before.** Even a drunk Undertaker knows who was executed, so info naming anyone else rules out its source being the Undertaker. A note explains this and suggests logging the missing execution. An execution logged under the same day number as the info also counts, in case the log numbers days that way.
+  - These three are only checked on complete grimoires; the search's early pruning stays loose, which is safe. Both solvers implement them, and `rule-data.test.ts` runs each scenario on both.
 - [ ] A rules pass over every entry in `role-rules.ts` and `info-specs.ts` against the official almanac.
 - [ ] The strongest check would be a set of **real game logs with known final grimoires,** as regression tests.
 
@@ -102,5 +103,10 @@ F-001 never came up in 36,000 random games; only a hand-built case found it. Ran
 
 ## 5. Project basics
 
-- [ ] **CI:** there is no `.github` workflow, so `npm test`, `npm run typecheck:test` and `ng build` only run when someone remembers to.
-- [ ] **No component tests,** although `AGENTS.md` requires the app to pass all AXE accessibility checks. Nothing checks that today.
+- [x] **CI** (`.github/workflows/ci.yml`): every push and pull request runs the three typechecks, `npm test` (including the engine vs reference checks), the build, and the accessibility scan.
+- [x] **The fuzz campaign** (`.github/workflows/fuzz.yml`) runs weekly and on demand with `STRICT=1`, which fails the run if anything new is found. The failures are uploaded as an artifact.
+- [x] **Accessibility checks** (`npm run build && npm run test:a11y`, in `e2e/a11y.spec.ts`).
+  - **What is scanned:** every page, in light and dark mode, with a sample game loaded (`e2e/fixtures/sample-game.json`). The open parts are scanned too: a player panel, a "Why?" answer, the claim test and the role picker.
+  - **How:** axe with the WCAG 2.0–2.2 A and AA rules. Locally it uses the installed Chrome; CI installs Chromium.
+  - **Result:** all pages pass. A planted low-contrast element and an image without alt text were both caught.
+- [ ] Unit-level component tests (TestBed) are still absent; the end-to-end scan covers rendering and accessibility, not component logic.

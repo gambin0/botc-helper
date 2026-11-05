@@ -5,6 +5,7 @@
 #
 #   bash scripts/fuzz-campaign.sh            # default: 1500 games per job
 #   GAMES=5000 bash scripts/fuzz-campaign.sh # longer
+#   STRICT=1 bash scripts/fuzz-campaign.sh   # exit with an error if anything new is found (CI)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 GAMES=${GAMES:-1500}
@@ -34,3 +35,8 @@ run demonmoves       24 demonmoves
 
 echo "=== new failures:"
 find "$OUT" -path '*/failures/*' -type f | sort || true
+
+# STRICT=1 (used in CI): fail if anything new was found.
+if [ "${STRICT:-0}" = "1" ] && [ -n "$(find "$OUT" -path '*/failures/*' -type f)" ]; then
+  exit 1
+fi

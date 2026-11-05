@@ -22,6 +22,19 @@ export function executionEndedGame(event: GameEvent): boolean {
   return (event.payload as { gameEnded?: boolean } | undefined)?.gameEnded === true;
 }
 
+/**
+ * Undertaker-style info on night N is about the player executed on day N-1.
+ * Does the log have that execution? An execution logged under day N also
+ * counts, in case the log numbers it that way; so this never wrongly says no.
+ */
+export function namesYesterdaysExecution(info: GameEvent, events: readonly GameEvent[]): boolean {
+  const player = infoPayload(info)?.player;
+  if (!player) return true;
+  return events.some(
+    e => e.kind === 'execution' && targetPlayer(e) === player && (e.night === info.night - 1 || e.night === info.night)
+  );
+}
+
 export function infoPayload(event: GameEvent): InfoPayload | null {
   const p = event.payload as InfoPayload | undefined;
   if (!p || typeof p.type !== 'string') return null;

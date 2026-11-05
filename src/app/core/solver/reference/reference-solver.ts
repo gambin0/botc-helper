@@ -12,7 +12,7 @@ import {
   teamAlignment
 } from '../../rules/role-rules';
 import { InfoPayload, InfoSpec, InfoView, getInfoSpec } from '../../rules/info-specs';
-import { claimRole, executionEndedGame, infoPayload, targetPlayer } from '../../rules/events';
+import { claimRole, executionEndedGame, infoPayload, namesYesterdaysExecution, targetPlayer } from '../../rules/events';
 import { baseComposition } from '../../rules/setup';
 import { chronologicalOrder } from '../../rules/timeline';
 import type { SolverInput } from '../solver';
@@ -84,8 +84,8 @@ type WorldRule = (world: readonly PoolRole[]) => boolean;
 /** Something that happens at a point in the game, in game order (rules/timeline.ts). */
 type Step =
   | { kind: 'item'; item: number }
-  | { kind: 'death' | 'resurrection'; seat: number }
-  | { kind: 'execution'; seat: number; ended: boolean };
+  | { kind: 'death' | 'resurrection'; seat: number; night: number }
+  | { kind: 'execution'; seat: number; ended: boolean; night: number };
 
 /** One possible history of the Demon for a grimoire. */
 interface Timeline {
@@ -223,9 +223,9 @@ export class ReferenceGame {
       const event = events[i];
       const seat = this.seatOf(targetPlayer(event));
       if ((event.kind === 'death' || event.kind === 'resurrection') && seat !== undefined) {
-        this.steps.push({ kind: event.kind, seat });
+        this.steps.push({ kind: event.kind, seat, night: event.night });
       } else if (event.kind === 'execution' && seat !== undefined) {
-        this.steps.push({ kind: 'execution', seat, ended: executionEndedGame(event) });
+        this.steps.push({ kind: 'execution', seat, ended: executionEndedGame(event), night: event.night });
       }
       for (const item of itemsOf[i]) this.steps.push({ kind: 'item', item });
     }
@@ -277,6 +277,10 @@ export class ReferenceGame {
     if (!spec) return;
     const referenced = [...(payload.players ?? []), ...(payload.player ? [payload.player] : [])];
     if (referenced.some(id => this.seatOf(id) === undefined)) return;
+    // An Undertaker always knows who was executed: naming anyone else means the source is not one.
+    if (spec.aboutExecution && !namesYesterdaysExecution(event, this.input.events)) {
+      this.seatFilters[seat].push(r => r.id !== spec.roleId);
+    }
     this.items.push({
       kind: 'info',
       seat,
@@ -585,24 +589,57 @@ export class ReferenceGame {
     return { canTrue, canFalse };
   }
 
-  /** Per-night corruption capacity, Fibbin allowance, and the drunk Village Idiot (design 4d). */
+  /** Is this seat alive during night `night`? Deaths and executions before that night count. */
+  private aliveOnNight(seat: number, night: number): boolean {
+    let alive = true;
+    for (const st of this.steps) {
+      if (st.kind === 'item' || st.seat !== seat || st.night >= night) continue;
+      alive = st.kind === 'resurrection';
+    }
+    return alive;
+  }
+
+  /**
+   * Can drunkenness and poisoning explain every false-info event (design 4d)?
+   * - Each corrupting character covers its capacity of distinct players per
+   *   night; a Poisoner (and others that corrupt only while alive) covers
+   *   nobody on nights after it died.
+   * - The Widow covers one player, the same one all game, while she lives.
+   * - With 2+ Village Idiots, one copy is drunk all game.
+   * - The Fibbin allows that many uncovered events in the whole game.
+   */
   private withinBudget(world: readonly PoolRole[], falseEvents: { seat: number; night: number }[]): boolean {
-    const cap = [...new Set(world)].reduce((sum, r) => sum + (r.rule.corruptionCapacity ?? 0), 0);
+    const corrupters = [...new Set(world)]
+      .filter(r => r.rule.corruptionCapacity)
+      .map(r => ({ rule: r.rule, seat: world.indexOf(r) }));
+    const working = (c: { rule: RoleRule; seat: number }, night: number) =>
+      !c.rule.corruptsWhileAlive || this.aliveOnNight(c.seat, night);
+    const perNight = corrupters.filter(c => !c.rule.corruptsOneForGame);
+    const widows = corrupters.filter(c => c.rule.corruptsOneForGame);
+    const capacity = (night: number) =>
+      perNight.reduce((sum, c) => sum + (working(c, night) ? c.rule.corruptionCapacity! : 0), 0);
+    const sources = [-1, ...new Set(falseEvents.map(e => e.seat))];
     const drunkCandidates = world.flatMap((r, i) =>
       r.rule.extraCopiesDrunk && world.filter(x => x === r).length >= 2 ? [i] : []
     );
-    for (const drunkSeat of [-1, ...drunkCandidates]) {
+
+    const fits = (drunkSeat: number, widowTargets: number[]): boolean => {
       const byNight = new Map<number, Set<number>>();
       for (const e of falseEvents) {
         if (e.seat === drunkSeat) continue;
+        if (widows.some((w, k) => widowTargets[k] === e.seat && working(w, e.night))) continue;
         if (!byNight.has(e.night)) byNight.set(e.night, new Set());
         byNight.get(e.night)!.add(e.seat);
       }
       let excess = 0;
-      for (const seats of byNight.values()) excess += Math.max(0, seats.size - cap);
-      if (excess <= this.fibbinAllowance) return true;
-    }
-    return false;
+      for (const [night, seats] of byNight) excess += Math.max(0, seats.size - capacity(night));
+      return excess <= this.fibbinAllowance;
+    };
+    const chooseTargets = (drunkSeat: number, chosen: number[]): boolean =>
+      chosen.length === widows.length
+        ? fits(drunkSeat, chosen)
+        : sources.some(t => chooseTargets(drunkSeat, [...chosen, t]));
+    return [-1, ...drunkCandidates].some(d => chooseTargets(d, []));
   }
 }
 

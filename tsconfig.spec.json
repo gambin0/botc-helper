@@ -4,5 +4,5 @@
     "outDir": "./out-tsc/spec",
     "types": ["node"]
   },
-  "include": ["src/**/*.test.ts", "src/**/*.d.ts", "scripts/**/*.ts"]
+  "include": ["src/**/*.test.ts", "src/**/*.d.ts", "scripts/**/*.ts", "e2e/**/*.ts", "playwright.config.ts"]
 }

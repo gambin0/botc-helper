@@ -46,6 +46,13 @@ export interface RoleRule {
    * poisoned. Used to bound how much information can be false in a world.
    */
   corruptionCapacity?: number;
+  /** The corruption stops once this character is dead (Poisoner, Widow, ...). */
+  corruptsWhileAlive?: boolean;
+  /**
+   * The Widow: one player, chosen on the first night, stays poisoned for the
+   * whole game (while the Widow lives), instead of a new choice each night.
+   */
+  corruptsOneForGame?: boolean;
   /** Vortox: all Townsfolk information is false. */
   falsifiesTownsfolkInfo?: boolean;
   /** A character no player holds (Lil' Monsta). */
@@ -118,10 +125,10 @@ const ROLE_RULES: Record<string, RoleRule> = {
   choirboy: { setup: { requiresInPlay: ['king'] } },
 
   // --- Drunkenness and poisoning sources ---
-  poisoner: { corruptionCapacity: 1 },
-  widow: { corruptionCapacity: 1 },
-  nodashii: { corruptionCapacity: 2 },
-  pukka: { corruptionCapacity: 1 },
+  poisoner: { corruptionCapacity: 1, corruptsWhileAlive: true },
+  widow: { corruptionCapacity: 1, corruptsWhileAlive: true, corruptsOneForGame: true },
+  nodashii: { corruptionCapacity: 2, corruptsWhileAlive: true },
+  pukka: { corruptionCapacity: 1, corruptsWhileAlive: true },
   lleech: { corruptionCapacity: 1 },
   philosopher: { corruptionCapacity: 1 },
   sweetheart: { corruptionCapacity: 1 },

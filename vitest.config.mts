@@ -5,6 +5,9 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     include: ['src/**/*.test.ts'],
-    environment: 'node'
+    environment: 'node',
+    // The brute-force reference solver takes a few seconds on some 7-player
+    // tests; CI runners are slower than a desktop.
+    testTimeout: 30_000
   }
 });
