@@ -1,7 +1,6 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, computed, effect, inject, signal } from '@angular/core';
 import {
   ClaimTrust,
-  DeductionResult,
   EvidenceRef,
   Explanation,
   Game,
@@ -14,6 +13,7 @@ import {
   ScriptCharacter
 } from '../models/game';
 import { DeductionEngine, SolverInput } from '../solver/solver';
+import { DeductionService } from './deduction.service';
 import { BluffSuggestion, suggestBluffs } from '../solver/bluffs';
 import { DatabaseService, GameState } from '../storage/database.service';
 import { generateUUID } from '../utils/uuid';
@@ -22,19 +22,10 @@ import { RoleRegistry } from '../roles/role-registry';
 import { InfoPayload } from '../rules/info-specs';
 import { targetPlayer } from '../rules/events';
 
-const EMPTY_RESULT: DeductionResult = {
-  consistent: true,
-  possibleRoles: [],
-  alignments: [],
-  contradictions: [],
-  ignoredEvidence: [],
-  warnings: [],
-  incomplete: false
-};
-
 @Injectable({ providedIn: 'root' })
 export class GameStateService {
   private db = inject(DatabaseService);
+  private deduction = inject(DeductionService);
 
   readonly script = signal<Script | null>(null);
   readonly customRoles = signal<ScriptCharacter[] | null>(null);
@@ -90,10 +81,20 @@ export class GameStateService {
     };
   });
 
-  readonly deductions = computed<DeductionResult>(() => {
+  /**
+   * The latest deductions. Solved in a Web Worker (DeductionService), so this
+   * can briefly lag behind the evidence while `solving()` is true.
+   */
+  readonly deductions = this.deduction.result.asReadonly();
+  /** True while a newer solve is running and the deductions may be out of date. */
+  readonly solving = this.deduction.solving.asReadonly();
+  /** Set if the most recent solve failed. */
+  readonly solveError = this.deduction.error.asReadonly();
+
+  private readonly resolveOnChange = effect(() => {
     const input = this.solverInput();
-    if (input.characters.length === 0 || input.players.length === 0) return EMPTY_RESULT;
-    return new DeductionEngine(input).solve();
+    if (input.characters.length === 0 || input.players.length === 0) this.deduction.clear();
+    else this.deduction.solve(input);
   });
 
   /** Bluff options when you were shown an evil character; empty otherwise. */

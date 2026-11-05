@@ -27,10 +27,19 @@ interface PlayerRow {
   template: `
     <main class="page">
       <h1>Deductions</h1>
+      <!-- Always present so screen readers announce the change. -->
+      <p class="updating" role="status">
+        @if (gameState.solving()) {
+          <mat-icon aria-hidden="true">hourglass_top</mat-icon> Updating deductions…
+        }
+      </p>
+      @if (gameState.solveError(); as err) {
+        <p class="note" role="alert">Deductions could not be updated: {{ err }}</p>
+      }
       @if (rows().length === 0) {
         <p>No active game. Start a game to see deductions.</p>
       } @else {
-        <mat-card class="summary" [class.bad]="!result().consistent">
+        <mat-card class="summary" [class.bad]="!result().consistent" [class.stale]="gameState.solving()" [attr.aria-busy]="gameState.solving()">
           <mat-card-content>
             @if (result().consistent) {
               <p class="status"><mat-icon aria-hidden="true">check_circle</mat-icon> The evidence is consistent.</p>
@@ -71,7 +80,7 @@ interface PlayerRow {
           </mat-card-content>
         </mat-card>
 
-        <mat-accordion multi>
+        <mat-accordion multi [class.stale]="gameState.solving()" [attr.aria-busy]="gameState.solving()">
           @for (row of rows(); track row.id) {
             <mat-expansion-panel>
               <mat-expansion-panel-header>
@@ -148,6 +157,11 @@ interface PlayerRow {
     .summary.bad { border: 2px solid var(--app-danger-border); }
     .status { display: flex; align-items: center; gap: 8px; font-weight: 600; }
     .note { color: var(--app-muted); font-size: 0.85rem; }
+    .updating { display: flex; align-items: center; gap: 6px; min-height: 1.5rem; margin: 0 0 8px; color: var(--app-muted); }
+    .updating:empty { min-height: 0; margin: 0; }
+    /* Previous results stay visible and usable while a newer solve runs. Not
+       dimmed: lower opacity would break colour-contrast minimums. */
+    .stale { cursor: progress; }
     .section { font-size: 0.95rem; margin: 8px 0 4px; }
     .roles, .impossible { list-style: none; padding: 0; margin: 0; }
     .role { display: flex; align-items: center; gap: 8px; padding: 2px 0; }

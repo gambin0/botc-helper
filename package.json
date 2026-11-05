@@ -9,7 +9,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck:test": "tsc --noEmit -p tsconfig.spec.json",
-    "fuzz": "tsx scripts/fuzz.ts"
+    "fuzz": "tsx scripts/fuzz.ts",
+    "bench:solver": "tsx scripts/bench-solver.ts"
   },
   "private": true,
   "packageManager": "npm@10.9.9",
