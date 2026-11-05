@@ -1,4 +1,5 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, linkedSignal, signal } from '@angular/core';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -7,6 +8,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { GameStateService } from '../../core/services/game-state.service';
 import { ThemeService } from '../../core/services/theme.service';
+import { RosterService } from '../../core/services/roster.service';
+import { seatNamesFrom } from '../../core/players/roster';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { SetupCountsComponent } from '../../shared/setup-counts/setup-counts.component';
 
@@ -37,6 +40,7 @@ class NewGameDialog {}
     MatIconModule,
     MatDialogModule,
     MatButtonToggleModule,
+    MatCheckboxModule,
     SetupCountsComponent
   ],
   template: `
@@ -68,12 +72,48 @@ class NewGameDialog {}
               <input matInput type="number" min="5" max="15" [value]="playerCount()" (input)="setCount($event)">
             </mat-form-field>
             <app-setup-counts [playerCount]="clampedCount()" [characters]="roles()" />
+            @if (lastPlayers(); as last) {
+              <mat-checkbox [checked]="keepPlayers()" (change)="keepPlayers.set($event.checked)">
+                Keep the players from the last game
+              </mat-checkbox>
+              @if (keepPlayers()) {
+                <p class="note">
+                  {{ seatPreview() }}
+                  @if (last.count !== clampedCount()) {
+                    <br />The last game had {{ last.count }} players:
+                    {{ clampedCount() > last.count ? 'the extra seats start unnamed.' : 'only the first ' + clampedCount() + ' are kept.' }}
+                  }
+                  <br />You can rearrange seats on the Players tab before logging anything.
+                </p>
+              }
+            }
           </mat-card-content>
           <mat-card-actions>
             <button mat-raised-button color="primary" (click)="createGame()">
               <mat-icon aria-hidden="true">play_arrow</mat-icon> Start game
             </button>
           </mat-card-actions>
+        </mat-card>
+      }
+
+      @if (roster.knownNames().length > 0) {
+        <mat-card>
+          <mat-card-content>
+            <details>
+              <summary><h2 class="setting inline">Remembered player names ({{ roster.knownNames().length }})</h2></summary>
+              <p class="note">Suggested when you name a seat. Kept only on this device.</p>
+              <ul class="names">
+                @for (name of roster.knownNames(); track name) {
+                  <li>
+                    <span>{{ name }}</span>
+                    <button mat-icon-button (click)="roster.forget(name)" [attr.aria-label]="'Forget ' + name">
+                      <mat-icon aria-hidden="true">close</mat-icon>
+                    </button>
+                  </li>
+                }
+              </ul>
+            </details>
+          </mat-card-content>
         </mat-card>
       }
 
@@ -116,6 +156,31 @@ class NewGameDialog {}
     .full-width {
       width: 100%;
     }
+    .note {
+      color: var(--app-muted);
+      font-size: 0.85rem;
+    }
+    .inline {
+      display: inline;
+    }
+    summary {
+      cursor: pointer;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+    }
+    .names {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px 12px;
+    }
+    .names li {
+      display: inline-flex;
+      align-items: center;
+    }
   `]
 })
 export class GameComponent {
@@ -129,8 +194,24 @@ export class GameComponent {
   readonly alivePlayers = this.gameState.alivePlayers;
   readonly hasGame = this.gameState.hasGame;
 
+  protected readonly roster = inject(RosterService);
+
   readonly roles = this.gameState.activeRoles;
-  readonly playerCount = signal(8);
+  /** Defaults to the last game's size when there is one. */
+  readonly playerCount = linkedSignal(() => this.roster.lastSeating().length || 8);
+  readonly keepPlayers = signal(true);
+
+  /** The last game's players, if any of them were named. */
+  protected readonly lastPlayers = computed(() => {
+    const seating = this.roster.lastSeating();
+    return seating.some(name => name !== null) ? { count: seating.length } : null;
+  });
+
+  protected readonly seatPreview = computed(() =>
+    seatNamesFrom(this.roster.lastSeating(), this.clampedCount())
+      .map((name, i) => `${i + 1}. ${name}`)
+      .join(', ')
+  );
 
   clampedCount(): number {
     return Math.max(5, Math.min(15, Math.round(this.playerCount()) || 8));
@@ -141,7 +222,8 @@ export class GameComponent {
   }
 
   createGame(): void {
-    this.gameState.createGame('Game 1', this.clampedCount());
+    const names = this.lastPlayers() && this.keepPlayers() ? seatNamesFrom(this.roster.lastSeating(), this.clampedCount()) : [];
+    this.gameState.createGame('Game 1', this.clampedCount(), names);
   }
 
   confirmNewGame(): void {

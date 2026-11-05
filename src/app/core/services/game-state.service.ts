@@ -14,6 +14,8 @@ import {
 } from '../models/game';
 import { SolverInput } from '../solver/solver';
 import { DeductionService } from './deduction.service';
+import { RosterService } from './roster.service';
+import { defaultName, moveToSeat } from '../players/roster';
 import { WhatIfInput, WhatIfResult } from '../solver/what-if';
 import { BluffSuggestion, suggestBluffs } from '../solver/bluffs';
 import { DatabaseService, GameState } from '../storage/database.service';
@@ -27,6 +29,7 @@ import { targetPlayer } from '../rules/events';
 export class GameStateService {
   private db = inject(DatabaseService);
   private deduction = inject(DeductionService);
+  private roster = inject(RosterService);
 
   readonly script = signal<Script | null>(null);
   readonly customRoles = signal<ScriptCharacter[] | null>(null);
@@ -222,7 +225,11 @@ export class GameStateService {
   // Game and players
   // ---------------------------------------------------------------------------
 
-  createGame(name: string, playerCount: number): void {
+  /**
+   * Starts a game. `names` fills the seats in order (from the last game's
+   * seating); seats without one get a default name.
+   */
+  createGame(name: string, playerCount: number, names: readonly string[] = []): void {
     if (!this.script() && !this.customRoles()) this.script.set(TROUBLE_BREWING_SCRIPT);
     const count = Math.max(5, Math.min(15, Math.round(Number(playerCount)) || 8));
     const gameId = generateUUID();
@@ -239,11 +246,12 @@ export class GameStateService {
       Array.from({ length: count }, (_, i) => ({
         id: generateUUID(),
         gameId,
-        name: `Player ${i + 1}`,
+        name: names[i]?.trim() || defaultName(i + 1),
         seat: i + 1,
         alive: true
       }))
     );
+    this.roster.saveSeating(this.players());
     this.events.set([]);
     this.demonBluffs.set([]);
     this.selfPlayerId.set(null);
@@ -254,6 +262,21 @@ export class GameStateService {
 
   updatePlayer(player: Player): void {
     this.players.update(players => players.map(p => (p.id === player.id ? { ...p, ...player } : p)));
+    this.roster.saveSeating(this.players());
+    this.persistState();
+  }
+
+  /**
+   * Seats can change only before anything is logged: info already logged
+   * (an Empath's neighbours, a Chef's pairs) depends on who sat where.
+   */
+  readonly canRearrangeSeats = computed(() => this.events().length === 0);
+
+  /** Moves a player to another seat (1-based), shifting the others along. */
+  movePlayer(playerId: string, toSeat: number): void {
+    if (!this.canRearrangeSeats()) return;
+    this.players.set(moveToSeat(this.players(), playerId, toSeat));
+    this.roster.saveSeating(this.players());
     this.persistState();
   }
 
@@ -394,6 +417,8 @@ export class GameStateService {
 
   async resetGame(): Promise<void> {
     const script = this.script() ?? TROUBLE_BREWING_SCRIPT;
+    // Remember who played, in seat order, for name suggestions next time.
+    this.roster.rememberAll([...this.players()].sort((a, b) => a.seat - b.seat).map(p => p.name));
     this.game.set(null);
     this.players.set([]);
     this.events.set([]);

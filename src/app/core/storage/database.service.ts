@@ -50,6 +50,41 @@ export class DatabaseService {
     }
   }
 
+  /** Names of people you have played with, most recent first. */
+  getKnownPlayerNames(): string[] {
+    return this.readJson<string[]>('known_player_names', []);
+  }
+
+  saveKnownPlayerNames(names: readonly string[]): void {
+    this.writeJson('known_player_names', names);
+  }
+
+  /** The last game's seating: a name per seat, null where the seat kept its default name. */
+  getLastSeating(): (string | null)[] {
+    return this.readJson<(string | null)[]>('last_seating', []);
+  }
+
+  saveLastSeating(seating: readonly (string | null)[]): void {
+    this.writeJson('last_seating', seating);
+  }
+
+  private readJson<T>(key: string, fallback: T): T {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? (JSON.parse(raw) as T) : fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
+  private writeJson(key: string, value: unknown): void {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch (e) {
+      console.warn(`Failed to save ${key}:`, e);
+    }
+  }
+
   async saveCustomScripts(scripts: Script[]): Promise<void> {
     try {
       localStorage.setItem('custom_scripts', JSON.stringify(scripts));

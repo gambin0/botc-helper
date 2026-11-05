@@ -13,7 +13,9 @@ A mobile-first, offline-first Android app that helps Blood on the Clocktower pla
 ## Features
 
 - Import and manage official BotC scripts (JSON format)
-- Create games with 5-15 players
+- Create games with 5-15 players, keeping the last game's players and seats if you like
+- Remembers the names of people you play with (on this device) and suggests them when you name a seat
+- Rearrange seats by dragging or with Move up/down buttons, until the first log entry
 - Record in-game events (claims, deaths, executions, nominations)
 - Constraint-based deduction engine
 - Role possibility matrix with explanations
