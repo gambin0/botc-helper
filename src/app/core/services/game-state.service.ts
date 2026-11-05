@@ -12,8 +12,9 @@ import {
   Script,
   ScriptCharacter
 } from '../models/game';
-import { DeductionEngine, SolverInput } from '../solver/solver';
+import { SolverInput } from '../solver/solver';
 import { DeductionService } from './deduction.service';
+import { WhatIfInput, WhatIfResult } from '../solver/what-if';
 import { BluffSuggestion, suggestBluffs } from '../solver/bluffs';
 import { DatabaseService, GameState } from '../storage/database.service';
 import { generateUUID } from '../utils/uuid';
@@ -141,8 +142,14 @@ export class GameStateService {
     return this.players().find(p => p.id === playerId)?.name ?? 'Unknown player';
   }
 
-  explain(playerId: string, roleId: string): Explanation {
-    return new DeductionEngine(this.solverInput()).explain(playerId, roleId);
+  /** Runs in a worker; rejects with CancelledError if the game changes first. */
+  explain(playerId: string, roleId: string): Promise<Explanation> {
+    return this.deduction.explain(this.solverInput(), playerId, roleId);
+  }
+
+  /** Runs in a worker; rejects with CancelledError if the game changes first. */
+  stressTestClaim(input: WhatIfInput): Promise<WhatIfResult> {
+    return this.deduction.stressTestClaim(input);
   }
 
   getPossibleRoles(playerId: string): RolePossibility[] {

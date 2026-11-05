@@ -34,7 +34,12 @@ The UI freezes for the whole solve, and phones are slower than this desktop.
   - Flipping a setting twice mid-solve abandoned the stale solve and settled on the final input.
   - The console stayed empty, and the fallback to the main thread never fired.
   - The deductions page keeps the previous result visible during a solve and marks it `aria-busy`. It is not dimmed, because that would break contrast minimums.
-- [ ] Move `explain()` and `stressTestClaim` to the worker too. `checkPool` has no events and is fast, so it can stay.
+- [x] **Move `explain()` and `stressTestClaim` to the worker too.** They run in a second worker (`SolverTaskRunner`), so they don't wait behind a long solve. Changing the game cancels them: an open "Why?" panel closes, and the claim test says to test again. `checkPool` has no events and is fast, so it stays on the main thread.
+  - **Checked in Chrome** with the same 15-player game:
+    - Four "Why?" panels answered in 3.9 s.
+    - A claim stress test took 29.6 s; before this change, that froze the page for the whole time.
+    - The main thread never paused for more than 11 ms in either case.
+    - Flipping a setting while an explanation was pending closed its panel.
 - [ ] **Make the search faster for 12–15 players.** This is where the real time goes. The reference solver and the fuzz campaign make it safe to optimize: any change that alters results will fail `npm test`.
 - [ ] Decide how the UI should present results when the search limit is hit. Today it marks roles "Not disproven (search limit reached)", and at 15 players that happens in about 1 game in 6.
 

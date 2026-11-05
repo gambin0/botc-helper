@@ -1,14 +1,13 @@
 /// <reference lib="webworker" />
 
-import { solve } from './solver';
-import { SolveRequest, SolveResponse } from './solver-worker-protocol';
+import { SolverRequest, SolverResponse, runTask } from './solver-worker-protocol';
 
-// Runs the deduction engine off the main thread. One request at a time: the
-// app terminates and replaces this worker when a newer input arrives mid-solve.
-addEventListener('message', ({ data }: MessageEvent<SolveRequest>) => {
-  let response: SolveResponse;
+// Runs deduction-engine tasks off the main thread, one at a time in arrival
+// order. The app terminates and replaces this worker to abandon stale work.
+addEventListener('message', ({ data }: MessageEvent<SolverRequest>) => {
+  let response: SolverResponse;
   try {
-    response = { id: data.id, result: solve(data.input) };
+    response = { id: data.id, result: runTask(data.task) };
   } catch (e) {
     response = { id: data.id, error: e instanceof Error ? e.message : String(e) };
   }

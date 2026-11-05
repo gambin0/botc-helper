@@ -1,7 +1,9 @@
 import { DestroyRef, Service, inject, signal } from '@angular/core';
-import { DeductionResult } from '../models/game';
-import { LatestSolver, SolverWorker } from '../solver/latest-solver';
+import { DeductionResult, Explanation } from '../models/game';
+import { LatestSolver } from '../solver/latest-solver';
 import { SolverInput } from '../solver/solver';
+import { SolverTaskRunner, SolverWorker } from '../solver/solver-task-runner';
+import { WhatIfInput, WhatIfResult } from '../solver/what-if';
 
 export const EMPTY_DEDUCTIONS: DeductionResult = {
   consistent: true,
@@ -18,8 +20,13 @@ function createSolverWorker(): SolverWorker {
 }
 
 /**
- * Runs the deduction engine in a Web Worker so large games do not freeze the
- * UI. Only the most recent input is solved; see LatestSolver.
+ * Runs the deduction engine in Web Workers so large games do not freeze the UI.
+ *
+ * - The main deductions run in one worker, always for the most recent input
+ *   (see LatestSolver).
+ * - On-demand questions (explanations, claim stress tests) run in a second
+ *   worker so they do not wait behind a long solve. Changing the game cancels
+ *   them: their promises reject with CancelledError.
  */
 @Service()
 export class DeductionService {
@@ -39,17 +46,34 @@ export class DeductionService {
     error: message => this.error.set(message)
   });
 
+  private readonly questions = new SolverTaskRunner(typeof Worker === 'undefined' ? null : createSolverWorker);
+
   constructor() {
-    inject(DestroyRef).onDestroy(() => this.solver.dispose());
+    inject(DestroyRef).onDestroy(() => {
+      this.solver.dispose();
+      this.questions.dispose();
+    });
   }
 
   solve(input: SolverInput): void {
+    this.questions.cancel(); // answers about the old game are no longer wanted
     this.solver.submit(input);
   }
 
-  /** Shows the empty result immediately and abandons any running solve. */
+  /** Why `playerId` can or cannot be `roleId`. */
+  explain(input: SolverInput, playerId: string, roleId: string): Promise<Explanation> {
+    return this.questions.run({ kind: 'explain', input, playerId, roleId });
+  }
+
+  /** What the table could deduce from a hypothetical claim. */
+  stressTestClaim(input: WhatIfInput): Promise<WhatIfResult> {
+    return this.questions.run({ kind: 'stress-test', input });
+  }
+
+  /** Shows the empty result immediately and abandons any running work. */
   clear(): void {
     this.solver.dispose();
+    this.questions.cancel();
     this.error.set(null);
     this.result.set(EMPTY_DEDUCTIONS);
   }

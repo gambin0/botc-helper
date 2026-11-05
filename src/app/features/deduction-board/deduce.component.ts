@@ -6,8 +6,15 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { GameStateService } from '../../core/services/game-state.service';
 import { Explanation, RolePossibility } from '../../core/models/game';
+import { CancelledError } from '../../core/solver/solver-task-runner';
 import { CharacterImageComponent } from '../../shared/character-image/character-image.component';
 import { RevealToggleComponent } from '../../shared/reveal-toggle/reveal-toggle.component';
+
+/** An open "Why?" panel: no fields yet while the explanation is being worked out. */
+interface WhyEntry {
+  explanation?: Explanation;
+  error?: string;
+}
 
 interface PlayerRow {
   id: string;
@@ -124,15 +131,21 @@ interface PlayerRow {
                             Why?
                           </button>
                         </div>
-                        @if (why(row.id, r.roleId); as ex) {
-                          <div class="why">
-                            <p>{{ ex.summary }}</p>
-                            @if (ex.evidence.length > 0) {
-                              <ul>
-                                @for (e of ex.evidence; track e.id) {
-                                  <li>{{ e.label }}</li>
-                                }
-                              </ul>
+                        @if (why(row.id, r.roleId); as w) {
+                          <div class="why" role="status" [attr.aria-busy]="!w.explanation && !w.error">
+                            @if (w.explanation; as ex) {
+                              <p>{{ ex.summary }}</p>
+                              @if (ex.evidence.length > 0) {
+                                <ul>
+                                  @for (e of ex.evidence; track e.id) {
+                                    <li>{{ e.label }}</li>
+                                  }
+                                </ul>
+                              }
+                            } @else if (w.error) {
+                              <p>Could not explain this: {{ w.error }}</p>
+                            } @else {
+                              <p>Checking…</p>
                             }
                           </div>
                         } @else {
@@ -181,7 +194,7 @@ export class DeduceComponent {
   protected readonly gameState = inject(GameStateService);
   protected readonly result = this.gameState.deductions;
   /** On-demand explanations; cleared whenever the evidence changes. */
-  private readonly explanations = linkedSignal<unknown, Map<string, Explanation>>({
+  private readonly explanations = linkedSignal<unknown, Map<string, WhyEntry>>({
     source: this.result,
     computation: () => new Map()
   });
@@ -211,15 +224,31 @@ export class DeduceComponent {
     });
   });
 
-  protected why(playerId: string, roleId: string): Explanation | undefined {
+  protected why(playerId: string, roleId: string): WhyEntry | undefined {
     return this.explanations().get(`${playerId}:${roleId}`);
   }
 
   protected toggleWhy(playerId: string, roleId: string): void {
     const key = `${playerId}:${roleId}`;
     const next = new Map(this.explanations());
-    if (next.has(key)) next.delete(key);
-    else next.set(key, this.gameState.explain(playerId, roleId));
-    this.explanations.set(next);
+    if (next.delete(key)) {
+      this.explanations.set(next);
+      return;
+    }
+    const pending: WhyEntry = {};
+    this.explanations.set(next.set(key, pending));
+    // Only touch the entry if it is still open and the evidence has not changed.
+    const settle = (done: WhyEntry | null) => {
+      if (this.explanations().get(key) !== pending) return;
+      const map = new Map(this.explanations());
+      if (done) map.set(key, done);
+      else map.delete(key);
+      this.explanations.set(map);
+    };
+    this.gameState.explain(playerId, roleId).then(
+      explanation => settle({ explanation }),
+      // Cancelled: the game changed, so the question is out of date. Close it.
+      (e: unknown) => settle(e instanceof CancelledError ? null : { error: e instanceof Error ? e.message : String(e) })
+    );
   }
 }

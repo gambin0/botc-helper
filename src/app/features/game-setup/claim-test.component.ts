@@ -6,7 +6,8 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { GameStateService } from '../../core/services/game-state.service';
 import { InfoPayload, getInfoSpec } from '../../core/rules/info-specs';
-import { WhatIfResult, WhatIfVerdict, stressTestClaim } from '../../core/solver/what-if';
+import { WhatIfResult, WhatIfVerdict } from '../../core/solver/what-if';
+import { CancelledError } from '../../core/solver/solver-task-runner';
 import { InfoFieldsComponent, isInfoComplete } from '../../shared/info-fields/info-fields.component';
 
 const VERDICT_LABEL: Record<WhatIfVerdict, string> = {
@@ -54,7 +55,15 @@ const VERDICT_LABEL: Record<WhatIfVerdict, string> = {
         }
       }
 
-      <button mat-flat-button [disabled]="!canRun()" (click)="run()">Test claim</button>
+      <button mat-flat-button [disabled]="!canRun() || testing()" (click)="run()">Test claim</button>
+      <!-- Always present so screen readers announce the change. -->
+      <p class="note" role="status">
+        @if (testing()) {
+          Testing claim…
+        } @else if (error(); as err) {
+          The claim could not be tested: {{ err }}
+        }
+      </p>
 
       @if (result(); as r) {
         <section class="result" [class]="'result ' + r.verdict" aria-live="polite">
@@ -126,21 +135,28 @@ export class ClaimTestComponent {
     return !this.spec() || !this.withInfo() || isInfoComplete(this.spec(), this.info());
   });
 
+  /** Changes identity whenever the inputs or the game change. */
+  private readonly inputs = computed(() => [
+    this.roleId(), this.night(), this.withInfo(), this.info(), this.gameState.events(), this.gameState.players()
+  ]);
   /** Cleared whenever the inputs or the game change, so it never shows stale results. */
-  protected readonly result = linkedSignal<unknown, WhatIfResult | null>({
-    source: () => [this.roleId(), this.night(), this.withInfo(), this.info(), this.gameState.events(), this.gameState.players()],
-    computation: () => null
-  });
+  protected readonly result = linkedSignal<unknown, WhatIfResult | null>({ source: this.inputs, computation: () => null });
+  protected readonly error = linkedSignal<unknown, string | null>({ source: this.inputs, computation: () => null });
+  /** Inputs of the test now running. A test for older inputs still runs, but its answer is dropped. */
+  private readonly runningFor = signal<unknown[] | null>(null);
+  protected readonly testing = computed(() => this.runningFor() === this.inputs());
 
   protected toNumber(event: Event): number {
     return Number((event.target as HTMLInputElement).value);
   }
 
-  protected run(): void {
+  protected async run(): Promise<void> {
     const selfPlayerId = this.gameState.selfPlayerId();
     if (!this.canRun() || !selfPlayerId) return;
-    this.result.set(
-      stressTestClaim({
+    const inputs = this.inputs();
+    this.runningFor.set(inputs);
+    try {
+      const result = await this.gameState.stressTestClaim({
         characters: this.gameState.activeRoles(),
         players: this.gameState.players(),
         events: this.gameState.events(),
@@ -149,7 +165,15 @@ export class ClaimTestComponent {
         info: this.spec() && this.withInfo() ? this.info() : null,
         night: this.night(),
         options: { assumeGoodPlayersHonest: this.gameState.assumeHonest() }
-      })
-    );
+      });
+      if (this.inputs() === inputs) this.result.set(result);
+    } catch (e) {
+      if (this.inputs() !== inputs) return; // the form changed; the cleared result says enough
+      this.error.set(
+        e instanceof CancelledError ? 'the game changed while it ran. Test again.' : e instanceof Error ? e.message : String(e)
+      );
+    } finally {
+      if (this.runningFor() === inputs) this.runningFor.set(null);
+    }
   }
 }
