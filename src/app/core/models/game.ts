@@ -106,7 +106,13 @@ export interface Contradiction {
 export interface DeductionResult {
   /** False when no starting grimoire is consistent with the evidence. */
   consistent: boolean;
+  /** Starting characters: what each player could have been dealt. */
   possibleRoles: RolePossibility[];
+  /**
+   * Players who could be the living Demon after the last logged event,
+   * allowing for star-passes and the Scarlet Woman. In player-ID order of seats.
+   */
+  demonNow: string[];
   alignments: PlayerAlignment[];
   contradictions: Contradiction[];
   /**

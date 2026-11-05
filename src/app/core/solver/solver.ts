@@ -24,6 +24,7 @@ import {
 import { InfoPayload, InfoSpec, InfoView, PartialInfoView, getInfoSpec } from '../rules/info-specs';
 import { claimRole, describeEvent, executionEndedGame, infoPayload, targetPlayer } from '../rules/events';
 import { baseComposition } from '../rules/setup';
+import { chronologicalOrder } from '../rules/timeline';
 
 /**
  * Blood on the Clocktower deduction engine.
@@ -121,6 +122,22 @@ interface InfoConstraint {
   alwaysFalse?: boolean;
   /** The ability has a red herring (Fortune Teller); set when indexing. */
   hasRedHerring?: boolean;
+  /** A death or execution comes before it in game order, so the Demon may have moved. */
+  late?: boolean;
+}
+
+/** Deaths, executions and information in game order (rules/timeline.ts). */
+type Step =
+  | { kind: 'info'; info: number }
+  | { kind: 'death' | 'resurrection'; seat: number }
+  | { kind: 'execution'; seat: number; ended: boolean; ev: number };
+
+/** One possible history of the Demon for a complete grimoire. */
+interface DemonTimeline {
+  /** The grimoire as it stood when each info constraint (by index) happened. */
+  rolesAt: Int16Array[];
+  /** Seat of the living Demon after the last event; -1 if the game is over. */
+  demonNow: number;
 }
 
 interface GlobalConstraint {
@@ -200,6 +217,19 @@ export class DeductionEngine {
   private unseatedDemon = -1;
   private maxMinionsEver = 0;
   private ambiguousRole: boolean[] = [];
+
+  // The Demon changing seats (star-pass, Scarlet Woman)
+  private steps: Step[] = [];
+  /** Some role in the pool can move the Demon to another seat. */
+  private demonCanMove = false;
+  /** Registrations a Minion may gain by becoming a Demon. */
+  private demonRegs: Registration[] = [];
+  /** Per role: its registrations plus `demonRegs` (for Minions), for loose checks after a possible move. */
+  private lateRegs: (readonly Registration[])[] = [];
+  /** Check information against the exact history (complete grimoires) rather than loosely. */
+  private exactTimeline = false;
+  /** When set, only histories that end with this seat as the living Demon count. */
+  private endDemonPin = -1;
   private readonly targetsCache = new Map<number, CompositionTargets>();
   /** roles[r].maxCopies, as a typed array for the hot path. */
   private maxCopies = new Uint8Array(0);
@@ -324,6 +354,10 @@ export class DeductionEngine {
       this.roleAlignments[i] = new Set(r.regs.map(g => g.alignment));
     });
 
+    this.demonCanMove = this.roles.some(r => r.rule.passesOnDeath || r.rule.inheritsDemon);
+    this.demonRegs = this.roles.filter(r => r.teamIdx === T_DEMON && !r.rule.unseated).flatMap(r => r.regs);
+    this.lateRegs = this.roles.map(r => (r.teamIdx === T_MINION ? [...r.regs, ...this.demonRegs] : r.regs));
+
     this.maxMinionsEver =
       this.composition[T_MINION] +
       (this.unseatedDemon >= 0 ? 1 : 0) +
@@ -417,19 +451,36 @@ export class DeductionEngine {
       }
     }
 
+    // Who is alive before each execution, in game order.
+    const events = input.events;
+    const order = chronologicalOrder(events);
+    const seatOf = (e: GameEvent) => this.seatIndex.get(targetPlayer(e) ?? '');
+    const aliveBeforeExecution = new Map<number, number>();
+    const chrono = new Array<boolean>(this.n).fill(true);
+    for (const i of order) {
+      const seat = seatOf(events[i]);
+      if (seat === undefined) continue;
+      if (events[i].kind === 'execution') aliveBeforeExecution.set(i, chrono.filter(Boolean).length);
+      if (events[i].kind === 'death' || events[i].kind === 'execution') chrono[seat] = false;
+      if (events[i].kind === 'resurrection') chrono[seat] = true;
+    }
+
     // Walk the log in order, tracking who is alive at each point.
     const alive = new Array<boolean>(this.n).fill(true);
-    for (const event of input.events) {
+    const infosOf = events.map(() => [] as number[]);
+    const executionEv = new Map<number, number>();
+    events.forEach((event, i) => {
       const label = describe(event);
+      const before = this.infos.length;
       switch (event.kind) {
         case 'death':
         case 'resurrection': {
-          const seat = this.seatIndex.get(targetPlayer(event) ?? '');
+          const seat = seatOf(event);
           if (seat !== undefined) alive[seat] = event.kind === 'resurrection';
           break;
         }
         case 'execution':
-          this.compileExecution(event, label, alive);
+          executionEv.set(i, this.compileExecution(event, label, alive, aliveBeforeExecution.get(i) ?? 0));
           break;
         case 'claim':
           this.compileClaim(event, label);
@@ -437,6 +488,25 @@ export class DeductionEngine {
         case 'info':
           this.compileInfo(event, label, alive);
           break;
+      }
+      for (let k = before; k < this.infos.length; k++) infosOf[i].push(k);
+    });
+
+    // The same events in game order, for tracking who holds the Demon.
+    let moved = false;
+    for (const i of order) {
+      const event = events[i];
+      const seat = seatOf(event);
+      if ((event.kind === 'death' || event.kind === 'resurrection') && seat !== undefined) {
+        this.steps.push({ kind: event.kind, seat });
+        moved ||= event.kind === 'death';
+      } else if (event.kind === 'execution' && seat !== undefined) {
+        this.steps.push({ kind: 'execution', seat, ended: executionEndedGame(event), ev: executionEv.get(i) ?? -1 });
+        moved = true;
+      }
+      for (const info of infosOf[i]) {
+        this.steps.push({ kind: 'info', info });
+        this.infos[info].late = moved;
       }
     }
   }
@@ -476,25 +546,28 @@ export class DeductionEngine {
     }
   }
 
-  private compileExecution(event: GameEvent, label: string, alive: boolean[]): void {
+  /**
+   * Returns the evidence index, or -1 if the execution is not evidence.
+   * `aliveBefore` counts living players in game order (rules/timeline.ts).
+   */
+  private compileExecution(event: GameEvent, label: string, alive: boolean[], aliveBefore: number): number {
     const seat = this.seatIndex.get(targetPlayer(event) ?? '');
-    if (seat === undefined) return;
-    const aliveBefore = alive.filter(Boolean).length;
+    if (seat === undefined) return -1;
     alive[seat] = false;
     const aliveAfter = aliveBefore - 1;
 
     if (executionEndedGame(event)) {
-      if (aliveAfter <= 2) return; // Could be the final-two evil win.
+      if (aliveAfter <= 2) return -1; // Could be the final-two evil win.
       const ev = this.addEvidence(event.id, label);
+      // A Minion may have become the Demon earlier; the history check is exact.
+      const minionOk = this.unseatedDemonInPool() || this.demonCanMove;
       this.addUnary(
         ev,
         seat,
-        this.maskWhere(
-          r => r.team === 'demon' || r.id === 'saint' || (r.team === 'minion' && this.unseatedDemonInPool())
-        ),
+        this.maskWhere(r => r.team === 'demon' || r.id === 'saint' || (r.team === 'minion' && minionOk)),
         'The game ended on their execution, so they were the Demon (or Saint)'
       );
-      return;
+      return ev;
     }
 
     const ev = this.addEvidence(event.id, `${label} and the game continued`);
@@ -523,10 +596,11 @@ export class DeductionEngine {
       ev,
       refs: [seat],
       watch: [seat],
+      // A necessary condition only; the history check also needs her alive with 5+ players.
       test: (w, complete) => {
         const r = w[seat];
         if (r < 0 || this.roles[r].teamIdx !== T_DEMON) return true;
-        const swOk = sw !== undefined && aliveBefore >= 5;
+        const swOk = sw !== undefined;
         if (!complete) return swOk || mastermind !== undefined;
         for (let i = 0; i < this.n; i++) {
           if (i === seat) continue;
@@ -536,6 +610,7 @@ export class DeductionEngine {
         return false;
       }
     });
+    return ev;
   }
 
   private compileInfo(event: GameEvent, label: string, alive: boolean[]): void {
@@ -666,9 +741,12 @@ export class DeductionEngine {
     const ambiguous: number[] = [];
     // With Lil' Monsta in play, the babysitting Minion "is the Demon".
     const babysitter = this.unseatedDemon >= 0 && this.teamCount[T_DEMON] === 0;
+    // Before the exact history check, a Minion may already have become the Demon.
+    const loose = this.looseTiming(c);
     const regsOf = (s: number): readonly Registration[] => {
-      const role = this.roles[this.world[s]];
-      return babysitter && role.teamIdx === T_MINION ? [...role.regs, BABYSITTER] : role.regs;
+      const r = this.world[s];
+      const regs = loose ? this.lateRegs[r] : this.roles[r].regs;
+      return babysitter && this.roles[r].teamIdx === T_MINION ? [...regs, BABYSITTER] : regs;
     };
     for (const s of seats) {
       const regs = regsOf(s);
@@ -705,6 +783,11 @@ export class DeductionEngine {
     this.curRedHerring = -1;
     this.curFauxPaw = -1;
     return { canTrue, canFalse };
+  }
+
+  /** Partial check of info that may come after the Demon moved: allow for any move. */
+  private looseTiming(c: InfoConstraint): boolean {
+    return !this.exactTimeline && c.late === true && this.demonCanMove;
   }
 
   private hasRedHerringRole(c: InfoConstraint): boolean {
@@ -879,13 +962,20 @@ export class DeductionEngine {
   // Search
   // ---------------------------------------------------------------------------
 
-  private staticDomains(active: Uint8Array, pin?: [number, number]): number[][] {
+  /** Could a seat that started as role r be the living Demon at the end? */
+  private canEndAsDemon(r: number): boolean {
+    const t = this.roles[r].teamIdx;
+    return t === T_DEMON || (t === T_MINION && this.demonCanMove);
+  }
+
+  private staticDomains(active: Uint8Array, pin?: [number, number], endDemon = -1): number[][] {
     const domains: number[][] = [];
     for (let p = 0; p < this.n; p++) {
       const d: number[] = [];
       for (let r = 0; r < this.roles.length; r++) {
         if (this.roles[r].rule.unseated) continue;
         if (pin && pin[0] === p && pin[1] !== r) continue;
+        if (p === endDemon && !this.canEndAsDemon(r)) continue;
         let ok = true;
         for (const u of this.unary) {
           if (u.player === p && active[u.ev] && !u.allowed[r]) {
@@ -900,8 +990,14 @@ export class DeductionEngine {
     return domains;
   }
 
-  private search(active: Uint8Array, pin?: [number, number]): SearchOutcome {
-    const domains = this.staticDomains(active, pin);
+  /**
+   * Looks for a grimoire (and Demon history) that fits the active evidence.
+   * `pin` fixes one seat's starting role; `endDemon` requires that seat to be
+   * the living Demon after the last event.
+   */
+  private search(active: Uint8Array, pin?: [number, number], endDemon = -1): SearchOutcome {
+    this.endDemonPin = endDemon;
+    const domains = this.staticDomains(active, pin, endDemon);
     if (domains.some(d => d.length === 0)) return { kind: 'unsat' };
     for (const d of domains) {
       for (let i = d.length - 1; i > 0; i--) {
@@ -928,6 +1024,8 @@ export class DeductionEngine {
       else link([c.source, ...c.involved]);
     }
     for (const g of this.globals) if (active[g.ev]) link(g.refs);
+    // Deaths matter to who can inherit the Demon, so those seats are not interchangeable.
+    for (const step of this.steps) if (step.kind !== 'info') link([step.seat]);
     this.freeSeats = [];
     this.isFree = new Uint8Array(this.n);
     for (let p = 0; p < this.n; p++) {
@@ -957,6 +1055,7 @@ export class DeductionEngine {
       throw e;
     } finally {
       this.totalNodes += this.nodes;
+      this.endDemonPin = -1;
     }
   }
 
@@ -1083,7 +1182,10 @@ export class DeductionEngine {
     vortox: 'yes' | 'maybe' | 'no',
     fauxPaw: number | 'any' = -1
   ): 'ok' | 'needs-corruption' | 'impossible' {
-    const genuine = this.roles[this.world[c.source]].id === c.infoRole;
+    const sourceRole = this.roles[this.world[c.source]];
+    // A Minion source may have become the Demon (and lost its ability) by now.
+    if (sourceRole.teamIdx === T_MINION && this.looseTiming(c)) return 'ok';
+    const genuine = sourceRole.id === c.infoRole;
     if (!genuine) return c.isPublic ? 'impossible' : 'ok';
     const { canTrue, canFalse } = this.outcomes(c, redHerring, fauxPaw);
     if (c.isPublic) return canTrue ? 'ok' : 'impossible';
@@ -1163,23 +1265,56 @@ export class DeductionEngine {
     for (const g of this.globals) {
       if (this.active[g.ev] && !g.test(this.world, true)) return false;
     }
+    return this.fittingDemonsNow(true).length > 0;
+  }
 
+  /**
+   * For the complete grimoire in `this.world`: the living Demon after the last
+   * event in each history that fits the evidence (-1 when the game is over).
+   * Empty if none fits. With `firstOnly`, stops at the first fitting history.
+   */
+  private fittingDemonsNow(firstOnly: boolean): number[] {
+    const base = this.world;
     const vortox = this.vortoxState(true);
     const cap = this.corruptionCapacity(true);
-    const activeInfos = this.infos.filter(c => this.active[c.ev]);
-    const needsHerring = activeInfos.some(
-      c => this.hasRedHerringRole(c) && this.roles[this.world[c.source]].id === c.infoRole
+    const needsHerring = this.infos.some(
+      c => this.active[c.ev] && this.hasRedHerringRole(c) && this.roles[base[c.source]].id === c.infoRole
     );
     const herrings = [-1];
     if (needsHerring) {
-      for (let s = 0; s < this.n; s++) if (this.roles[this.world[s]].alignment === 'good') herrings.push(s);
+      for (let s = 0; s < this.n; s++) if (this.roles[base[s]].alignment === 'good') herrings.push(s);
     }
-
     const paws = [-1];
     if (this.fauxPawRole >= 0 && this.used[this.fauxPawRole]) {
-      for (let s = 0; s < this.n; s++) if (this.roles[this.world[s]].alignment === 'good') paws.push(s);
+      for (let s = 0; s < this.n; s++) if (this.roles[base[s]].alignment === 'good') paws.push(s);
     }
 
+    const found: number[] = [];
+    this.exactTimeline = true;
+    try {
+      for (const timeline of this.demonTimelines()) {
+        if (this.endDemonPin >= 0 && timeline.demonNow !== this.endDemonPin) continue;
+        if (found.includes(timeline.demonNow)) continue;
+        if (this.timelineFits(timeline, herrings, paws, vortox, cap)) {
+          found.push(timeline.demonNow);
+          if (firstOnly) break;
+        }
+      }
+    } finally {
+      this.world = base;
+      this.exactTimeline = false;
+    }
+    return found;
+  }
+
+  /** Judges every active info against the grimoire as it stood at the time. */
+  private timelineFits(
+    timeline: DemonTimeline,
+    herrings: number[],
+    paws: number[],
+    vortox: 'yes' | 'maybe' | 'no',
+    cap: number
+  ): boolean {
     for (const rh of herrings) for (const fp of paws) {
       const failing = new Map<number, Set<number>>();
       const add = (night: number, source: number) => {
@@ -1188,7 +1323,10 @@ export class DeductionEngine {
       };
       const drunkCopyFails: InfoConstraint[] = [];
       let ok = true;
-      for (const c of activeInfos) {
+      for (let ci = 0; ci < this.infos.length; ci++) {
+        const c = this.infos[ci];
+        if (!this.active[c.ev]) continue;
+        this.world = timeline.rolesAt[ci];
         const verdict = this.judge(c, rh, vortox, fp);
         if (verdict === 'impossible') {
           ok = false;
@@ -1201,6 +1339,117 @@ export class DeductionEngine {
       if (ok && this.drunkCopyChoiceFits(failing, drunkCopyFails, cap)) return true;
     }
     return false;
+  }
+
+  /**
+   * Every possible history of who holds the Demon, for the complete starting
+   * grimoire in `this.world`. Walks deaths and executions in game order. When
+   * the living Demon dies:
+   * - a living Scarlet Woman becomes that Demon if 5 or more players were
+   *   alive before the death (she must);
+   * - otherwise, if it died other than by execution and passes on death (the
+   *   Imp's star-pass), any living Minion may become it;
+   * - after an execution logged as "the game continued", only a Mastermind
+   *   can keep the game going (without a Demon); otherwise it is impossible;
+   * - otherwise the game is over, and no later death, execution or active
+   *   information may happen. (The game may also simply end when a
+   *   star-passing Demon dies, for example to a Slayer.)
+   * A game-ending execution must kill the living Demon (unless a Scarlet
+   * Woman would take over) or the Saint, unless 2 or fewer players remain.
+   * A Minion who becomes the Demon has that character from then on; a dead
+   * Demon keeps its character.
+   */
+  private demonTimelines(): DemonTimeline[] {
+    const out: DemonTimeline[] = [];
+    const steps = this.steps;
+    // Shortcut: if no Demon ever dies and no active execution ends the game, nothing changes.
+    // (An execution set aside as evidence is skipped entirely, as in the full walk.)
+    let quiet = true;
+    for (const st of steps) {
+      if (st.kind === 'info' || st.kind === 'resurrection') continue;
+      if (st.kind === 'execution' && st.ev >= 0 && !this.active[st.ev]) continue;
+      if (this.roles[this.world[st.seat]].teamIdx === T_DEMON || (st.kind === 'execution' && st.ended)) quiet = false;
+    }
+    const aliveEnd = this.aliveAtEnd(this.active);
+    if (quiet) {
+      let demonNow = -1;
+      for (let i = 0; i < this.n; i++) if (aliveEnd[i] && this.roles[this.world[i]].teamIdx === T_DEMON) demonNow = i;
+      return [{ rolesAt: new Array(this.infos.length).fill(this.world), demonNow }];
+    }
+    const rolesAt: Int16Array[] = new Array(this.infos.length).fill(this.world);
+    const mastermind = this.roleIndex.get('mastermind');
+    const hasMastermind = mastermind !== undefined && this.used[mastermind] > 0;
+    const team = (r: number) => this.roles[r].teamIdx;
+    const livingDemon = (roles: Int16Array, alive: Uint8Array) => {
+      for (let i = 0; i < this.n; i++) if (alive[i] && team(roles[i]) === T_DEMON) return i;
+      return -1;
+    };
+    const becomes = (roles: Int16Array, seat: number, role: number) => {
+      const next = roles.slice();
+      next[seat] = role;
+      return next;
+    };
+
+    const walk = (k: number, roles: Int16Array, alive: Uint8Array, over: boolean): void => {
+      if (k === steps.length) {
+        out.push({ rolesAt: rolesAt.slice(), demonNow: over ? -1 : livingDemon(roles, alive) });
+        return;
+      }
+      const step = steps[k];
+      if (step.kind === 'info') {
+        if (!this.active[this.infos[step.info].ev]) return walk(k + 1, roles, alive, over);
+        if (over) return; // nothing can happen after the game ended
+        rolesAt[step.info] = roles;
+        return walk(k + 1, roles, alive, false);
+      }
+      if (step.kind === 'execution' && step.ev >= 0 && !this.active[step.ev]) return walk(k + 1, roles, alive, over);
+      if (over) return;
+      if (step.kind === 'resurrection') {
+        const next = alive.slice();
+        next[step.seat] = 1;
+        return walk(k + 1, roles, next, false);
+      }
+      if (!alive[step.seat]) return walk(k + 1, roles, alive, false); // already dead
+      let aliveBefore = 0;
+      for (let i = 0; i < this.n; i++) aliveBefore += alive[i];
+      const after = alive.slice();
+      after[step.seat] = 0;
+      const dying = roles[step.seat];
+      const wasDemon = team(dying) === T_DEMON;
+      let sw = -1;
+      if (wasDemon && aliveBefore >= 5) {
+        for (let i = 0; i < this.n; i++) {
+          if (after[i] && this.roles[roles[i]].rule.inheritsDemon && team(roles[i]) !== T_DEMON) {
+            sw = i;
+            break;
+          }
+        }
+      }
+
+      if (step.kind === 'execution' && step.ended) {
+        if (aliveBefore - 1 <= 2 || (wasDemon && sw < 0) || this.roles[dying].id === 'saint') {
+          walk(k + 1, roles, after, true);
+        } else if (team(dying) === T_MINION && this.unseatedDemon >= 0 && livingDemon(roles, alive) < 0) {
+          walk(k + 1, roles, after, true); // Lil' Monsta's babysitter
+        }
+        return;
+      }
+      if (!wasDemon) return walk(k + 1, roles, after, false);
+      if (sw >= 0) return walk(k + 1, becomes(roles, sw, dying), after, false);
+      if (step.kind === 'death' && this.roles[dying].rule.passesOnDeath) {
+        for (let m = 0; m < this.n; m++) {
+          if (after[m] && team(roles[m]) === T_MINION) walk(k + 1, becomes(roles, m, dying), after, false);
+        }
+      }
+      if (step.kind === 'execution') {
+        // The log says the game went on, so only a Mastermind could have kept it going.
+        if (hasMastermind) walk(k + 1, roles, after, false);
+        return;
+      }
+      walk(k + 1, roles, after, true);
+    };
+    walk(0, this.world, new Uint8Array(this.n).fill(1), false);
+    return out;
   }
 
   /**
@@ -1255,7 +1504,8 @@ export class DeductionEngine {
       contradictions: [],
       ignoredEvidence: [],
       warnings: [...this.warnings],
-      incomplete: false
+      incomplete: false,
+      demonNow: []
     };
     if (this.n === 0 || R === 0) return empty;
     if (this.n < 5) {
@@ -1266,10 +1516,16 @@ export class DeductionEngine {
     const active = this.allActive();
     const possible = Array.from({ length: this.n }, () => new Uint8Array(R));
     const unproven = Array.from({ length: this.n }, () => new Uint8Array(R));
+    const demonNow = new Uint8Array(this.n);
     const markWorld = (out: { world: Int16Array; free: number[] }) => {
       out.world.forEach((r, p) => (possible[p][r] = 1));
       // Interchangeable seats could have had any of each other's roles.
       for (const p of out.free) for (const q of out.free) possible[p][out.world[q]] = 1;
+      for (const d of this.demonsNowOf(out.world, active)) {
+        if (d < 0) continue;
+        demonNow[d] = 1;
+        if (out.free.includes(d)) for (const q of out.free) demonNow[q] = 1;
+      }
     };
     let incomplete = false;
     const contradictions: DeductionResult['contradictions'] = [];
@@ -1316,6 +1572,20 @@ export class DeductionEngine {
       // If the first search gave up but a pinned one found a world, the
       // evidence is consistent and the pinned searches settled every role.
       if (!foundWorld) incomplete = true;
+
+      // Who could be the Demon now: seats not yet seen as the Demon at the
+      // end of some fitting history need their own search.
+      const aliveEnd = this.aliveAtEnd(active);
+      for (let p = 0; p < this.n; p++) {
+        if (demonNow[p] || !aliveEnd[p]) continue;
+        if (!domains[p].some(r => possible[p][r] && this.canEndAsDemon(r))) continue;
+        const out = this.search(active, undefined, p);
+        if (out.kind === 'sat') markWorld(out);
+        else if (out.kind === 'unknown') {
+          demonNow[p] = 1;
+          incomplete = true;
+        }
+      }
     }
 
     const possibleRoles: RolePossibility[] = [];
@@ -1356,8 +1626,32 @@ export class DeductionEngine {
       contradictions,
       ignoredEvidence,
       warnings: [...this.warnings],
-      incomplete
+      incomplete,
+      demonNow: this.seatIds.filter((_, p) => demonNow[p])
     };
+  }
+
+  /** Who is alive after the last event, skipping executions set aside as evidence. */
+  private aliveAtEnd(active: Uint8Array): Uint8Array {
+    const alive = new Uint8Array(this.n).fill(1);
+    for (const st of this.steps) {
+      if (st.kind === 'info') continue;
+      if (st.kind === 'execution' && st.ev >= 0 && !active[st.ev]) continue;
+      alive[st.seat] = st.kind === 'resurrection' ? 1 : 0;
+    }
+    return alive;
+  }
+
+  /** Living Demons after the last event, over the fitting histories of a complete grimoire. */
+  private demonsNowOf(world: Int16Array, active: Uint8Array): number[] {
+    this.world = world;
+    this.active = active;
+    this.used = new Uint8Array(this.roles.length);
+    world.forEach(r => this.used[r]++);
+    this.teamCount = [0, 0, 0, 0];
+    world.forEach(r => this.teamCount[this.roles[r].teamIdx]++);
+    this.assignedCount = this.n;
+    return this.fittingDemonsNow(false);
   }
 
   private directReason(p: number, r: number, active: Uint8Array): string | null {

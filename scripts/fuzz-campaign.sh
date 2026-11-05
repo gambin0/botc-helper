@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Runs the standard fuzz campaign: every profile on its own seed, plus long games.
-# Failures explained by a recorded engine bug (F-001, F-002) are only counted;
+# Failures explained by a recorded engine bug are only counted;
 # anything new is written, minimized, to fuzz-runs/campaign/<job>/failures/.
 #
 #   bash scripts/fuzz-campaign.sh            # default: 1500 games per job
@@ -30,6 +30,7 @@ run lycanthrope      19 lycanthrope
 run executions       20 executions
 run long             21 mixed --max-events 14
 run setup            22 setup
+run demonmoves       24 demonmoves
 
 echo "=== new failures:"
 find "$OUT" -path '*/failures/*' -type f | sort || true

@@ -19,7 +19,7 @@ export type DiffOutcome =
   | { status: 'skipped'; reason: string }
   | {
       status: 'disagree';
-      kind: 'consistency' | 'roles';
+      kind: 'consistency' | 'roles' | 'demon-now';
       engineConsistent: boolean;
       referenceConsistent: boolean;
       players: PlayerDiff[];
@@ -65,6 +65,18 @@ export function differentialCheck(input: SolverInput): DiffOutcome {
   const players = roleDiffs(input, enginePossible(engine), ref.possible);
   if (players.length > 0) {
     return { status: 'disagree', kind: 'roles', engineConsistent: true, referenceConsistent: true, players };
+  }
+  // Who could be the Demon now, reported as the role "demon-now" in the diff.
+  const engineNow = new Set(engine.demonNow);
+  const nowDiffs: PlayerDiff[] = input.players
+    .map(p => ({
+      playerId: p.id,
+      engineOnly: engineNow.has(p.id) && !ref.demonNow.has(p.id) ? ['demon-now'] : [],
+      referenceOnly: ref.demonNow.has(p.id) && !engineNow.has(p.id) ? ['demon-now'] : []
+    }))
+    .filter(d => d.engineOnly.length || d.referenceOnly.length);
+  if (nowDiffs.length > 0) {
+    return { status: 'disagree', kind: 'demon-now', engineConsistent: true, referenceConsistent: true, players: nowDiffs };
   }
   return { status: 'agree', consistent: true };
 }

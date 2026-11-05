@@ -8,6 +8,9 @@
  * - consistent: built from a true grimoire. Good players claim their
  *   character, the Drunk claims what it thinks it is, evil players bluff,
  *   and info roles report info that the true grimoire allows.
+ * - with deaths: as consistent, plus a death on nights 2 and 3 and an
+ *   execution on days 2 and 3, each kept only if the true grimoire still
+ *   fits (so some games include a star-pass).
  * - contradictory: everyone claims a random Townsfolk and reports random
  *   info. Almost always contradictory, so this times the work of finding
  *   and setting aside conflicting evidence.
@@ -53,8 +56,8 @@ function contradictoryGame(n: number, i: number): SolverInput {
 
 const listsBySize = new Map<number, string[][]>();
 
-function consistentGame(n: number, i: number): SolverInput {
-  const rng = new Rng(7, i + n * 100);
+function consistentGame(n: number, i: number, deaths = false): SolverInput {
+  const rng = new Rng(deaths ? 8 : 7, i + n * 100);
   const players: Player[] = makePlayers(n);
   const ids = players.map(p => p.id);
   const empty: SolverInput = { characters, players, events: [] };
@@ -70,6 +73,24 @@ function consistentGame(n: number, i: number): SolverInput {
   ids.forEach((id, s) =>
     events.push({ ...base, id: `c${k++}`, night: 1, kind: 'claim', actorId: id, payload: { roleId: claimed[s] } })
   );
+  if (deaths) {
+    const alive = new Set(ids);
+    for (const night of [2, 3]) {
+      for (const kind of ['death', 'execution'] as const) {
+        for (let attempt = 0; attempt < 10; attempt++) {
+          const victim = rng.pick([...alive]);
+          const payload = kind === 'death' ? { playerId: victim } : { playerId: victim, gameEnded: false };
+          const event: GameEvent = { ...base, id: `d${k}`, night, kind, payload };
+          if (worldFits({ ...empty, events: [...events, event] }, truth)) {
+            events.push(event);
+            alive.delete(victim);
+            k++;
+            break;
+          }
+        }
+      }
+    }
+  }
   // Info that the true grimoire allows: honest from sober info roles, anything
   // from evil players and the Drunk (subject to the Poisoner's budget).
   ids.forEach((id, s) => {
@@ -91,7 +112,8 @@ function consistentGame(n: number, i: number): SolverInput {
 const [onlyN, count] = process.argv.slice(2).map(Number);
 const sizes = onlyN ? [onlyN] : [10, 12, 15];
 const games = count || 30;
-for (const [kind, make] of [['consistent', consistentGame], ['contradictory', contradictoryGame]] as const) {
+const withDeaths = (n: number, i: number) => consistentGame(n, i, true);
+for (const [kind, make] of [['consistent', consistentGame], ['with deaths', withDeaths], ['contradictory', contradictoryGame]] as const) {
   for (const n of sizes) {
     const times: number[] = [];
     let incomplete = 0;

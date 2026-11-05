@@ -61,6 +61,16 @@ export interface RoleRule {
   /** Fortune Teller: one good player registers as the Demon to them. */
   hasRedHerring?: boolean;
   /**
+   * Imp: when this Demon dies other than by execution, a living Minion may
+   * become this character (a star-pass). See rules/timeline.ts.
+   */
+  passesOnDeath?: boolean;
+  /**
+   * Scarlet Woman: if 5 or more players are alive when the Demon dies, this
+   * player becomes that Demon. See rules/timeline.ts.
+   */
+  inheritsDemon?: boolean;
+  /**
    * Set when the engine models the role only partially, so the UI can warn
    * that deductions involving it may be too permissive or too strict.
    */
@@ -128,9 +138,11 @@ const ROLE_RULES: Record<string, RoleRule> = {
   lycanthrope: { grantsFauxPaw: true },
   fibbin: { gameWideFalseInfo: 1 },
 
+  // --- The Demon changing seats ---
+  imp: { passesOnDeath: true },
+  scarletwoman: { inheritsDemon: true },
+
   // --- Known gaps ---
-  imp: { approximation: 'Star-passing is not modelled: roles shown are starting characters.' },
-  scarletwoman: { approximation: 'Becoming the Demon is not modelled: roles shown are starting characters.' },
   legion: { approximation: 'Multiple Legion players are not modelled.' },
   atheist: { approximation: 'Games with no evil characters are not modelled.' },
   summoner: { approximation: 'Games that start with no Demon are not modelled.' },

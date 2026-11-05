@@ -3,7 +3,7 @@
 The campaign is a plain script, so no agent is needed to run it:
 
 ```bash
-bash scripts/fuzz-campaign.sh             # 12 jobs × 1500 games per check, a few minutes
+bash scripts/fuzz-campaign.sh             # 13 jobs × 1500 games per check, a few minutes
 GAMES=5000 bash scripts/fuzz-campaign.sh  # longer
 ```
 
@@ -43,3 +43,5 @@ Checked on 2026-11-04 by planting a bug in a temporary copy of `solver.ts`, runn
 | Fibbin allowance counted per night instead of per game | fibbin | Yes, by the generated-truth check (2 failures) |
 | Drunk claim rule removed ("if the Drunk claims X, X is not in play") | mixed | Yes, by the differential check (3 failures by game ~230) |
 | Scarlet Woman saves the Demon even with fewer than 5 alive | executions | Yes, by the differential check (3 failures by game ~65) |
+| Imp star-pass skipped (2026-11-05) | demonmoves | Yes, by the differential check (3 failures by game ~77) |
+| Info after a possible Demon move checked without the Minion-as-Demon registrations (2026-11-05) | demonmoves | Yes, 1 differential and 2 generated-truth failures |

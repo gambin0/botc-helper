@@ -14,6 +14,7 @@ import {
 import { InfoPayload, InfoSpec, InfoView, getInfoSpec } from '../../rules/info-specs';
 import { claimRole, executionEndedGame, infoPayload, targetPlayer } from '../../rules/events';
 import { baseComposition } from '../../rules/setup';
+import { chronologicalOrder } from '../../rules/timeline';
 import type { SolverInput } from '../solver';
 
 /**
@@ -28,6 +29,11 @@ import type { SolverInput } from '../solver';
  * The only shortcut is that per-seat evidence (self-knowledge, claims, a
  * game-ending execution) filters which roles a seat may take while seatings
  * are generated. Everything else is checked on complete grimoires.
+ *
+ * The Demon can change seats during the game (an Imp star-pass, the Scarlet
+ * Woman). For each grimoire, every possible history of who held the Demon is
+ * simulated (see `timelines`), and information is judged against the
+ * characters as they were when it was received.
  */
 
 export interface ReferenceResult {
@@ -35,6 +41,8 @@ export interface ReferenceResult {
   consistent: boolean;
   /** Player ID → role IDs that player holds in at least one fitting grimoire. */
   possible: Map<string, Set<string>>;
+  /** Players who are the living Demon after the last event in at least one fitting history. */
+  demonNow: Set<string>;
   /** How many complete seatings were checked. */
   seatingsChecked: number;
 }
@@ -73,6 +81,20 @@ interface SaintItem {
 
 type WorldRule = (world: readonly PoolRole[]) => boolean;
 
+/** Something that happens at a point in the game, in game order (rules/timeline.ts). */
+type Step =
+  | { kind: 'item'; item: number }
+  | { kind: 'death' | 'resurrection'; seat: number }
+  | { kind: 'execution'; seat: number; ended: boolean };
+
+/** One possible history of the Demon for a grimoire. */
+interface Timeline {
+  /** The characters in play when each item (by index) happened. */
+  rolesAt: (readonly PoolRole[])[];
+  /** The living Demon's seat after the last event, or -1 if there is none (the game is over). */
+  demonNow: number;
+}
+
 /** The input, compiled once: role pool, per-seat filters and world-level rules. */
 export class ReferenceGame {
   readonly seats: string[];
@@ -89,6 +111,8 @@ export class ReferenceGame {
   readonly seatFilters: ((r: PoolRole) => boolean)[][];
   readonly worldRules: WorldRule[] = [];
   readonly items: (InfoItem | SaintItem)[] = [];
+  /** Deaths, executions and items in game order. */
+  private readonly steps: Step[] = [];
   private readonly honest: boolean;
 
   constructor(readonly input: SolverInput) {
@@ -171,7 +195,10 @@ export class ReferenceGame {
 
   private compileEvents(events: readonly GameEvent[]): void {
     const alive = new Array<boolean>(this.n).fill(true);
-    for (const event of events) {
+    /** Event index → the items it produced. */
+    const itemsOf = events.map(() => [] as number[]);
+    events.forEach((event, i) => {
+      const before = this.items.length;
       switch (event.kind) {
         case 'death':
         case 'resurrection': {
@@ -189,6 +216,18 @@ export class ReferenceGame {
           this.compileInfo(event, alive);
           break;
       }
+      for (let k = before; k < this.items.length; k++) itemsOf[i].push(k);
+    });
+
+    for (const i of chronologicalOrder(events)) {
+      const event = events[i];
+      const seat = this.seatOf(targetPlayer(event));
+      if ((event.kind === 'death' || event.kind === 'resurrection') && seat !== undefined) {
+        this.steps.push({ kind: event.kind, seat });
+      } else if (event.kind === 'execution' && seat !== undefined) {
+        this.steps.push({ kind: 'execution', seat, ended: executionEndedGame(event) });
+      }
+      for (const item of itemsOf[i]) this.steps.push({ kind: 'item', item });
     }
   }
 
@@ -218,23 +257,14 @@ export class ReferenceGame {
   private compileExecution(event: GameEvent, alive: boolean[]): void {
     const seat = this.seatOf(targetPlayer(event));
     if (seat === undefined) return;
-    const aliveBefore = alive.filter(Boolean).length;
     alive[seat] = false;
 
-    if (executionEndedGame(event)) {
-      if (aliveBefore - 1 <= 2) return;
-      const lilMonsta = this.unseatedDemonInPool;
-      this.seatFilters[seat].push(
-        r => r.team === 'demon' || r.id === 'saint' || (lilMonsta && r.team === 'minion')
-      );
-      return;
-    }
+    // A game-ending execution must kill the Demon (perhaps a Minion who became
+    // it) or the Saint: checked in `timelines`, which counts players in game order.
+    if (executionEndedGame(event)) return;
 
-    // The Demon survived its execution: a Scarlet Woman (5+ alive) or a Mastermind saved the game.
-    this.worldRules.push(w => {
-      if (w[seat].team !== 'demon') return true;
-      return w.some((r, i) => i !== seat && ((r.id === 'scarletwoman' && aliveBefore >= 5) || r.id === 'mastermind'));
-    });
+    // If the Demon was executed and the game went on, `timelines` requires a
+    // Scarlet Woman (5+ alive) to take over, or a Mastermind.
     // The Saint survived its execution: that is false information about the Saint's ability.
     this.items.push({ kind: 'saint', seat, night: event.night });
   }
@@ -351,9 +381,19 @@ export class ReferenceGame {
   // --- Judging a complete seating (design 4c–4f) ----------------------------
 
   fits(world: readonly PoolRole[]): boolean {
-    if (!this.legalList(world)) return false;
-    for (let s = 0; s < this.n; s++) if (!this.seatFilters[s].every(f => f(world[s]))) return false;
-    if (!this.worldRules.every(rule => rule(world))) return false;
+    return this.judgeWorld(world, true).fits;
+  }
+
+  /**
+   * Whether the grimoire fits, and the living Demon after the last event in
+   * each fitting history. With `firstOnly`, stops at the first fitting history.
+   */
+  judgeWorld(world: readonly PoolRole[], firstOnly = false): { fits: boolean; demonsNow: Set<number> } {
+    const demonsNow = new Set<number>();
+    const none = { fits: false, demonsNow };
+    if (!this.legalList(world)) return none;
+    for (let s = 0; s < this.n; s++) if (!this.seatFilters[s].every(f => f(world[s]))) return none;
+    if (!this.worldRules.every(rule => rule(world))) return none;
 
     const goodSeats = world.flatMap((r, i) => (r.alignment === 'good' ? [i] : []));
     const needsHerring = this.items.some(
@@ -362,30 +402,137 @@ export class ReferenceGame {
     const herrings = needsHerring ? [-1, ...goodSeats] : [-1];
     const paws = world.some(r => r.rule.grantsFauxPaw) ? [-1, ...goodSeats] : [-1];
 
-    for (const rh of herrings) {
-      for (const fp of paws) {
-        const falseEvents = this.falseInfo(world, rh, fp);
-        if (falseEvents && this.withinBudget(world, falseEvents)) return true;
+    let fits = false;
+    for (const timeline of this.timelines(world)) {
+      if (demonsNow.has(timeline.demonNow)) continue; // nothing new to learn from it
+      search: for (const rh of herrings) {
+        for (const fp of paws) {
+          const falseEvents = this.falseInfo(world, timeline.rolesAt, rh, fp);
+          if (falseEvents && this.withinBudget(world, falseEvents)) {
+            fits = true;
+            demonsNow.add(timeline.demonNow);
+            break search;
+          }
+        }
       }
+      if (fits && firstOnly) break;
     }
-    return false;
+    return { fits, demonsNow };
+  }
+
+  /**
+   * Every possible history of the Demon for a starting grimoire (event order: rules/timeline.ts).
+   *
+   * Walks the deaths and executions in game order. When the living Demon dies:
+   * - a living Scarlet Woman becomes that Demon if 5 or more players were
+   *   alive before the death (she must);
+   * - otherwise, if it died other than by execution and passes on death (the
+   *   Imp's star-pass), any living Minion may become it;
+   * - after an execution logged as "the game continued", only a Mastermind
+   *   can keep the game going (without a Demon); otherwise it is impossible;
+   * - otherwise the game is over, and no later death, execution or
+   *   information may happen. (The game may also simply be over after a
+   *   star-passing Demon dies, for example to a Slayer.)
+   * A game-ending execution must kill the living Demon (unless a Scarlet Woman
+   * would have taken over) or the Saint, unless 2 or fewer players remain.
+   */
+  *timelines(world: readonly PoolRole[]): Generator<Timeline> {
+    const steps = this.steps;
+    // Shortcut: if no Demon ever dies and no execution ends the game, nothing changes.
+    const quiet = steps.every(st => st.kind === 'item' || st.kind === 'resurrection' || (world[st.seat].team !== 'demon' && !(st.kind === 'execution' && st.ended)));
+    if (quiet) {
+      const alive = new Array<boolean>(this.n).fill(true);
+      for (const st of steps) if (st.kind !== 'item') alive[st.seat] = st.kind === 'resurrection';
+      yield { rolesAt: this.items.map(() => world), demonNow: world.findIndex((r, i) => alive[i] && r.team === 'demon') };
+      return;
+    }
+    const rolesAt: (readonly PoolRole[])[] = new Array(this.items.length);
+    const hasMastermind = world.some(r => r.id === 'mastermind');
+    const livingDemon = (roles: readonly PoolRole[], alive: readonly boolean[]) =>
+      roles.findIndex((r, i) => alive[i] && r.team === 'demon');
+    const scarletWomanFor = (roles: readonly PoolRole[], alive: readonly boolean[], dying: number, aliveBefore: number) =>
+      aliveBefore >= 5 ? roles.findIndex((r, i) => i !== dying && alive[i] && r.rule.inheritsDemon && r.team !== 'demon') : -1;
+    const becomes = (roles: readonly PoolRole[], seat: number, role: PoolRole) => roles.map((r, i) => (i === seat ? role : r));
+
+    function* walk(k: number, roles: readonly PoolRole[], alive: readonly boolean[], over: boolean): Generator<Timeline> {
+      if (k === steps.length) {
+        yield { rolesAt: [...rolesAt], demonNow: over ? -1 : livingDemon(roles, alive) };
+        return;
+      }
+      const step = steps[k];
+      if (over) return; // nothing can happen after the game ended
+      if (step.kind === 'item') {
+        rolesAt[step.item] = roles;
+        yield* walk(k + 1, roles, alive, false);
+        return;
+      }
+      if (step.kind === 'resurrection') {
+        yield* walk(k + 1, roles, alive.map((a, i) => a || i === step.seat), false);
+        return;
+      }
+      if (!alive[step.seat]) {
+        yield* walk(k + 1, roles, alive, false); // already dead
+        return;
+      }
+      const aliveBefore = alive.filter(Boolean).length;
+      const after = alive.map((a, i) => a && i !== step.seat);
+      const wasDemon = roles[step.seat].team === 'demon';
+      const sw = wasDemon ? scarletWomanFor(roles, after, step.seat, aliveBefore) : -1;
+
+      if (step.kind === 'execution' && step.ended) {
+        if (aliveBefore - 1 <= 2) yield* walk(k + 1, roles, after, true);
+        else if ((wasDemon && sw < 0) || roles[step.seat].id === 'saint') yield* walk(k + 1, roles, after, true);
+        else if (roles[step.seat].team === 'minion' && game.unseatedDemonInPool && livingDemon(roles, alive) < 0) {
+          yield* walk(k + 1, roles, after, true); // Lil' Monsta's babysitter
+        }
+        return;
+      }
+      if (!wasDemon) {
+        yield* walk(k + 1, roles, after, false);
+        return;
+      }
+      if (sw >= 0) {
+        yield* walk(k + 1, becomes(roles, sw, roles[step.seat]), after, false);
+        return;
+      }
+      if (step.kind === 'death' && roles[step.seat].rule.passesOnDeath) {
+        for (let m = 0; m < roles.length; m++) {
+          if (after[m] && roles[m].team === 'minion') yield* walk(k + 1, becomes(roles, m, roles[step.seat]), after, false);
+        }
+      }
+      if (step.kind === 'execution') {
+        // The log says the game went on, so only a Mastermind could have kept it going.
+        if (hasMastermind) yield* walk(k + 1, roles, after, false);
+        return;
+      }
+      yield* walk(k + 1, roles, after, true);
+    }
+    const game = this;
+    yield* walk(0, world, new Array<boolean>(this.n).fill(true), false);
   }
 
   /** False-info events in this world, or null if some evidence cannot hold at all. */
-  private falseInfo(world: readonly PoolRole[], redHerring: number, fauxPaw: number): { seat: number; night: number }[] | null {
+  private falseInfo(
+    world: readonly PoolRole[],
+    rolesAt: readonly (readonly PoolRole[])[],
+    redHerring: number,
+    fauxPaw: number
+  ): { seat: number; night: number }[] | null {
     const vortox = world.some(r => r.rule.falsifiesTownsfolkInfo);
     const result: { seat: number; night: number }[] = [];
-    for (const it of this.items) {
+    for (let k = 0; k < this.items.length; k++) {
+      const it = this.items[k];
+      const now = rolesAt[k];
       if (it.kind === 'saint') {
-        if (world[it.seat].id === 'saint') result.push({ seat: it.seat, night: it.night });
+        if (now[it.seat].id === 'saint') result.push({ seat: it.seat, night: it.night });
         continue;
       }
-      const genuine = world[it.seat].id === it.spec.roleId;
+      const genuine = now[it.seat].id === it.spec.roleId;
       if (!genuine) {
         if (it.isPublic) return null;
         continue;
       }
-      const { canTrue, canFalse } = this.outcomes(it, world, redHerring, fauxPaw);
+      const { canTrue, canFalse } = this.outcomes(it, now, redHerring, fauxPaw);
       if (it.isPublic) {
         if (!canTrue) return null;
         continue;
@@ -463,6 +610,7 @@ export class ReferenceGame {
 export function referenceSolve(input: SolverInput): ReferenceResult {
   const game = new ReferenceGame(input);
   const possible = new Map(game.seats.map(id => [id, new Set<string>()]));
+  const demonNow = new Set<string>();
   let consistent = false;
   let seatingsChecked = 0;
   for (const list of game.legalLists()) {
@@ -470,12 +618,14 @@ export function referenceSolve(input: SolverInput): ReferenceResult {
       if (++seatingsChecked > MAX_SEATINGS) {
         throw new Error(`Reference solver: more than ${MAX_SEATINGS} seatings; use a smaller game.`);
       }
-      if (!game.fits(world)) continue;
+      const judged = game.judgeWorld(world);
+      if (!judged.fits) continue;
       consistent = true;
       world.forEach((r, s) => possible.get(game.seats[s])!.add(r.id));
+      for (const s of judged.demonsNow) if (s >= 0) demonNow.add(game.seats[s]);
     }
   }
-  return { consistent, possible, seatingsChecked };
+  return { consistent, possible, demonNow, seatingsChecked };
 }
 
 /** Does this exact seating (role ID per seat, in seat order) fit the evidence? */

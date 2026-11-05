@@ -7,6 +7,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { GameStateService } from '../../core/services/game-state.service';
 import { Explanation, RolePossibility } from '../../core/models/game';
 import { CancelledError } from '../../core/solver/solver-task-runner';
+import { RoleRegistry } from '../../core/roles/role-registry';
 import { CharacterImageComponent } from '../../shared/character-image/character-image.component';
 import { RevealToggleComponent } from '../../shared/reveal-toggle/reveal-toggle.component';
 
@@ -26,6 +27,10 @@ interface PlayerRow {
   alignment: 'Good' | 'Evil' | 'Unknown' | 'None';
   possible: RolePossibility[];
   impossible: RolePossibility[];
+  /** Could be the living Demon after the last logged event. */
+  demonNow: boolean;
+  /** ...but did not start as a Demon: they would have caught a star-pass or been the Scarlet Woman. */
+  becameDemon: boolean;
 }
 
 @Component({
@@ -64,6 +69,9 @@ interface PlayerRow {
                 </ul>
               }
             }
+            @if (result().consistent && demonNowNames(); as names) {
+              <p class="now"><mat-icon aria-hidden="true">swap_horiz</mat-icon> <span><strong>Could be the Demon now:</strong> {{ names }}</span></p>
+            }
             @if (result().incomplete) {
               <p class="note">The search limit was reached, so some "possible" roles are not fully checked.</p>
             }
@@ -72,7 +80,7 @@ interface PlayerRow {
             </mat-slide-toggle>
             <p class="note">
               Information only counts if its source really has that ability and is not drunk or poisoned.
-              Roles shown are starting characters.
+              Roles shown are starting characters. "Could be the Demon now" allows for an Imp star-pass or the Scarlet Woman taking over.
             </p>
             @if (gameState.visibleWarnings().length > 0) {
               <details>
@@ -107,6 +115,12 @@ interface PlayerRow {
                 <app-reveal-toggle />
               } @else {
 
+              @if (row.demonNow) {
+                <p class="now">
+                  <mat-icon aria-hidden="true">swap_horiz</mat-icon>
+                  <span>Could be the Demon now@if (row.becameDemon) {, after a star-pass or as the Scarlet Woman}</span>
+                </p>
+              }
               <h2 class="section">Possible</h2>
               <ul class="roles">
                 @for (r of row.possible; track r.roleId) {
@@ -176,6 +190,7 @@ interface PlayerRow {
        dimmed: lower opacity would break colour-contrast minimums. */
     .stale { cursor: progress; }
     .section { font-size: 0.95rem; margin: 8px 0 4px; }
+    .now { display: flex; align-items: center; gap: 8px; }
     .roles, .impossible { list-style: none; padding: 0; margin: 0; }
     .role { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
     .role.confirmed { font-weight: 700; }
@@ -203,6 +218,7 @@ export class DeduceComponent {
     const result = this.result();
     const selfId = this.gameState.selfPlayerId();
     const reveal = this.gameState.revealSelf();
+    const demonNow = new Set(result.demonNow);
     return this.gameState.players().map(p => {
       const roles = result.possibleRoles.filter(r => r.playerId === p.id);
       const align = result.alignments.find(a => a.playerId === p.id);
@@ -219,10 +235,20 @@ export class DeduceComponent {
         alive: p.alive,
         alignment,
         possible: roles.filter(r => r.status !== 'impossible'),
-        impossible: roles.filter(r => r.status === 'impossible')
+        impossible: roles.filter(r => r.status === 'impossible'),
+        demonNow: demonNow.has(p.id),
+        becameDemon: demonNow.has(p.id) && !roles.some(r => r.status !== 'impossible' && RoleRegistry.get(r.roleId)?.team === 'demon')
       };
     });
   });
+
+  /** Who could be the Demon now, leaving out your own seat while it is hidden. */
+  protected readonly demonNowNames = computed(() =>
+    this.rows()
+      .filter(r => r.demonNow && !r.masked)
+      .map(r => r.name)
+      .join(', ')
+  );
 
   protected why(playerId: string, roleId: string): WhyEntry | undefined {
     return this.explanations().get(`${playerId}:${roleId}`);

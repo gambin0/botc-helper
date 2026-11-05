@@ -4,7 +4,7 @@ Findings from building the brute-force reference solver (`src/app/core/solver/re
 
 ## Where things stand
 
-- The engine agrees with an independent brute-force solver on 36,000 generated checks across 12 role profiles (5–7 players). The campaign also caught three bugs planted to test it. See `src/app/core/solver/reference/CAMPAIGN.md`.
+- The engine agrees with an independent brute-force solver on 39,000 generated checks across 13 jobs (5–7 players), including Demon moves. The campaign also caught all five bugs planted to test it. See `src/app/core/solver/reference/CAMPAIGN.md`.
 - Two engine bugs were found and fixed (`src/app/core/solver/reference/FINDINGS.md`):
   - **F-001:** with two or more Village Idiots, the engine always treated the first one in the log as the drunk copy.
   - **F-002:** Outsider setup changes were clamped at zero in pool order, so Hermit before Baron gave the wrong count. It hit about 1 in 50 random games.
@@ -62,7 +62,21 @@ The UI freezes for the whole solve, and phones are slower than this desktop.
 
 The engine warns about these (`approximation` in `role-rules.ts`), but they matter in ordinary play:
 
-- [ ] **Star-passing (Imp) and the Scarlet Woman becoming the Demon are not modelled.** Results describe *starting* characters. After a star-pass in Trouble Brewing, the board can mislead players who read it as current characters.
+- [x] **Star-passing (Imp) and the Scarlet Woman becoming the Demon.** Both solvers now consider every possible history of who held the Demon. Each piece of info is judged against the characters as they stood when it was received, and the result has a new `demonNow` list: who could be the living Demon after the last event. The Deduce page shows it in the summary and on each player.
+  - **Order of events:** for the Demon's history, events run in game order (`rules/timeline.ts`). On night N, deaths come first, then that night's info (including day-N public abilities, which the log files under the day's number), then day N's execution.
+  - **When the living Demon dies:**
+    - a living Scarlet Woman must take over if 5 or more were alive;
+    - otherwise, after a non-execution death, an Imp may pass the star to any living Minion;
+    - an execution logged as "the game continued" needs one of those, or a Mastermind;
+    - otherwise the game is over, so nothing may happen afterwards.
+  - **A game-ending execution** must kill the living Demon (and no Scarlet Woman may be able to take over) or the Saint.
+  - **New deductions** follow from this. A non-Imp Demon that died while the game went on is ruled out. "The game ended on the Imp's execution" proves the Scarlet Woman was dead or that 4 or fewer players were alive.
+  - **Still lenient (never wrongly rules anything out):**
+    - the log doesn't record how someone died, so an Imp killed by a Slayer is still allowed to pass the star;
+    - a Poisoner who becomes the Imp is still counted as able to poison.
+  - **Not modelled:** other ways the Demon moves (the Fang Gu jumping, the Pit-Hag, the Barber, Snake Charmer swaps).
+  - **Testing:** a new `demonmoves` fuzz profile (TB with forced Imp and Scarlet Woman, 35% deaths) is in the campaign. In it, the starting Imp dies and the game goes on in about 1 game in 5. Both planted bugs were caught: skipping the star-pass (by game ~77) and dropping the loose check for info after a possible move (by the truth check). `demon-moves.test.ts` runs hand-written scenarios on both solvers.
+  - **Speed:** the bench now has a "with deaths" row; at 15 players it takes a median of 174 ms and at most 0.62 s.
 - [ ] The Marionette sitting next to the Demon is not enforced.
 - [ ] Lord of Typhon's line of evil players is not enforced.
 - [ ] Multiple Legion players are not supported.

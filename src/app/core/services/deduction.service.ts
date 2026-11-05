@@ -8,6 +8,7 @@ import { WhatIfInput, WhatIfResult } from '../solver/what-if';
 export const EMPTY_DEDUCTIONS: DeductionResult = {
   consistent: true,
   possibleRoles: [],
+  demonNow: [],
   alignments: [],
   contradictions: [],
   ignoredEvidence: [],

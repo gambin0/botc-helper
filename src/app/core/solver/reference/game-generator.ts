@@ -38,8 +38,19 @@ export const PROFILES = {
   fibbin: { forced: ['fibbin'], weights: {} },
   lycanthrope: { forced: ['lycanthrope'], weights: {} },
   setup: { forced: [], weights: { baron: 5, godfather: 5, balloonist: 4, fanggu: 4, vigormortis: 4, hermit: 4 } },
-  executions: { forced: ['scarletwoman', 'saint'], weights: { mastermind: 4 } }
-} satisfies Record<string, { forced: string[]; weights: Record<string, number>; only?: string[] }>;
+  executions: { forced: ['scarletwoman', 'saint'], weights: { mastermind: 4 } },
+  // Star-passes and the Scarlet Woman: Trouble Brewing with many deaths and Demon-related info.
+  demonmoves: {
+    forced: ['imp', 'scarletwoman'],
+    weights: { slayer: 4, fortuneteller: 4, undertaker: 3, ravenkeeper: 3, poisoner: 2 },
+    only: [
+      'washerwoman', 'librarian', 'investigator', 'chef', 'empath', 'fortuneteller', 'undertaker',
+      'ravenkeeper', 'virgin', 'slayer', 'drunk', 'recluse', 'saint', 'butler',
+      'poisoner', 'spy', 'scarletwoman', 'baron', 'imp'
+    ],
+    deathRate: 0.35
+  }
+} satisfies Record<string, { forced: string[]; weights: Record<string, number>; only?: string[]; deathRate?: number }>;
 
 export type ProfileName = keyof typeof PROFILES;
 
@@ -193,9 +204,23 @@ export function randomPayload(rng: Rng, type: string, playerIds: readonly string
   return payload;
 }
 
+/** How often a profile asks for deaths and executions (undefined: the default mix). */
+function deathRate(profile: ProfileName | undefined): number | undefined {
+  const p = PROFILES[profile ?? 'mixed'];
+  return 'deathRate' in p ? p.deathRate : undefined;
+}
+
 /** One random event, given who is alive. Returns null if nothing sensible could be made. */
-function randomEvent(rng: Rng, night: number, players: readonly string[], alive: Set<string>, poolIds: string[]): GameEvent | null {
-  const roll = rng.next();
+function randomEvent(
+  rng: Rng,
+  night: number,
+  players: readonly string[],
+  alive: Set<string>,
+  poolIds: string[],
+  deaths?: number
+): GameEvent | null {
+  // With a death rate, pick deaths at that rate and otherwise a claim or info in the usual proportion.
+  const roll = deaths === undefined ? rng.next() : rng.chance(deaths) ? 0.8 + 0.2 * rng.next() : 0.8 * rng.next();
   const seatedPool = poolIds.filter(id => id !== 'fibbin' && id !== 'lilmonsta');
   if (roll < 0.35) {
     const trust: ClaimTrust = rng.pick(['asserted', 'asserted', 'asserted', 'asserted', 'asserted', 'asserted', 'asserted', 'confirmed', 'doubted', 'false']);
@@ -244,7 +269,7 @@ export function generateGame(seed: number, index: number, options: GeneratorOpti
   let night = 1;
   for (let k = 0; k < count; k++) {
     if (rng.chance(0.3)) night = Math.min(3, night + 1);
-    const event = randomEvent(rng, night, ids, alive, poolIds);
+    const event = randomEvent(rng, night, ids, alive, poolIds, deathRate(options.profile));
     if (!event) continue;
     applyAlive(alive, event);
     events.push(event);
@@ -313,7 +338,7 @@ export function generateTrueGame(seed: number, index: number, options: Generator
   let night = 1;
   for (let attempt = 0; attempt < target * 6 && events.length < target; attempt++) {
     if (rng.chance(0.25)) night = Math.min(3, night + 1);
-    const event = trueEvent(rng, night, ids, alive, poolIds, truth, drunkBelief);
+    const event = trueEvent(rng, night, ids, alive, poolIds, truth, drunkBelief, deathRate(options.profile));
     if (!event) continue;
     const next = { ...input, events: [...events, event] };
     if (!worldFits(next, truth)) continue;
@@ -331,10 +356,11 @@ function trueEvent(
   alive: Set<string>,
   poolIds: string[],
   truth: readonly string[],
-  drunkBelief: string | null
+  drunkBelief: string | null,
+  deaths?: number
 ): GameEvent | null {
   const seatedPool = poolIds.filter(id => id !== 'fibbin' && id !== 'lilmonsta');
-  const roll = rng.next();
+  const roll = deaths === undefined ? rng.next() : rng.chance(deaths) ? 0.85 + 0.15 * rng.next() : 0.85 * rng.next();
   const seat = rng.int(0, ids.length - 1);
   const role = truth[seat];
   const team = RoleRegistry.get(role)!.team;
