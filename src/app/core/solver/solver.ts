@@ -119,6 +119,8 @@ interface InfoConstraint {
   vortoxApplies: boolean;
   /** An always-false "info", e.g. a Saint executed without the game ending. */
   alwaysFalse?: boolean;
+  /** The ability has a red herring (Fortune Teller); set when indexing. */
+  hasRedHerring?: boolean;
 }
 
 interface GlobalConstraint {
@@ -127,13 +129,26 @@ interface GlobalConstraint {
   refs: number[];
   /** Seats that trigger a partial check when assigned; null = check at leaves only. */
   watch: number[] | null;
+  /** Roles that also trigger a partial check when placed on any seat. */
+  watchRoles?: number[];
   /** With complete=false, return false only if definitely violated. */
   test(world: Int16Array, complete: boolean): boolean;
+}
+
+/** Allowed team sizes given the setup modifiers that are (or may still be) in play. */
+interface CompositionTargets {
+  outsiders: Set<number>;
+  minOutsiders: number;
+  maxOutsiders: number;
+  minMinions: number;
+  maxMinions: number;
 }
 
 type SearchOutcome = { kind: 'sat'; world: Int16Array; free: number[] } | { kind: 'unsat' } | { kind: 'unknown' };
 
 class BudgetExceeded extends Error {}
+
+const EITHER_ALIGNMENT: ReadonlySet<Alignment> = new Set<Alignment>(['good', 'evil']);
 
 const BABYSITTER: Registration = { alignment: 'evil', team: 'demon', roleId: 'lilmonsta' };
 
@@ -167,6 +182,7 @@ export class DeductionEngine {
   // Constraint indexes by seat
   private infosBySeat: number[][] = [];
   private globalsBySeat: number[][] = [];
+  private globalsByRole: number[][] = [];
   private wholeCircleInfos: number[] = [];
   private leafGlobals: number[] = [];
 
@@ -184,6 +200,9 @@ export class DeductionEngine {
   private unseatedDemon = -1;
   private maxMinionsEver = 0;
   private ambiguousRole: boolean[] = [];
+  private readonly targetsCache = new Map<number, CompositionTargets>();
+  /** roles[r].maxCopies, as a typed array for the hot path. */
+  private maxCopies = new Uint8Array(0);
 
   // Search state
   private world!: Int16Array;
@@ -211,7 +230,9 @@ export class DeductionEngine {
   private curFauxPaw = -1;
   private readonly view: InfoView;
   private readonly partialView: PartialInfoView;
-  private partialAlignments: Set<Alignment>[] = [];
+  private partialAlignments: ReadonlySet<Alignment>[] = [];
+  /** The alignments each role can register as. */
+  private roleAlignments: ReadonlySet<Alignment>[] = [];
 
   constructor(input: SolverInput) {
     this.options = {
@@ -258,6 +279,7 @@ export class DeductionEngine {
       seats: this.seatIds,
       alignmentOptions: id => engine.partialAlignments[engine.seatIndex.get(id) ?? 0]
     };
+    this.addPublicInfoDomains(); // needs the views above
   }
 
   // ---------------------------------------------------------------------------
@@ -287,6 +309,7 @@ export class DeductionEngine {
       this.roles.push(info);
     }
 
+    this.maxCopies = Uint8Array.from(this.roles, r => r.maxCopies);
     this.roles.forEach((r, i) => {
       if (r.rule.setup?.outsiderDelta || r.rule.setup?.anyOutsiderCount || r.rule.setup?.minionDelta) {
         this.setupModifierRoles.push(i);
@@ -298,6 +321,7 @@ export class DeductionEngine {
       if (r.rule.unseated && r.teamIdx === T_DEMON) this.unseatedDemon = i;
       if (r.rule.grantsFauxPaw) this.fauxPawRole = i;
       this.ambiguousRole[i] = r.regs.length > 1;
+      this.roleAlignments[i] = new Set(r.regs.map(g => g.alignment));
     });
 
     this.maxMinionsEver =
@@ -356,7 +380,9 @@ export class DeductionEngine {
     this.globals.push({
       ev,
       refs: [seat],
-      watch: null,
+      // Can only start failing when this seat becomes the Drunk or the believed role is placed.
+      watch: [seat],
+      watchRoles: [believedIdx],
       test: w => {
         if (w[seat] !== drunk) return true;
         for (let i = 0; i < this.n; i++) if (w[i] === believedIdx) return false;
@@ -550,19 +576,66 @@ export class DeductionEngine {
     });
   }
 
+  /**
+   * A public outcome (a Slayer kill, a Virgin execution) needs its source to
+   * genuinely hold the ability, and for a single target, that target to
+   * register suitably. `judge` already enforces both, but only once the seats
+   * are assigned, in every search. Restricting the seats' domains up front
+   * removes the same worlds before the search starts.
+   */
+  private addPublicInfoDomains(): void {
+    // With these in play a registration depends on the rest of the grimoire.
+    if (this.unseatedDemon >= 0 || this.fauxPawRole >= 0) return;
+    const R = this.roles.length;
+    for (const c of this.infos) {
+      if (!c.isPublic || c.alwaysFalse) continue;
+      const label = this.evidence[c.ev].label;
+      const genuine = this.roleIndex.get(c.infoRole);
+      if (genuine === undefined) {
+        this.addUnary(c.ev, c.source, new Uint8Array(R), label);
+        continue;
+      }
+      if (c.involved?.length !== 1 || c.hasRedHerring) {
+        this.addUnary(c.ev, c.source, this.maskWhere((_, r) => r === genuine), label);
+        continue;
+      }
+      const target = c.involved[0];
+      this.world = new Int16Array(this.n).fill(-1);
+      this.curReg = new Array(this.n).fill(null);
+      this.world[c.source] = genuine;
+      const fits = (r: number): boolean => {
+        this.world[target] = r;
+        try {
+          return this.outcomes(c, -1).canTrue;
+        } catch {
+          return true; // the check needed more of the grimoire; leave it to the search
+        }
+      };
+      if (target === c.source) {
+        this.addUnary(c.ev, c.source, this.maskWhere((_, r) => r === genuine && fits(r)), label);
+      } else {
+        this.addUnary(c.ev, c.source, this.maskWhere((_, r) => r === genuine), label);
+        this.addUnary(c.ev, target, this.maskWhere((_, r) => fits(r)), label);
+      }
+    }
+  }
+
   private indexConstraints(): void {
     this.infosBySeat = Array.from({ length: this.n }, () => []);
     this.globalsBySeat = Array.from({ length: this.n }, () => []);
     this.infos.forEach((c, i) => {
+      c.hasRedHerring = getRoleRule(c.infoRole).hasRedHerring === true;
       if (c.involved === null) {
         this.wholeCircleInfos.push(i);
         return;
       }
       for (const s of new Set([c.source, ...c.involved])) this.infosBySeat[s].push(i);
     });
+    this.globalsByRole = Array.from({ length: this.roles.length }, () => []);
     this.globals.forEach((g, i) => {
       if (g.watch === null) this.leafGlobals.push(i);
       else for (const s of g.watch) this.globalsBySeat[s].push(i);
+      for (const r of g.watchRoles ?? []) this.globalsByRole[r].push(i);
     });
   }
 
@@ -635,7 +708,7 @@ export class DeductionEngine {
   }
 
   private hasRedHerringRole(c: InfoConstraint): boolean {
-    return getRoleRule(c.infoRole).hasRedHerring === true;
+    return c.hasRedHerring === true;
   }
 
   /** During search: could a Faux Paw exist in this world? */
@@ -650,7 +723,7 @@ export class DeductionEngine {
 
   /** All copies of role r are already seated. */
   private full(r: number): boolean {
-    return this.used[r] >= this.roles[r].maxCopies;
+    return this.used[r] >= this.maxCopies[r];
   }
 
   /** Can role r still appear given the current partial assignment? */
@@ -662,8 +735,25 @@ export class DeductionEngine {
     return true;
   }
 
-  /** Allowed outsider counts and minion count range given mandatory and optional modifiers. */
-  private compositionTargets(complete: boolean): { outsiders: Set<number>; minMinions: number; maxMinions: number } {
+  /**
+   * Allowed outsider counts and minion count range given mandatory and optional modifiers.
+   * Called at every search node, so results are cached: they depend only on whether
+   * each setup modifier is placed, still placeable, or neither.
+   */
+  private compositionTargets(complete: boolean): CompositionTargets {
+    let key = complete ? 1 : 0;
+    for (const r of this.setupModifierRoles) {
+      key = key * 3 + (this.used[r] ? 2 : !complete && this.placeable(r) ? 1 : 0);
+    }
+    let targets = this.targetsCache.get(key);
+    if (!targets) {
+      targets = this.computeCompositionTargets(complete);
+      this.targetsCache.set(key, targets);
+    }
+    return targets;
+  }
+
+  private computeCompositionTargets(complete: boolean): CompositionTargets {
     // Track the unclamped sum of Outsider changes and clamp at zero once at the
     // end. Clamping after each modifier would depend on pool order: with a base
     // of 0, Hermit (−1) then Baron (+2) must give 1, not 2.
@@ -693,25 +783,19 @@ export class DeductionEngine {
     const outsiders = new Set<number>();
     if (anyCount) for (let x = 0; x <= this.n; x++) outsiders.add(x);
     else for (const d of sums) outsiders.add(Math.max(0, this.composition[T_OUTSIDER] + d));
-    return { outsiders, minMinions, maxMinions };
+    return { outsiders, minOutsiders: Math.min(...outsiders), maxOutsiders: Math.max(...outsiders), minMinions, maxMinions };
   }
 
   private compositionOk(complete: boolean): boolean {
     const [tf, out, min, dem] = this.teamCount;
     const demons = this.composition[T_DEMON];
-    const { outsiders, minMinions, maxMinions } = this.compositionTargets(complete);
+    const { outsiders, minOutsiders: oMin, maxOutsiders: oMax, minMinions, maxMinions } = this.compositionTargets(complete);
     // Lil' Monsta: no Demon seat, one extra Minion.
     const unseated = this.unseatedDemon >= 0;
     if (complete) {
       if (tf + out + min + dem !== this.n || !outsiders.has(out)) return false;
       if (dem === demons) return min === minMinions;
       return unseated && dem === 0 && min === minMinions + 1;
-    }
-    let oMin = Infinity;
-    let oMax = -Infinity;
-    for (const x of outsiders) {
-      oMin = Math.min(oMin, x);
-      oMax = Math.max(oMax, x);
     }
     if (dem > demons || min > maxMinions + (unseated && dem === 0 ? 1 : 0) || out > oMax) return false;
     // Either layout has the same number of evil seats, so Townsfolk bounds are unchanged.
@@ -744,7 +828,7 @@ export class DeductionEngine {
 
   /** "Requires X in play" (Huntsman → Damsel) is still achievable. */
   private requirementsPlaceable(): boolean {
-    let targets: ReturnType<DeductionEngine['compositionTargets']> | null = null;
+    let targets: CompositionTargets | null = null;
     for (const r of this.requiresRoles) {
       if (!this.used[r]) continue;
       for (const req of this.roles[r].rule.setup!.requiresInPlay!) {
@@ -755,7 +839,7 @@ export class DeductionEngine {
         // There must also be room on the required role's team.
         targets ??= this.compositionTargets(false);
         const t = this.roles[q].teamIdx;
-        if (t === T_OUTSIDER && this.teamCount[T_OUTSIDER] >= Math.max(...targets.outsiders)) return false;
+        if (t === T_OUTSIDER && this.teamCount[T_OUTSIDER] >= targets.maxOutsiders) return false;
         if (t === T_MINION && this.teamCount[T_MINION] >= targets.maxMinions + (this.unseatedDemon >= 0 ? 1 : 0)) return false;
       }
     }
@@ -944,6 +1028,10 @@ export class DeductionEngine {
       const g = this.globals[gi];
       if (this.active[g.ev] && !g.test(this.world, false)) return fail();
     }
+    for (const gi of this.globalsByRole[r]) {
+      const g = this.globals[gi];
+      if (this.active[g.ev] && !g.test(this.world, false)) return fail();
+    }
     for (const gi of this.leafGlobals) {
       const g = this.globals[gi];
       if (this.active[g.ev] && !g.test(this.world, false)) return fail();
@@ -976,12 +1064,11 @@ export class DeductionEngine {
       if (left === 0) byNight.delete(source);
       else byNight.set(source, left);
     }
-    undo.length = 0;
     this.world[p] = -1;
     this.used[r]--;
     this.teamCount[this.roles[r].teamIdx]--;
     this.assignedCount--;
-    for (let i = 0; i < this.n; i++) if (this.world[i] < 0) this.curReg[i] = null;
+    this.curReg[p] = null;
   }
 
   /**
@@ -1008,20 +1095,20 @@ export class DeductionEngine {
   /** Bounds-based check for whole-circle info such as the Chef. */
   private wholeCircleFailures(vortox: 'yes' | 'maybe' | 'no'): Map<number, Set<number>> {
     const extra = new Map<number, Set<number>>();
-    if (this.wholeCircleInfos.length === 0) return extra;
-    const pawPossible = this.fauxPawMode(false) === 'any';
-    this.partialAlignments = [];
-    for (let s = 0; s < this.n; s++) {
-      const r = this.world[s];
-      this.partialAlignments.push(
-        r < 0 || pawPossible ? new Set<Alignment>(['good', 'evil']) : new Set(this.roles[r].regs.map(g => g.alignment))
-      );
-    }
+    let viewReady = false;
     for (const ci of this.wholeCircleInfos) {
       const c = this.infos[ci];
       if (!this.active[c.ev] || !c.spec.countRange || this.world[c.source] < 0) continue;
       if (this.roles[this.world[c.source]].id !== c.infoRole) continue;
       if (c.vortoxApplies && vortox === 'maybe') continue;
+      if (!viewReady) {
+        const pawPossible = this.fauxPawMode(false) === 'any';
+        for (let s = 0; s < this.n; s++) {
+          const r = this.world[s];
+          this.partialAlignments[s] = r < 0 || pawPossible ? EITHER_ALIGNMENT : this.roleAlignments[r];
+        }
+        viewReady = true;
+      }
       const [min, max] = c.spec.countRange(c.payload, this.partialView);
       const value = c.payload.count ?? -1;
       const canTrue = value >= min && value <= max;
@@ -1038,6 +1125,12 @@ export class DeductionEngine {
   private corruptionFits(vortox: 'yes' | 'maybe' | 'no'): boolean {
     const cap = this.corruptionCapacity(false);
     const extra = this.wholeCircleFailures(vortox);
+    if (extra.size === 0) {
+      // Common case: no allocation. Each night's map holds its distinct false sources.
+      let excess = 0;
+      for (const sources of this.failing.values()) excess += Math.max(0, sources.size - cap);
+      return excess <= this.gameWideFalseInfo;
+    }
     const nights = new Set([...this.failing.keys(), ...extra.keys()]);
     const sizes: number[] = [];
     for (const night of nights) {
@@ -1201,8 +1294,8 @@ export class DeductionEngine {
       ignoredEvidence.push(refs[refs.length - 1]);
       base = this.search(active);
     }
+    let foundWorld = base.kind === 'sat';
     if (base.kind === 'sat') markWorld(base);
-    if (base.kind === 'unknown') incomplete = true;
 
     if (base.kind !== 'unsat') {
       const domains = this.staticDomains(active);
@@ -1210,14 +1303,19 @@ export class DeductionEngine {
         for (const r of domains[p]) {
           if (possible[p][r]) continue;
           const out = this.search(active, [p, r]);
-          if (out.kind === 'sat') markWorld(out);
-          else if (out.kind === 'unknown') {
+          if (out.kind === 'sat') {
+            markWorld(out);
+            foundWorld = true;
+          } else if (out.kind === 'unknown') {
             possible[p][r] = 1;
             unproven[p][r] = 1;
             incomplete = true;
           }
         }
       }
+      // If the first search gave up but a pinned one found a world, the
+      // evidence is consistent and the pinned searches settled every role.
+      if (!foundWorld) incomplete = true;
     }
 
     const possibleRoles: RolePossibility[] = [];
@@ -1267,15 +1365,31 @@ export class DeductionEngine {
     return null;
   }
 
-  /** Deletion-based minimal unsatisfiable subset of evidence, as evidence indexes in log order. */
+  /**
+   * Deletion-based minimal unsatisfiable subset of evidence, as evidence indexes in log order.
+   *
+   * Plain deletion drops each piece of evidence in log order if the rest is
+   * still unsatisfiable. That costs one full unsatisfiability proof per piece,
+   * and proofs are the expensive searches. Instead, try dropping a whole
+   * chunk at once: if the rest is still unsatisfiable, then (because removing
+   * evidence never removes worlds) deletion would have dropped every piece in
+   * the chunk, so one proof covers them all. Otherwise split the chunk and
+   * recurse in log order. The result is the same subset plain deletion finds
+   * (as long as no search runs out of budget).
+   */
   private minimalConflictIndexes(start: Uint8Array, pin?: [number, number]): number[] {
     const active = start.slice();
-    for (let e = 0; e < active.length; e++) {
-      if (!active[e]) continue;
-      active[e] = 0;
-      const out = this.search(active, pin);
-      if (out.kind !== 'unsat') active[e] = 1; // e is needed for the conflict
-    }
+    const reduce = (chunk: number[]): void => {
+      if (chunk.length === 0) return;
+      for (const e of chunk) active[e] = 0;
+      if (this.search(active, pin).kind === 'unsat') return; // none of the chunk is needed
+      for (const e of chunk) active[e] = 1;
+      if (chunk.length === 1) return; // needed for the conflict
+      const mid = chunk.length >> 1;
+      reduce(chunk.slice(0, mid));
+      reduce(chunk.slice(mid));
+    };
+    reduce([...active.keys()].filter(i => active[i]));
     return [...active.keys()].filter(i => active[i]);
   }
 

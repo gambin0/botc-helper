@@ -274,6 +274,20 @@ describe('public abilities and executions', () => {
     expect(possibleRoles(r, 'p2').sort()).toEqual(['imp', 'recluse']);
   });
 
+  it('names the public outcome as the reason, not just "the combined evidence"', () => {
+    const shot = info('p1', { type: 'slayer', player: 'p2', yes: true });
+    const r = run({ players: players(8), events: [shot] });
+    const reason = (playerId: string, roleId: string) =>
+      r.possibleRoles.find(x => x.playerId === playerId && x.roleId === roleId)?.reason;
+    expect(reason('p1', 'chef')).toContain('shot P2, who DIED');
+    expect(reason('p2', 'chef')).toContain('shot P2, who DIED');
+  });
+
+  it('a Slayer cannot kill themselves by shooting themselves', () => {
+    const r = run({ players: players(8), events: [info('p1', { type: 'slayer', player: 'p1', yes: true })] });
+    expect(r.consistent).toBe(false);
+  });
+
   it('a Virgin execution proves the nominator registers as a Townsfolk', () => {
     const r = run({
       players: players(8),
@@ -345,6 +359,22 @@ describe('contradictions and explanations', () => {
     const r = run({ players: players(8), events: [c1, unrelated, c2] });
     expect(r.consistent).toBe(false);
     expect(r.contradictions[0].events.sort()).toEqual([c1.id, c2.id].sort());
+  });
+
+  it('finds the minimal conflict among many unrelated entries', () => {
+    const first = claim('p2', 'imp', 'confirmed');
+    const second = claim('p11', 'imp', 'confirmed');
+    const filler = ['chef', 'empath', 'monk', 'soldier', 'mayor', 'undertaker', 'virgin', 'slayer'];
+    const events = [
+      claim('p1', 'washerwoman'),
+      first,
+      ...filler.map((role, i) => claim(`p${i + 3}`, role)),
+      second,
+      claim('p12', 'librarian')
+    ];
+    const r = run({ players: players(12), events });
+    expect(r.contradictions[0].events.sort()).toEqual([first.id, second.id].sort());
+    expect(r.ignoredEvidence.map(e => e.id)).toEqual([second.id]);
   });
 
   it('keeps deducing after a contradiction by setting aside the latest conflicting evidence', () => {
