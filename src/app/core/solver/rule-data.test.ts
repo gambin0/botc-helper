@@ -78,7 +78,53 @@ describe.each([0, 1])('rule data (%s = engine, reference)', which => {
   });
 });
 
+describe.each([0, 1])('one player drunk or poisoned for the game (%s = engine, reference)', which => {
+  const run = (pool: string[], events: GameEvent[]) => both(pool, events)[which];
+  const pool = [...TOWN, 'mastermind', 'lleech'];
+  const base = [claim('p1', 'empath'), claim('p4', 'chef'), claim('p5', 'mastermind')];
+
+  it("the Lleech's host is the same player all game", () => {
+    expect(run(pool, [...base, chefWrong(1), empathWrong(2)]).consistent).toBe(false);
+    expect(run(pool, [...base, empathWrong(1), empathWrong(2)]).consistent).toBe(true);
+  });
+});
+
+describe.each([0, 1])('info that comes with dying (%s = engine, reference)', which => {
+  const run = (pool: string[], events: GameEvent[]) => both(pool, events)[which];
+  const pool = [...TOWN, 'ravenkeeper', 'sage', 'poisoner', 'imp'];
+  const death = (playerId: string, night: number) => ev('death', night, { payload: { playerId } });
+
+  it('Ravenkeeper and Sage info needs the source to have died that night', () => {
+    const raven = info('p1', { type: 'ravenkeeper', player: 'p3', roleId: 'chef' }, 2);
+    const alive = run(pool, [claim('p1', 'ravenkeeper', 'asserted'), raven]);
+    expect(alive.can('p1', 'ravenkeeper')).toBe(false);
+    expect(run(pool, [claim('p1', 'ravenkeeper', 'asserted'), death('p1', 2), raven]).can('p1', 'ravenkeeper')).toBe(true);
+
+    const sage = info('p2', { type: 'sage', players: ['p3', 'p4'] }, 3);
+    expect(run(pool, [claim('p2', 'sage', 'asserted'), sage]).can('p2', 'sage')).toBe(false);
+    expect(run(pool, [claim('p2', 'sage', 'asserted'), death('p2', 3), sage]).can('p2', 'sage')).toBe(true);
+  });
+});
+
 describe('rule data warnings', () => {
+  it('warns when Ravenkeeper info comes from someone who did not die', () => {
+    const r = solve({
+      characters: RoleRegistry.toScriptCharacters([...TOWN, 'ravenkeeper', 'poisoner', 'imp']),
+      players: makePlayers(7),
+      events: [info('p1', { type: 'ravenkeeper', player: 'p3', roleId: 'chef' }, 2)]
+    });
+    expect(r.warnings.some(w => w.includes('did not die that night'))).toBe(true);
+  });
+
+  it('warns about characters whose changes are not modelled', () => {
+    const r = solve({
+      characters: RoleRegistry.toScriptCharacters([...TOWN, 'poisoner', 'imp', 'bountyhunter']),
+      players: makePlayers(7),
+      events: []
+    });
+    expect(r.warnings.some(w => w.startsWith('Bounty Hunter:'))).toBe(true);
+  });
+
   it('warns when Undertaker info names someone who was not executed', () => {
     const r = solve({
       characters: RoleRegistry.toScriptCharacters(withMinion('poisoner')),

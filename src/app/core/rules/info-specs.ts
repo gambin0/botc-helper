@@ -76,6 +76,12 @@ export interface InfoSpec {
    * `namesYesterdaysExecution` in rules/events.ts.
    */
   aboutExecution?: boolean;
+  /**
+   * The Ravenkeeper and Sage: the info comes when the source dies at night,
+   * so a genuine one (even a drunk one) has a death logged that night. See
+   * `diedThatNight` in rules/events.ts.
+   */
+  afterOwnDeath?: boolean;
   describe(payload: InfoPayload, name: (playerId?: string) => string, role: (roleId?: string) => string): string;
 }
 
@@ -188,7 +194,7 @@ const SPECS: InfoSpec[] = [
       `chose ${name(p.players?.[0])} and ${name(p.players?.[1])}: ${p.yes ? 'YES' : 'no'}`
   },
   { ...roleOfPlayer('undertaker', 'You learn which character died by execution today.'), aboutExecution: true },
-  roleOfPlayer('ravenkeeper', 'If you die at night, you choose a player and learn their character.'),
+  { ...roleOfPlayer('ravenkeeper', 'If you die at night, you choose a player and learn their character.'), afterOwnDeath: true },
   roleOfPlayer('grandmother', 'You start knowing a good player and their character.', ['townsfolk', 'outsider']),
   {
     roleId: 'slayer',
@@ -255,6 +261,7 @@ const SPECS: InfoSpec[] = [
   {
     roleId: 'sage',
     prompt: 'If the Demon kills you, you learn that it is 1 of 2 players.',
+    afterOwnDeath: true,
     fields: [players2],
     involved: p => p.players ?? [],
     check: (p, _src, v) => (pair(p) ?? []).some(id => v.team(id) === 'demon'),

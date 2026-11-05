@@ -32,6 +32,7 @@ run executions       20 executions
 run long             21 mixed --max-events 14
 run setup            22 setup
 run demonmoves       24 demonmoves
+run fanggu           25 fanggu
 
 echo "=== new failures:"
 find "$OUT" -path '*/failures/*' -type f | sort || true

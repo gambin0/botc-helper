@@ -105,7 +105,8 @@ To run every profile, use `bash scripts/fuzz-campaign.sh`. It filters out failur
 
 ```bash
 npm test                                  # unit tests, including engine vs reference
-npm run typecheck:test                    # plus: npx tsc --noEmit -p tsconfig.app.json (and tsconfig.worker.json)
+npm run test:components                   # Angular component tests (src/app/**/*.spec.ts, jsdom)
+npm run typecheck:test                    # plus: npx tsc --noEmit -p tsconfig.app.json (and tsconfig.worker.json, tsconfig.component.json)
 npm run build && npm run test:a11y        # axe / WCAG AA scan of every page, light and dark
 npm run bench:solver                      # solver timings for 10–15 player games
 ```

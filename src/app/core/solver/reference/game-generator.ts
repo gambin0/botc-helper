@@ -49,6 +49,12 @@ export const PROFILES = {
       'poisoner', 'spy', 'scarletwoman', 'baron', 'imp'
     ],
     deathRate: 0.35
+  },
+  // The Fang Gu jumping to an Outsider, with Outsider- and Demon-related info.
+  fanggu: {
+    forced: ['fanggu', 'scarletwoman'],
+    weights: { recluse: 3, drunk: 3, saint: 3, librarian: 4, fortuneteller: 4, undertaker: 3, slayer: 3, dreamer: 3 },
+    deathRate: 0.35
   }
 } satisfies Record<string, { forced: string[]; weights: Record<string, number>; only?: string[]; deathRate?: number }>;
 

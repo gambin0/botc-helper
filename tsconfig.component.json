@@ -1,0 +1,9 @@
+/* Angular component tests (`npm run test:components`), run by the @angular/build:unit-test builder in jsdom. */
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./out-tsc/component",
+    "types": []
+  },
+  "include": ["src/**/*.spec.ts", "src/**/*.d.ts"]
+}

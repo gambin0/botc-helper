@@ -104,4 +104,36 @@ describe.each([0, 1])('the Demon changing seats (%s = engine, reference)', which
     expect(r.can('p5', 'poisoner')).toBe(true);
     expect(r.can('p5', 'chef')).toBe(false);
   });
+  describe('the Fang Gu jumping to an Outsider', () => {
+    // 7 players with a Fang Gu: 4 Townsfolk, 1 Outsider, 1 Minion, 1 Demon.
+    const FANG_GU = ['chef', 'empath', 'monk', 'soldier', 'mayor', 'butler', 'saint', 'poisoner', 'fanggu'];
+    const jump = [claim('p1', 'chef'), claim('p2', 'fanggu'), claim('p4', 'butler'), death('p2', 2), death('p3', 3)];
+
+    it('the game goes on after the Fang Gu dies at night, with the Outsider as the Demon', () => {
+      const r = run(FANG_GU, jump);
+      expect(r.consistent).toBe(true);
+      expect(r.demonNow).toEqual(['p4']);
+    });
+
+    it('jumps only once', () => {
+      expect(run(FANG_GU, [...jump, death('p4', 3), death('p5', 4)]).consistent).toBe(false);
+    });
+
+    it('later whole-circle info sees the Outsider as evil after the jump (fuzz seed 25, game 1075)', () => {
+      // P5 (Fang Gu) jumps to P4 (Butler) on night 1. On night 3 the evil players
+      // are P3, P4 and the dead P5: 2 evil pairs, so P1 can be a sober Chef.
+      const input: SolverInput = {
+        characters: RoleRegistry.toScriptCharacters(['dreamer', 'fanggu', 'mastermind', 'butler', 'chef']),
+        players: makePlayers(5),
+        events: [death('p5', 1), info('p1', { type: 'chef', count: 2 }, 3)]
+      };
+      const engine = solve(input);
+      expect(engine.possibleRoles.some(x => x.playerId === 'p1' && x.roleId === 'chef' && x.status !== 'impossible')).toBe(true);
+      expect(referenceSolve(input).possible.get('p1')!.has('chef')).toBe(true);
+    });
+
+    it('cannot jump on an execution', () => {
+      expect(run(FANG_GU, [...jump.slice(0, 3), execution('p2', 1), death('p3', 2)]).consistent).toBe(false);
+    });
+  });
 });

@@ -35,6 +35,17 @@ export function namesYesterdaysExecution(info: GameEvent, events: readonly GameE
   );
 }
 
+/**
+ * Ravenkeeper- and Sage-style info on night N comes from a player who died
+ * that night. Does the log have that death? A death logged under the day
+ * before also counts, in case the log numbers it that way.
+ */
+export function diedThatNight(info: GameEvent, events: readonly GameEvent[]): boolean {
+  return events.some(
+    e => e.kind === 'death' && targetPlayer(e) === info.actorId && (e.night === info.night || e.night === info.night - 1)
+  );
+}
+
 export function infoPayload(event: GameEvent): InfoPayload | null {
   const p = event.payload as InfoPayload | undefined;
   if (!p || typeof p.type !== 'string') return null;

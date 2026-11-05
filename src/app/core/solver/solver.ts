@@ -28,6 +28,7 @@ import {
   executionEndedGame,
   infoPayload,
   namesYesterdaysExecution,
+  diedThatNight,
   targetPlayer
 } from '../rules/events';
 import { baseComposition } from '../rules/setup';
@@ -229,9 +230,11 @@ export class DeductionEngine {
   private steps: Step[] = [];
   /** Some role in the pool can move the Demon to another seat. */
   private demonCanMove = false;
-  /** Registrations a Minion may gain by becoming a Demon. */
+  /** Per team index: whether a player of that team may become the Demon (Minions; Outsiders with a Fang Gu). */
+  private heirTeam = [false, false, false, false];
+  /** Registrations a Minion (or Outsider) may gain by becoming a Demon. */
   private demonRegs: Registration[] = [];
-  /** Per role: its registrations plus `demonRegs` (for Minions), for loose checks after a possible move. */
+  /** Per role: its registrations plus `demonRegs` (for heir teams), for loose checks after a possible move. */
   private lateRegs: (readonly Registration[])[] = [];
   /** Check information against the exact history (complete grimoires) rather than loosely. */
   private exactTimeline = false;
@@ -270,6 +273,8 @@ export class DeductionEngine {
   private partialAlignments: ReadonlySet<Alignment>[] = [];
   /** The alignments each role can register as. */
   private roleAlignments: ReadonlySet<Alignment>[] = [];
+  /** Per role: alignments it may have after a possible Demon move (a Fang Gu jump turns an Outsider evil). */
+  private lateAlignments: ReadonlySet<Alignment>[] = [];
 
   constructor(input: SolverInput) {
     this.options = {
@@ -362,8 +367,11 @@ export class DeductionEngine {
     });
 
     this.demonCanMove = this.roles.some(r => r.rule.passesOnDeath || r.rule.inheritsDemon);
+    this.heirTeam[T_MINION] = this.roles.some(r => r.rule.inheritsDemon || r.rule.passesOnDeath?.to === 'minion');
+    this.heirTeam[T_OUTSIDER] = this.roles.some(r => r.rule.passesOnDeath?.to === 'outsider');
     this.demonRegs = this.roles.filter(r => r.teamIdx === T_DEMON && !r.rule.unseated).flatMap(r => r.regs);
-    this.lateRegs = this.roles.map(r => (r.teamIdx === T_MINION ? [...r.regs, ...this.demonRegs] : r.regs));
+    this.lateRegs = this.roles.map(r => (this.heirTeam[r.teamIdx] ? [...r.regs, ...this.demonRegs] : r.regs));
+    this.lateAlignments = this.lateRegs.map(regs => new Set(regs.map(g => g.alignment)));
 
     this.maxMinionsEver =
       this.composition[T_MINION] +
@@ -572,12 +580,16 @@ export class DeductionEngine {
     if (executionEndedGame(event)) {
       if (aliveAfter <= 2) return -1; // Could be the final-two evil win.
       const ev = this.addEvidence(event.id, label);
-      // A Minion may have become the Demon earlier; the history check is exact.
-      const minionOk = this.unseatedDemonInPool() || this.demonCanMove;
+      // A Minion (or an Outsider, with a Fang Gu) may have become the Demon
+      // earlier; the history check is exact.
+      const minionOk = this.unseatedDemonInPool() || this.heirTeam[T_MINION];
+      const outsiderOk = this.heirTeam[T_OUTSIDER];
       this.addUnary(
         ev,
         seat,
-        this.maskWhere(r => r.team === 'demon' || r.id === 'saint' || (r.team === 'minion' && minionOk)),
+        this.maskWhere(
+          r => r.team === 'demon' || r.id === 'saint' || (r.team === 'minion' && minionOk) || (r.team === 'outsider' && outsiderOk)
+        ),
         'The game ended on their execution, so they were the Demon (or Saint)'
       );
       return ev;
@@ -663,6 +675,19 @@ export class DeductionEngine {
       this.warnings.push(
         `${this.name(event.actorId)}'s ${this.roleName(spec.roleId)} info names ${who}, who was not executed the day ` +
           `before night ${event.night}. A real ${this.roleName(spec.roleId)} would know who was executed, so they are treated as not the ${this.roleName(spec.roleId)}. Log the execution if it is missing.`
+      );
+    }
+    // A Ravenkeeper or Sage only learns something on the night they die.
+    if (spec.afterOwnDeath && !diedThatNight(event, events)) {
+      this.addUnary(
+        ev,
+        source,
+        this.maskWhere(r => r.id !== spec.roleId),
+        `${label}, but ${this.name(event.actorId)} did not die that night`
+      );
+      this.warnings.push(
+        `${this.name(event.actorId)}'s ${this.roleName(spec.roleId)} info is from night ${event.night}, but they did not ` +
+          `die that night. A real ${this.roleName(spec.roleId)} only learns this when they die, so they are treated as not the ${this.roleName(spec.roleId)}. Log the death if it is missing.`
       );
     }
     this.infos.push({
@@ -993,7 +1018,7 @@ export class DeductionEngine {
   /** Could a seat that started as role r be the living Demon at the end? */
   private canEndAsDemon(r: number): boolean {
     const t = this.roles[r].teamIdx;
-    return t === T_DEMON || (t === T_MINION && this.demonCanMove);
+    return t === T_DEMON || this.heirTeam[t];
   }
 
   private staticDomains(active: Uint8Array, pin?: [number, number], endDemon = -1): number[][] {
@@ -1211,8 +1236,8 @@ export class DeductionEngine {
     fauxPaw: number | 'any' = -1
   ): 'ok' | 'needs-corruption' | 'impossible' {
     const sourceRole = this.roles[this.world[c.source]];
-    // A Minion source may have become the Demon (and lost its ability) by now.
-    if (sourceRole.teamIdx === T_MINION && this.looseTiming(c)) return 'ok';
+    // A Minion (or Outsider) source may have become the Demon (and lost its ability) by now.
+    if (this.heirTeam[sourceRole.teamIdx] && this.looseTiming(c)) return 'ok';
     const genuine = sourceRole.id === c.infoRole;
     if (!genuine) return c.isPublic ? 'impossible' : 'ok';
     const { canTrue, canFalse } = this.outcomes(c, redHerring, fauxPaw);
@@ -1225,19 +1250,22 @@ export class DeductionEngine {
   /** Bounds-based check for whole-circle info such as the Chef. */
   private wholeCircleFailures(vortox: 'yes' | 'maybe' | 'no'): Map<number, Set<number>> {
     const extra = new Map<number, Set<number>>();
-    let viewReady = false;
+    let viewFor: 'start' | 'late' | null = null;
     for (const ci of this.wholeCircleInfos) {
       const c = this.infos[ci];
       if (!this.active[c.ev] || !c.spec.countRange || this.world[c.source] < 0) continue;
       if (this.roles[this.world[c.source]].id !== c.infoRole) continue;
       if (c.vortoxApplies && vortox === 'maybe') continue;
-      if (!viewReady) {
+      // Info that may come after the Demon moved sees the late alignments.
+      const want = this.looseTiming(c) ? 'late' : 'start';
+      if (viewFor !== want) {
         const pawPossible = this.fauxPawMode(false) === 'any';
+        const alignments = want === 'late' ? this.lateAlignments : this.roleAlignments;
         for (let s = 0; s < this.n; s++) {
           const r = this.world[s];
-          this.partialAlignments[s] = r < 0 || pawPossible ? EITHER_ALIGNMENT : this.roleAlignments[r];
+          this.partialAlignments[s] = r < 0 || pawPossible ? EITHER_ALIGNMENT : alignments[r];
         }
-        viewReady = true;
+        viewFor = want;
       }
       const [min, max] = c.spec.countRange(c.payload, this.partialView);
       const value = c.payload.count ?? -1;
@@ -1417,26 +1445,27 @@ export class DeductionEngine {
       return next;
     };
 
-    const walk = (k: number, roles: Int16Array, alive: Uint8Array, over: boolean): void => {
+    // `jumped`: a once-per-game pass (the Fang Gu's) has happened.
+    const walk = (k: number, roles: Int16Array, alive: Uint8Array, over: boolean, jumped = false): void => {
       if (k === steps.length) {
         out.push({ rolesAt: rolesAt.slice(), demonNow: over ? -1 : livingDemon(roles, alive) });
         return;
       }
       const step = steps[k];
       if (step.kind === 'info') {
-        if (!this.active[this.infos[step.info].ev]) return walk(k + 1, roles, alive, over);
+        if (!this.active[this.infos[step.info].ev]) return walk(k + 1, roles, alive, over, jumped);
         if (over) return; // nothing can happen after the game ended
         rolesAt[step.info] = roles;
-        return walk(k + 1, roles, alive, false);
+        return walk(k + 1, roles, alive, false, jumped);
       }
-      if (step.kind === 'execution' && step.ev >= 0 && !this.active[step.ev]) return walk(k + 1, roles, alive, over);
+      if (step.kind === 'execution' && step.ev >= 0 && !this.active[step.ev]) return walk(k + 1, roles, alive, over, jumped);
       if (over) return;
       if (step.kind === 'resurrection') {
         const next = alive.slice();
         next[step.seat] = 1;
-        return walk(k + 1, roles, next, false);
+        return walk(k + 1, roles, next, false, jumped);
       }
-      if (!alive[step.seat]) return walk(k + 1, roles, alive, false); // already dead
+      if (!alive[step.seat]) return walk(k + 1, roles, alive, false, jumped); // already dead
       let aliveBefore = 0;
       for (let i = 0; i < this.n; i++) aliveBefore += alive[i];
       const after = alive.slice();
@@ -1461,19 +1490,30 @@ export class DeductionEngine {
         }
         return;
       }
-      if (!wasDemon) return walk(k + 1, roles, after, false);
-      if (sw >= 0) return walk(k + 1, becomes(roles, sw, dying), after, false);
-      if (step.kind === 'death' && this.roles[dying].rule.passesOnDeath) {
+      if (!wasDemon) return walk(k + 1, roles, after, false, jumped);
+      const pass = step.kind === 'death' ? this.roles[dying].rule.passesOnDeath : undefined;
+      const canPass = !!pass && !(pass.once && jumped);
+      if (sw >= 0) {
+        walk(k + 1, becomes(roles, sw, dying), after, false, jumped);
+        // A Scarlet Woman always catches an Imp's star-pass; a Fang Gu may still jump instead.
+        if (!canPass || pass!.to === 'minion') return;
+      } else if (canPass && pass!.to === 'minion') {
         for (let m = 0; m < this.n; m++) {
-          if (after[m] && team(roles[m]) === T_MINION) walk(k + 1, becomes(roles, m, dying), after, false);
+          if (after[m] && team(roles[m]) === T_MINION) walk(k + 1, becomes(roles, m, dying), after, false, jumped);
         }
+      }
+      if (canPass && pass!.to === 'outsider') {
+        for (let m = 0; m < this.n; m++) {
+          if (after[m] && team(roles[m]) === T_OUTSIDER) walk(k + 1, becomes(roles, m, dying), after, false, true);
+        }
+        if (sw >= 0) return;
       }
       if (step.kind === 'execution') {
         // The log says the game went on, so only a Mastermind could have kept it going.
-        if (hasMastermind) walk(k + 1, roles, after, false);
+        if (hasMastermind) walk(k + 1, roles, after, false, jumped);
         return;
       }
-      walk(k + 1, roles, after, true);
+      walk(k + 1, roles, after, true, jumped);
     };
     walk(0, this.world, new Uint8Array(this.n).fill(1), false);
     return out;
@@ -1501,7 +1541,9 @@ export class DeductionEngine {
    * poisoning explain the false sources on each night?
    * - Each corrupting character covers its capacity of distinct players per
    *   night; one that corrupts only while alive covers nobody after it died.
-   * - The Widow covers one player, the same one all game, while she lives.
+   * - The Widow covers one player, the same one all game, while she lives;
+   *   so do the other one-player-for-the-game sources (Lleech, Philosopher,
+   *   Sweetheart, Puzzlemaster, Courtier), whether or not they live.
    * - The Fibbin allows that many uncovered sources in the whole game.
    * (The Village Idiot's drunk copy is handled by the caller.)
    */

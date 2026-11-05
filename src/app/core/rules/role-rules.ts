@@ -68,10 +68,12 @@ export interface RoleRule {
   /** Fortune Teller: one good player registers as the Demon to them. */
   hasRedHerring?: boolean;
   /**
-   * Imp: when this Demon dies other than by execution, a living Minion may
-   * become this character (a star-pass). See rules/timeline.ts.
+   * When this Demon dies other than by execution, a living player of team
+   * `to` may become this character: the Imp's star-pass to a Minion, or the
+   * Fang Gu jumping to an Outsider (`once`: only the first time in a game).
+   * See rules/timeline.ts.
    */
-  passesOnDeath?: boolean;
+  passesOnDeath?: { to: 'minion' | 'outsider'; once?: boolean };
   /**
    * Scarlet Woman: if 5 or more players are alive when the Demon dies, this
    * player becomes that Demon. See rules/timeline.ts.
@@ -105,8 +107,7 @@ const ROLE_RULES: Record<string, RoleRule> = {
 
   // --- Setup modifiers ---
   baron: { setup: { outsiderDelta: [2] } },
-  fanggu: { setup: { outsiderDelta: [1] } },
-  vigormortis: { setup: { outsiderDelta: [-1] } },
+  fanggu: { setup: { outsiderDelta: [1] }, passesOnDeath: { to: 'outsider', once: true } },
   godfather: { setup: { outsiderDelta: [-1, 1] } },
   balloonist: { setup: { outsiderDelta: [0, 1] } },
   hermit: { setup: { outsiderDelta: [0, -1] } },
@@ -129,15 +130,24 @@ const ROLE_RULES: Record<string, RoleRule> = {
   widow: { corruptionCapacity: 1, corruptsWhileAlive: true, corruptsOneForGame: true },
   nodashii: { corruptionCapacity: 2, corruptsWhileAlive: true },
   pukka: { corruptionCapacity: 1, corruptsWhileAlive: true },
-  lleech: { corruptionCapacity: 1 },
-  philosopher: { corruptionCapacity: 1 },
-  sweetheart: { corruptionCapacity: 1 },
+  // One player chosen once stays drunk or poisoned (Lleech's host, the
+  // Philosopher's copied character, the Sweetheart's and Puzzlemaster's drunk,
+  // the Courtier's character), like the Widow but whether or not they live.
+  lleech: { corruptionCapacity: 1, corruptsOneForGame: true },
+  philosopher: { corruptionCapacity: 1, corruptsOneForGame: true },
+  sweetheart: { corruptionCapacity: 1, corruptsOneForGame: true },
+  puzzlemaster: { corruptionCapacity: 1, corruptsOneForGame: true },
+  courtier: { corruptionCapacity: 1, corruptsOneForGame: true },
   sailor: { corruptionCapacity: 1 },
   innkeeper: { corruptionCapacity: 1 },
-  courtier: { corruptionCapacity: 1 },
-  goon: { corruptionCapacity: 1 },
   cannibal: { corruptionCapacity: 1 },
   minstrel: { corruptionCapacity: 99 },
+  vigormortis: {
+    setup: { outsiderDelta: [-1] },
+    // Up to 3 Minions it killed, each poisoning a Townsfolk neighbour.
+    corruptionCapacity: 3,
+    approximation: 'Poisoning by Minions it killed is allowed for any 3 players, not just their Townsfolk neighbours.'
+  },
 
   // --- Information modifiers ---
   vortox: { falsifiesTownsfolkInfo: true },
@@ -146,7 +156,7 @@ const ROLE_RULES: Record<string, RoleRule> = {
   fibbin: { gameWideFalseInfo: 1 },
 
   // --- The Demon changing seats ---
-  imp: { passesOnDeath: true },
+  imp: { passesOnDeath: { to: 'minion' } },
   scarletwoman: { inheritsDemon: true },
 
   // --- Known gaps ---
@@ -154,7 +164,20 @@ const ROLE_RULES: Record<string, RoleRule> = {
   atheist: { approximation: 'Games with no evil characters are not modelled.' },
   summoner: { approximation: 'Games that start with no Demon are not modelled.' },
   villageidiot: { maxCopies: 3, extraCopiesDrunk: true },
-  marionette: { approximation: 'The Marionette neighbouring the Demon is not enforced.' }
+  marionette: { approximation: 'The Marionette neighbouring the Demon is not enforced.' },
+  // Characters or alignments that change during the game are not tracked
+  // (beyond the Imp, Fang Gu and Scarlet Woman): deductions can rule out the truth.
+  bountyhunter: { approximation: 'The evil Townsfolk is not modelled: they are treated as good.' },
+  cultleader: { approximation: 'Changing alignment is not modelled.' },
+  goon: { corruptionCapacity: 1, approximation: 'Changing alignment is not modelled.' },
+  ogre: { approximation: 'Changing alignment is not modelled.' },
+  mezepheles: { approximation: 'A good player turning evil is not modelled.' },
+  farmer: { approximation: 'A good player becoming the Farmer is not modelled.' },
+  pithag: { approximation: 'Players changing character is not modelled.' },
+  snakecharmer: { approximation: 'Swapping characters with the Demon is not modelled.' },
+  riot: { approximation: 'Minions becoming Riot is not modelled.' },
+  zombuul: { approximation: 'The Zombuul registering as dead while alive is not modelled.' },
+  revolutionary: { approximation: 'A player registering falsely once is not modelled.' }
 };
 
 export function getRoleRule(roleId: string): RoleRule {

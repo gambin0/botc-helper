@@ -74,7 +74,8 @@ The engine warns about these (`approximation` in `role-rules.ts`), but they matt
   - **Still lenient (never wrongly rules anything out):**
     - the log doesn't record how someone died, so an Imp killed by a Slayer is still allowed to pass the star;
     - a Poisoner who becomes the Imp is still counted as able to poison.
-  - **Not modelled:** other ways the Demon moves (the Fang Gu jumping, the Pit-Hag, the Barber, Snake Charmer swaps).
+  - **The Fang Gu jumping** is modelled the same way (`passesOnDeath: { to: 'outsider', once: true }`): when the Fang Gu dies other than by execution, a living Outsider may become the Fang Gu, once per game. A living Scarlet Woman may still catch it instead. Before this, a Fang Gu that jumped made the rest of the log read as "after the game ended", which wrongly ruled out the truth.
+  - **Not modelled:** other ways the Demon moves (the Pit-Hag, the Barber, Snake Charmer swaps). These roles now carry a warning.
   - **Testing:** a new `demonmoves` fuzz profile (TB with forced Imp and Scarlet Woman, 35% deaths) is in the campaign. In it, the starting Imp dies and the game goes on in about 1 game in 5. Both planted bugs were caught: skipping the star-pass (by game ~77) and dropping the loose check for info after a possible move (by the truth check). `demon-moves.test.ts` runs hand-written scenarios on both solvers.
   - **Speed:** the bench now has a "with deaths" row; at 15 players it takes a median of 174 ms and at most 0.62 s.
 - [ ] The Marionette sitting next to the Demon is not enforced.
@@ -91,7 +92,16 @@ The reference solver shares `role-rules.ts` and `info-specs.ts` with the engine,
 - [x] **The Widow poisons one player for the whole game** (`corruptsOneForGame`), while she lives. False info from two different players on different nights now needs more than a Widow.
 - [x] **Undertaker info must name the player executed the day before.** Even a drunk Undertaker knows who was executed, so info naming anyone else rules out its source being the Undertaker. A note explains this and suggests logging the missing execution. An execution logged under the same day number as the info also counts, in case the log numbers days that way.
   - These three are only checked on complete grimoires; the search's early pruning stays loose, which is safe. Both solvers implement them, and `rule-data.test.ts` runs each scenario on both.
-- [ ] A rules pass over every entry in `role-rules.ts` and `info-specs.ts` against the official almanac.
+- [x] **A rules pass against the official ability text** (in `roles/official-roles.ts`) for every entry in `role-rules.ts` and `info-specs.ts`, and for every official character whose ability mentions poisoning, drunkenness, false info, setup changes, registering or becoming something.
+  - **Fixed, too strict (could rule out the truth):**
+    - the Fang Gu jump (above);
+    - the Vigormortis had no corruption at all, though Minions it killed poison a Townsfolk neighbour. It now allows 3 corrupted players a night, with a warning that the neighbour rule is not enforced.
+  - **Fixed, too loose (missed deductions):**
+    - the Lleech's host, the Philosopher's drunk copy, the Sweetheart's drunk, the Puzzlemaster's drunk and the Courtier's character are each one player for the whole game, like the Widow (`corruptsOneForGame`). They were a new player each night. The Puzzlemaster had no corruption at all, which was too strict.
+    - Ravenkeeper and Sage info needs the source to have died that night (`afterOwnDeath`, `diedThatNight`), like the Undertaker check: otherwise the source is not that character, with a note suggesting logging the missing death.
+  - **Now warned about** (`approximation`): characters that change someone's alignment or character, or register falsely, which the engine does not track: Bounty Hunter, Cult Leader, Goon, Ogre, Mezepheles, Farmer, Pit-Hag, Snake Charmer, Riot, Zombuul, Revolutionary. Deductions in games with these can rule out the truth.
+  - **Still lenient, left as is:** an Imp or Fang Gu killed by a Slayer may still pass the Demon on (deaths have no cause); the No Dashii's poisoning is not tied to its Townsfolk neighbours; the Vortox rule "if no-one is executed, evil wins" is not used, since the log has no "no execution today" entry; the Minstrel, Sailor and Innkeeper are allowed on any night.
+  - `rule-data.test.ts` and `demon-moves.test.ts` cover the fixes on both solvers; the new tests fail with the old rule data. A `fanggu` fuzz profile (forced Fang Gu and Scarlet Woman, 35% deaths) joins the campaign.
 - [ ] The strongest check would be a set of **real game logs with known final grimoires,** as regression tests.
 
 ## 4. Test scenarios that random games miss
@@ -109,4 +119,4 @@ F-001 never came up in 36,000 random games; only a hand-built case found it. Ran
   - **What is scanned:** every page, in light and dark mode, with a sample game loaded (`e2e/fixtures/sample-game.json`). The open parts are scanned too: a player panel, a "Why?" answer, the claim test and the role picker.
   - **How:** axe with the WCAG 2.0–2.2 A and AA rules. Locally it uses the installed Chrome; CI installs Chromium.
   - **Result:** all pages pass. A planted low-contrast element and an image without alt text were both caught.
-- [ ] Unit-level component tests (TestBed) are still absent; the end-to-end scan covers rendering and accessibility, not component logic.
+- [x] **Component tests** (`npm run test:components`, `src/app/**/*.spec.ts`): the `@angular/build:unit-test` builder runs Vitest in jsdom, with the real services. Without Web Workers the solver runs on the main thread, so the tests see real deductions. They cover the Players, Game, Log (with the evidence form, driven through Material's test harnesses), Deduce and claim-test screens, plus the setup counts. Four planted bugs (a wrong move announcement, ignoring "keep the players", showing your hidden seat as a possible Demon, and a stale claim-test answer) were each caught. CI runs them after the unit tests.

@@ -12,7 +12,7 @@ import {
   teamAlignment
 } from '../../rules/role-rules';
 import { InfoPayload, InfoSpec, InfoView, getInfoSpec } from '../../rules/info-specs';
-import { claimRole, executionEndedGame, infoPayload, namesYesterdaysExecution, targetPlayer } from '../../rules/events';
+import { claimRole, diedThatNight, executionEndedGame, infoPayload, namesYesterdaysExecution, targetPlayer } from '../../rules/events';
 import { baseComposition } from '../../rules/setup';
 import { chronologicalOrder } from '../../rules/timeline';
 import type { SolverInput } from '../solver';
@@ -281,6 +281,10 @@ export class ReferenceGame {
     if (spec.aboutExecution && !namesYesterdaysExecution(event, this.input.events)) {
       this.seatFilters[seat].push(r => r.id !== spec.roleId);
     }
+    // A Ravenkeeper or Sage only learns something on the night they die.
+    if (spec.afterOwnDeath && !diedThatNight(event, this.input.events)) {
+      this.seatFilters[seat].push(r => r.id !== spec.roleId);
+    }
     this.items.push({
       kind: 'info',
       seat,
@@ -431,7 +435,9 @@ export class ReferenceGame {
    * - a living Scarlet Woman becomes that Demon if 5 or more players were
    *   alive before the death (she must);
    * - otherwise, if it died other than by execution and passes on death (the
-   *   Imp's star-pass), any living Minion may become it;
+   *   Imp's star-pass), any living Minion may become it; a Fang Gu may
+   *   instead (once per game, even with a Scarlet Woman) jump to any living
+   *   Outsider;
    * - after an execution logged as "the game continued", only a Mastermind
    *   can keep the game going (without a Demon); otherwise it is impossible;
    * - otherwise the game is over, and no later death, execution or
@@ -458,7 +464,8 @@ export class ReferenceGame {
       aliveBefore >= 5 ? roles.findIndex((r, i) => i !== dying && alive[i] && r.rule.inheritsDemon && r.team !== 'demon') : -1;
     const becomes = (roles: readonly PoolRole[], seat: number, role: PoolRole) => roles.map((r, i) => (i === seat ? role : r));
 
-    function* walk(k: number, roles: readonly PoolRole[], alive: readonly boolean[], over: boolean): Generator<Timeline> {
+    // `jumped`: a once-per-game pass (the Fang Gu's) has happened.
+    function* walk(k: number, roles: readonly PoolRole[], alive: readonly boolean[], over: boolean, jumped = false): Generator<Timeline> {
       if (k === steps.length) {
         yield { rolesAt: [...rolesAt], demonNow: over ? -1 : livingDemon(roles, alive) };
         return;
@@ -467,15 +474,15 @@ export class ReferenceGame {
       if (over) return; // nothing can happen after the game ended
       if (step.kind === 'item') {
         rolesAt[step.item] = roles;
-        yield* walk(k + 1, roles, alive, false);
+        yield* walk(k + 1, roles, alive, false, jumped);
         return;
       }
       if (step.kind === 'resurrection') {
-        yield* walk(k + 1, roles, alive.map((a, i) => a || i === step.seat), false);
+        yield* walk(k + 1, roles, alive.map((a, i) => a || i === step.seat), false, jumped);
         return;
       }
       if (!alive[step.seat]) {
-        yield* walk(k + 1, roles, alive, false); // already dead
+        yield* walk(k + 1, roles, alive, false, jumped); // already dead
         return;
       }
       const aliveBefore = alive.filter(Boolean).length;
@@ -492,24 +499,27 @@ export class ReferenceGame {
         return;
       }
       if (!wasDemon) {
-        yield* walk(k + 1, roles, after, false);
+        yield* walk(k + 1, roles, after, false, jumped);
         return;
       }
-      if (sw >= 0) {
-        yield* walk(k + 1, becomes(roles, sw, roles[step.seat]), after, false);
-        return;
-      }
-      if (step.kind === 'death' && roles[step.seat].rule.passesOnDeath) {
+      const pass = step.kind === 'death' ? roles[step.seat].rule.passesOnDeath : undefined;
+      const usable = pass && !(pass.once && jumped) ? pass : undefined;
+      // A Scarlet Woman must take over; the Fang Gu may still jump to an Outsider instead.
+      if (sw >= 0) yield* walk(k + 1, becomes(roles, sw, roles[step.seat]), after, false, jumped);
+      if (usable && (sw < 0 || usable.to === 'outsider')) {
         for (let m = 0; m < roles.length; m++) {
-          if (after[m] && roles[m].team === 'minion') yield* walk(k + 1, becomes(roles, m, roles[step.seat]), after, false);
+          if (after[m] && roles[m].team === usable.to) {
+            yield* walk(k + 1, becomes(roles, m, roles[step.seat]), after, false, jumped || !!usable.once);
+          }
         }
       }
+      if (sw >= 0) return;
       if (step.kind === 'execution') {
         // The log says the game went on, so only a Mastermind could have kept it going.
-        if (hasMastermind) yield* walk(k + 1, roles, after, false);
+        if (hasMastermind) yield* walk(k + 1, roles, after, false, jumped);
         return;
       }
-      yield* walk(k + 1, roles, after, true);
+      yield* walk(k + 1, roles, after, true, jumped);
     }
     const game = this;
     yield* walk(0, world, new Array<boolean>(this.n).fill(true), false);

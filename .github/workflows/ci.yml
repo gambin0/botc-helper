@@ -23,8 +23,11 @@ jobs:
           npm run typecheck:test
           npx tsc --noEmit -p tsconfig.app.json
           npx tsc --noEmit -p tsconfig.worker.json
+          npx tsc --noEmit -p tsconfig.component.json
       - name: Unit tests (includes engine vs reference solver checks)
         run: npm test
+      - name: Component tests (Angular, jsdom)
+        run: npm run test:components
       - name: Build
         run: npm run build
       - name: Install Chromium for the accessibility checks
