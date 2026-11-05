@@ -1,0 +1,21 @@
+{
+  "solutions": [
+    {
+      "roles": {
+        "Aoife": "Poisoner",
+        "Fraser": "Imp",
+        "Hannah": "Slayer",
+        "Matthew": "Empath",
+        "Sarah": "Chambermaid",
+        "Sula": "Washerwoman",
+        "Tom": "Knight",
+        "You": "Saint"
+      },
+      "poisoned": {
+        "night_1": ["Matthew"],
+        "night_2": ["Tom"],
+        "night_3": ["Hannah"]
+      }
+    }
+  ]
+}

@@ -1,0 +1,168 @@
+{
+  "title": "Puzzle 79 - Erudition Lesson",
+  "players": ["Louisa", "Marc", "Marsh", "Chris", "You", "Edd", "Goose", "Seb"],
+  "script": [
+    "Fang Gu",
+    "Vigormortis",
+    "Vortox",
+    "No Dashii",
+    "Witch",
+    "Mutant",
+    "Sweetheart",
+    "Artist",
+    "Clockmaker",
+    "Mathematician",
+    "Juggler",
+    "Savant",
+    "Snake Charmer",
+    "Seamstress"
+  ],
+  "timeline": [
+    {
+      "timing": "day_1",
+      "type": "execution",
+      "players": ["Edd"]
+    },
+    {
+      "timing": "night_2",
+      "type": "nightDeath",
+      "players": ["Seb"]
+    },
+    {
+      "timing": "day_2",
+      "type": "witchCurse",
+      "players": ["Chris"],
+      "caller": "Chris"
+    },
+    {
+      "timing": "day_2",
+      "type": "execution",
+      "players": ["Louisa"]
+    },
+    {
+      "timing": "night_3",
+      "type": "nightDeath",
+      "players": ["Marc"]
+    }
+  ],
+  "claims": [
+    {
+      "type": "Artist",
+      "name": "Louisa",
+      "timing": "day_2",
+      "info": [
+        {
+          "timing": "day_2",
+          "expression": "Goose.initial_type != Townsfolk"
+        }
+      ],
+      "possibleActualRoles": ["Artist", "Fang Gu", "Vigormortis", "Vortox", "No Dashii", "Witch", "Mutant"]
+    },
+    {
+      "type": "Clockmaker",
+      "name": "Marc",
+      "distance": 1,
+      "possibleActualRoles": ["Clockmaker", "Fang Gu", "Vigormortis", "Vortox", "No Dashii", "Witch", "Mutant"]
+    },
+    {
+      "type": "Mathematician",
+      "name": "Marsh",
+      "malfunctions": [
+        {
+          "timing": "night_1",
+          "count": 0
+        },
+        {
+          "timing": "night_3",
+          "count": 2
+        }
+      ],
+      "possibleActualRoles": ["Mathematician", "Fang Gu", "Vigormortis", "Vortox", "No Dashii", "Witch", "Mutant"]
+    },
+    {
+      "type": "Juggler",
+      "name": "Chris",
+      "timing": "night_2",
+      "guesses": {
+        "You": "Fang Gu",
+        "Edd": "Vigormortis",
+        "Marc": "Mutant"
+      },
+      "correctCount": 1,
+      "possibleActualRoles": ["Juggler", "Fang Gu", "Vigormortis", "Vortox", "No Dashii", "Witch", "Mutant"]
+    },
+    {
+      "type": "Savant",
+      "name": "You",
+      "timing": "day_1",
+      "statements": [
+        {
+          "options": [
+            "#({Mathematician, Juggler, Vigormortis, `No Dashii`} & players.initial_role) = 3",
+            "#{p : {Edd, Louisa, Chris} | p.initial_type == Townsfolk} == 2"
+          ]
+        }
+      ],
+      "possibleActualRoles": ["Savant"]
+    },
+    {
+      "type": "Savant",
+      "name": "You",
+      "timing": "day_2",
+      "statements": [
+        {
+          "options": ["#{p : {Edd, Marc, Chris} | p.alignment == Evil} == 1", "townsfolk_chain_length(2)"]
+        }
+      ],
+      "possibleActualRoles": ["Savant"]
+    },
+    {
+      "type": "Savant",
+      "name": "You",
+      "timing": "day_3",
+      "statements": [
+        {
+          "options": [
+            "#((Seb + Louisa + Marc + Chris).initial_type) = 3",
+            "some p : Vigormortis.~initial_role | Mutant in p.neighbors.initial_role"
+          ]
+        }
+      ],
+      "possibleActualRoles": ["Savant"]
+    },
+    {
+      "type": "Sweetheart",
+      "name": "Edd"
+    },
+    {
+      "type": "Snake Charmer",
+      "name": "Goose",
+      "checks": [
+        {
+          "timing": "night_1",
+          "player": "Marc",
+          "demon": false
+        },
+        {
+          "timing": "night_2",
+          "player": "Seb",
+          "demon": false
+        },
+        {
+          "timing": "night_3",
+          "player": "Marsh",
+          "demon": false
+        }
+      ],
+      "possibleActualRoles": ["Snake Charmer", "Fang Gu", "Vigormortis", "Vortox", "No Dashii", "Witch", "Mutant"]
+    },
+    {
+      "type": "Seamstress",
+      "name": "Seb",
+      "timing": "night_1",
+      "among": ["You", "Chris"],
+      "aligned": false,
+      "possibleActualRoles": ["Seamstress", "Fang Gu", "Vigormortis", "Vortox", "No Dashii", "Witch", "Mutant"]
+    }
+  ]
+}

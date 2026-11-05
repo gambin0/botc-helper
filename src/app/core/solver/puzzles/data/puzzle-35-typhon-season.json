@@ -1,0 +1,99 @@
+{
+  "title": "Puzzle 35 - Typhon Season",
+  "players": ["Oscar", "Olivia", "Sarah", "Jasmine", "You", "Tim", "Sula", "Fraser"],
+  "script": [
+    "Imp",
+    "Lord of Typhon",
+    "Poisoner",
+    "Spy",
+    "Drunk",
+    "Saint",
+    "Clockmaker",
+    "Empath",
+    "Fortune Teller",
+    "Investigator",
+    "Librarian",
+    "Ravenkeeper",
+    "Undertaker"
+  ],
+  "timeline": [
+    {
+      "timing": "day_1",
+      "type": "execution",
+      "players": ["You"]
+    },
+    {
+      "timing": "night_2",
+      "type": "nightDeath",
+      "players": ["Oscar"]
+    }
+  ],
+  "claims": [
+    {
+      "type": "Ravenkeeper",
+      "name": "Oscar",
+      "timing": "night_2",
+      "player": "Sula",
+      "role": "Imp"
+    },
+    {
+      "type": "Saint",
+      "name": "Olivia"
+    },
+    {
+      "type": "Investigator",
+      "name": "Sarah",
+      "role": "Spy",
+      "among": ["Olivia", "Jasmine"]
+    },
+    {
+      "type": "Empath",
+      "name": "Jasmine",
+      "timing": "night_1",
+      "count": 2
+    },
+    {
+      "type": "Empath",
+      "name": "Jasmine",
+      "timing": "night_2",
+      "count": 2
+    },
+    {
+      "type": "Librarian",
+      "name": "You",
+      "role": "Drunk",
+      "among": ["Sula", "Oscar"],
+      "possibleActualRoles": ["Librarian", "Drunk"]
+    },
+    {
+      "type": "Clockmaker",
+      "name": "Tim",
+      "distance": 4
+    },
+    {
+      "type": "Undertaker",
+      "name": "Sula",
+      "timing": "night_2",
+      "player": "You",
+      "role": "Spy"
+    },
+    {
+      "type": "FortuneTeller",
+      "name": "Fraser",
+      "checks": [
+        {
+          "left": "Sula",
+          "right": "Oscar",
+          "yes": false,
+          "timing": "night_1"
+        },
+        {
+          "left": "Sarah",
+          "right": "Jasmine",
+          "yes": false,
+          "timing": "night_2"
+        }
+      ]
+    }
+  ]
+}

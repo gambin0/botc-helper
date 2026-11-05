@@ -1,0 +1,134 @@
+{
+  "title": "Puzzle 53 - Let's Do the Time Warp Again",
+  "players": ["Tim", "Aoife", "Fraser", "Jasmine", "You", "Sarah", "Josh", "Olivia"],
+  "script": [
+    "Fang Gu",
+    "Vigormortis",
+    "No Dashii",
+    "Vortox",
+    "Witch",
+    "Mutant",
+    "Artist",
+    "Klutz",
+    "Snake Charmer",
+    "Juggler",
+    "Clockmaker",
+    "Dreamer",
+    "Oracle",
+    "Mathematician"
+  ],
+  "timeline": [
+    {
+      "timing": "day_1",
+      "type": "execution",
+      "players": ["Aoife"]
+    },
+    {
+      "timing": "night_2",
+      "type": "nightDeath",
+      "players": ["Jasmine"]
+    },
+    {
+      "timing": "day_2",
+      "type": "witchCurse",
+      "players": ["Josh"]
+    },
+    {
+      "timing": "day_2",
+      "type": "execution",
+      "players": ["Olivia"]
+    },
+    {
+      "timing": "night_3",
+      "type": "nightDeath",
+      "players": ["You"]
+    }
+  ],
+  "claims": [
+    {
+      "type": "Clockmaker",
+      "name": "Tim",
+      "distance": 4,
+      "possibleActualRoles": ["Clockmaker", "Fang Gu", "Vigormortis", "No Dashii", "Vortox", "Witch", "Mutant"]
+    },
+    {
+      "type": "Dreamer",
+      "name": "Aoife",
+      "timing": "night_1",
+      "player": "Olivia",
+      "roles": ["Mutant", "Witch"],
+      "possibleActualRoles": ["Dreamer", "Fang Gu", "Vigormortis", "No Dashii", "Vortox", "Witch", "Mutant"]
+    },
+    {
+      "type": "Oracle",
+      "name": "Fraser",
+      "timing": "night_2",
+      "count": 0,
+      "possibleActualRoles": ["Oracle", "Fang Gu", "Vigormortis", "No Dashii", "Vortox", "Witch", "Mutant"]
+    },
+    {
+      "type": "Oracle",
+      "name": "Fraser",
+      "timing": "night_3",
+      "count": 1,
+      "possibleActualRoles": ["Oracle", "Fang Gu", "Vigormortis", "No Dashii", "Vortox", "Witch", "Mutant"]
+    },
+    {
+      "type": "Mathematician",
+      "name": "Jasmine",
+      "malfunctions": [
+        {
+          "timing": "night_1",
+          "count": 2
+        }
+      ],
+      "possibleActualRoles": ["Mathematician", "Fang Gu", "Vigormortis", "No Dashii", "Vortox", "Witch", "Mutant"]
+    },
+    {
+      "type": "Artist",
+      "name": "You",
+      "timing": "day_2",
+      "info": [
+        {
+          "timing": "day_2",
+          "expression": "Sarah.initial_type != Demon"
+        }
+      ],
+      "possibleActualRoles": ["Artist"]
+    },
+    {
+      "type": "Klutz",
+      "name": "Sarah"
+    },
+    {
+      "type": "Snake Charmer",
+      "name": "Josh",
+      "checks": [
+        {
+          "timing": "night_1",
+          "player": "Fraser",
+          "demon": false
+        },
+        {
+          "timing": "night_2",
+          "player": "Sarah",
+          "demon": false
+        }
+      ],
+      "possibleActualRoles": ["Snake Charmer", "Fang Gu", "Vigormortis", "No Dashii", "Vortox", "Witch", "Mutant"]
+    },
+    {
+      "type": "Juggler",
+      "name": "Olivia",
+      "timing": "night_2",
+      "correctCount": 2,
+      "guesses": {
+        "Aoife": "Dreamer",
+        "Tim": "Mutant",
+        "Fraser": "Mutant",
+        "Sarah": "Vortox"
+      },
+      "possibleActualRoles": ["Juggler", "Fang Gu", "Vigormortis", "No Dashii", "Vortox", "Witch", "Mutant"]
+    }
+  ]
+}

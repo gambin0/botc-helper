@@ -1,0 +1,88 @@
+{
+  "title": "Puzzle 12b - Thunderstruck",
+  "players": ["Fraser", "Tom", "Aoife", "Steph", "You", "Oscar", "Anna", "Josh"],
+  "script": [
+    "Vortox",
+    "Spy",
+    "Scarlet Woman",
+    "Lunatic",
+    "Clockmaker",
+    "Courtier",
+    "Dreamer",
+    "Empath",
+    "Investigator",
+    "Librarian",
+    "Mayor",
+    "Slayer"
+  ],
+  "timeline": [
+    {
+      "timing": "day_1",
+      "type": "doomsayerDeath",
+      "caller": "Tom",
+      "players": ["Josh"]
+    },
+    {
+      "timing": "day_1",
+      "type": "doomsayerDeath",
+      "caller": "Steph",
+      "players": ["Oscar"]
+    },
+    {
+      "timing": "day_1",
+      "type": "doomsayerDeath",
+      "caller": "Fraser",
+      "players": ["Aoife"]
+    }
+  ],
+  "claims": [
+    {
+      "type": "Slayer",
+      "name": "Fraser",
+      "timing": "day_1",
+      "target": "Steph",
+      "killed": false
+    },
+    {
+      "type": "Dreamer",
+      "name": "Tom",
+      "player": "Steph",
+      "roles": ["Lunatic", "Spy"]
+    },
+    {
+      "type": "Clockmaker",
+      "name": "Aoife",
+      "distance": 3
+    },
+    {
+      "type": "Courtier",
+      "name": "Steph",
+      "timing": "night_1",
+      "role": "Vortox",
+      "drunkTimings": ["night_1"]
+    },
+    {
+      "type": "Librarian",
+      "name": "You",
+      "role": "Lunatic",
+      "among": ["Fraser", "Steph"],
+      "possibleActualRoles": ["Librarian"]
+    },
+    {
+      "type": "Investigator",
+      "name": "Oscar",
+      "role": "Spy",
+      "among": ["Josh", "Fraser"]
+    },
+    {
+      "type": "Empath",
+      "name": "Anna",
+      "count": 1,
+      "possibleActualRoles": ["Empath", "Vortox", "Spy", "Scarlet Woman", "Lunatic"]
+    },
+    {
+      "type": "Mayor",
+      "name": "Josh"
+    }
+  ]
+}

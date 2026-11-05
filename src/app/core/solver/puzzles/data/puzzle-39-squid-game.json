@@ -1,0 +1,120 @@
+{
+  "title": "Puzzle 39 - Squid Game",
+  "players": ["Fraser", "Tom", "Sula", "Hannah", "You", "Jasmine", "Matt", "Aoife"],
+  "script": [
+    "No Dashii",
+    "Witch",
+    "Mutant",
+    "Klutz",
+    "Artist",
+    "Juggler",
+    "Mathematician",
+    "Oracle",
+    "Philosopher",
+    "Sage",
+    "Seamstress"
+  ],
+  "timeline": [
+    {
+      "timing": "day_1",
+      "type": "witchCurse",
+      "players": ["Tom"]
+    },
+    {
+      "timing": "day_1",
+      "type": "execution",
+      "players": ["Aoife"]
+    },
+    {
+      "timing": "night_2",
+      "type": "nightDeath",
+      "players": ["Fraser"]
+    },
+    {
+      "timing": "day_2",
+      "type": "execution",
+      "players": ["Sula"]
+    },
+    {
+      "timing": "night_3",
+      "type": "nightDeath",
+      "players": ["You"]
+    }
+  ],
+  "claims": [
+    {
+      "type": "Sage",
+      "name": "Fraser",
+      "timing": "night_2",
+      "demonAmong": ["Jasmine", "Matt"]
+    },
+    {
+      "type": "Artist",
+      "name": "Tom",
+      "timing": "day_1",
+      "info": [
+        {
+          "timing": "day_1",
+          "expression": "some p: {Jasmine, Matt, Aoife} | p.initial_role == Mutant"
+        }
+      ]
+    },
+    {
+      "type": "Mathematician",
+      "name": "Sula",
+      "malfunctions": [
+        {
+          "timing": "night_1",
+          "count": 0
+        },
+        {
+          "timing": "night_2",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "type": "Klutz",
+      "name": "Hannah"
+    },
+    {
+      "type": "Oracle",
+      "name": "You",
+      "timing": "night_2",
+      "count": 1,
+      "possibleActualRoles": ["Oracle"]
+    },
+    {
+      "type": "Juggler",
+      "name": "Jasmine",
+      "timing": "night_2",
+      "guesses": {
+        "You": "Witch",
+        "Aoife": "Witch",
+        "Tom": "Witch",
+        "Fraser": "Sage",
+        "Hannah": "Klutz"
+      },
+      "correctCount": 3
+    },
+    {
+      "type": "Philosopher",
+      "name": "Matt",
+      "timing": "night_1",
+      "role": "Seamstress",
+      "seamstress": {
+        "timing": "night_1",
+        "among": ["Aoife", "Tom"],
+        "aligned": false
+      },
+      "possibleActualRoles": ["Philosopher", "No Dashii", "Witch", "Mutant"]
+    },
+    {
+      "type": "Seamstress",
+      "name": "Aoife",
+      "timing": "night_1",
+      "among": ["Matt", "Hannah"],
+      "aligned": false
+    }
+  ]
+}

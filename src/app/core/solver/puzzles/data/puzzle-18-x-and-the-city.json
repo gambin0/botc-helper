@@ -1,0 +1,120 @@
+{
+  "title": "Puzzle 18 - X And The City",
+  "players": ["Aoife", "Tim", "Olivia", "Sarah", "You", "Steph", "Fraser", "Dan"],
+  "script": [
+    "Leviathan",
+    "Xaan",
+    "Drunk",
+    "Saint",
+    "Recluse",
+    "Balloonist",
+    "Fortune Teller",
+    "Investigator",
+    "Juggler",
+    "Librarian",
+    "Snake Charmer"
+  ],
+  "claims": [
+    {
+      "type": "Balloonist",
+      "name": "Aoife",
+      "timing": "night_2",
+      "differentCharacterTypePairs": [["Olivia", "Aoife"]]
+    },
+    {
+      "type": "Balloonist",
+      "name": "Aoife",
+      "timing": "night_3",
+      "differentCharacterTypePairs": [["You", "Aoife"]]
+    },
+    {
+      "type": "Saint",
+      "name": "Tim"
+    },
+    {
+      "type": "Investigator",
+      "name": "Olivia",
+      "role": "Xaan",
+      "among": ["Fraser", "Aoife"]
+    },
+    {
+      "type": "Recluse",
+      "name": "Sarah"
+    },
+    {
+      "type": "Librarian",
+      "name": "You",
+      "role": "Drunk",
+      "among": ["Aoife", "Tim"],
+      "possibleActualRoles": ["Librarian", "Drunk"]
+    },
+    {
+      "type": "Juggler",
+      "name": "Steph",
+      "timing": "night_2",
+      "guesses": {
+        "Fraser": "Leviathan",
+        "Aoife": "Balloonist",
+        "Tim": "Xaan"
+      },
+      "correctCount": 2
+    },
+    {
+      "type": "Snake Charmer",
+      "name": "Fraser",
+      "checks": [
+        {
+          "player": "Olivia",
+          "demon": false,
+          "timing": "night_1"
+        }
+      ]
+    },
+    {
+      "type": "Snake Charmer",
+      "name": "Fraser",
+      "checks": [
+        {
+          "player": "Steph",
+          "demon": false,
+          "timing": "night_2"
+        }
+      ]
+    },
+    {
+      "type": "Snake Charmer",
+      "name": "Fraser",
+      "checks": [
+        {
+          "player": "Aoife",
+          "demon": false,
+          "timing": "night_3"
+        }
+      ]
+    },
+    {
+      "type": "FortuneTeller",
+      "name": "Dan",
+      "checks": [
+        {
+          "left": "Tim",
+          "right": "Sarah",
+          "yes": false,
+          "timing": "night_1"
+        },
+        {
+          "left": "Steph",
+          "right": "Aoife",
+          "yes": false,
+          "timing": "night_2"
+        },
+        {
+          "left": "Fraser",
+          "right": "Olivia",
+          "yes": false,
+          "timing": "night_3"
+        }
+      ]
+    }
+  ]
+}

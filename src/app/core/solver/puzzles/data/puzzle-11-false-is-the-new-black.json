@@ -1,0 +1,164 @@
+{
+  "title": "Puzzle 11 - False Is The New Black",
+  "players": ["Matthew", "Anna", "Aoife", "Hannah", "You", "Sula", "Sarah", "Tom"],
+  "script": [
+    "Vortox",
+    "Cerenovus",
+    "Pit-Hag",
+    "Mutant",
+    "Sweetheart",
+    "Artist",
+    "Clockmaker",
+    "Dreamer",
+    "Philosopher",
+    "Sage",
+    "Seamstress",
+    "Snake Charmer"
+  ],
+  "uniqueCharacters": true,
+  "timeline": [
+    {
+      "timing": "day_1",
+      "type": "execution",
+      "players": ["You"]
+    },
+    {
+      "timing": "night_2",
+      "type": "nightDeath",
+      "players": ["Anna"]
+    },
+    {
+      "timing": "day_2",
+      "type": "execution",
+      "players": ["Sula"]
+    },
+    {
+      "timing": "night_3",
+      "type": "nightDeath",
+      "players": ["Tom"]
+    }
+  ],
+  "claims": [
+    {
+      "type": "Seamstress",
+      "name": "Matthew",
+      "timing": "night_1",
+      "among": ["Aoife", "Tom"],
+      "aligned": true,
+      "possibleActualRoles": ["Seamstress", "Vortox", "Cerenovus", "Pit-Hag", "Artist", "Mutant"]
+    },
+    {
+      "type": "Artist",
+      "name": "Matthew",
+      "timing": "day_2",
+      "info": [
+        {
+          "timing": "day_2",
+          "expression": "You.initial_role == Clockmaker"
+        }
+      ],
+      "possibleActualRoles": ["Seamstress", "Vortox", "Cerenovus", "Pit-Hag", "Artist", "Mutant"],
+      "roleTiming": "day_2"
+    },
+    {
+      "type": "Sage",
+      "name": "Anna",
+      "timing": "night_2",
+      "demonAmong": ["Matthew", "Hannah"]
+    },
+    {
+      "type": "Snake Charmer",
+      "name": "Aoife",
+      "checks": [
+        {
+          "player": "Tom",
+          "demon": false,
+          "timing": "night_1"
+        }
+      ]
+    },
+    {
+      "type": "Snake Charmer",
+      "name": "Aoife",
+      "checks": [
+        {
+          "player": "Hannah",
+          "demon": false,
+          "timing": "night_2"
+        }
+      ]
+    },
+    {
+      "type": "Snake Charmer",
+      "name": "Aoife",
+      "checks": [
+        {
+          "player": "Matthew",
+          "demon": false,
+          "timing": "night_3"
+        }
+      ]
+    },
+    {
+      "type": "Artist",
+      "name": "Hannah",
+      "timing": "day_1",
+      "info": [
+        {
+          "timing": "day_1",
+          "expression": "false"
+        }
+      ]
+    },
+    {
+      "type": "Clockmaker",
+      "name": "You",
+      "distance": 2,
+      "possibleActualRoles": ["Clockmaker"]
+    },
+    {
+      "type": "Philosopher",
+      "name": "Sula",
+      "timing": "night_2",
+      "role": "Snake Charmer",
+      "possibleActualRoles": ["Philosopher", "Vortox", "Cerenovus", "Pit-Hag"]
+    },
+    {
+      "type": "Snake Charmer",
+      "name": "Sula",
+      "checks": [
+        {
+          "player": "Sarah",
+          "demon": false,
+          "timing": "night_2"
+        }
+      ],
+      "possibleActualRoles": ["Philosopher", "Vortox", "Cerenovus", "Pit-Hag"]
+    },
+    {
+      "type": "Dreamer",
+      "name": "Sarah",
+      "timing": "night_1",
+      "player": "Matthew",
+      "roles": ["Cerenovus", "Seamstress"]
+    },
+    {
+      "type": "Dreamer",
+      "name": "Sarah",
+      "timing": "night_2",
+      "player": "Aoife",
+      "roles": ["Vortox", "Mutant"]
+    },
+    {
+      "type": "Dreamer",
+      "name": "Sarah",
+      "timing": "night_3",
+      "player": "You",
+      "roles": ["Vortox", "Mutant"]
+    },
+    {
+      "type": "Sweetheart",
+      "name": "Tom"
+    }
+  ]
+}

@@ -104,6 +104,14 @@ describe.each([0, 1])('the Demon changing seats (%s = engine, reference)', which
     expect(r.can('p5', 'poisoner')).toBe(true);
     expect(r.can('p5', 'chef')).toBe(false);
   });
+  it('an Imp shot by the Slayer cannot pass the star', () => {
+    const shot = [claim('p1', 'slayer'), claim('p2', 'imp'), info('p1', { type: 'slayer', player: 'p2', yes: true }, 2), death('p2', 2)];
+    // Without a Scarlet Woman the game is over, so nothing can happen afterwards.
+    expect(run(without('scarletwoman'), [...shot, death('p3', 3)]).consistent).toBe(false);
+    // Killed at night (by itself), it could have.
+    expect(run(without('scarletwoman'), [claim('p2', 'imp'), death('p2', 2), death('p3', 3)]).consistent).toBe(true);
+  });
+
   describe('the Fang Gu jumping to an Outsider', () => {
     // 7 players with a Fang Gu: 4 Townsfolk, 1 Outsider, 1 Minion, 1 Demon.
     const FANG_GU = ['chef', 'empath', 'monk', 'soldier', 'mayor', 'butler', 'saint', 'poisoner', 'fanggu'];

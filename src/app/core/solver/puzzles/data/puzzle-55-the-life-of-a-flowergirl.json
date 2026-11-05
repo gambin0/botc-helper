@@ -1,0 +1,126 @@
+{
+  "title": "Puzzle 55 - The Life of a Flowergirl",
+  "players": ["Aoife", "Anna", "Sarah", "Jasmine", "You", "Matt", "Fraser", "Steph"],
+  "script": [
+    "Fang Gu",
+    "Vigormortis",
+    "No Dashii",
+    "Vortox",
+    "Witch",
+    "Mutant",
+    "Klutz",
+    "Artist",
+    "Juggler",
+    "Mathematician",
+    "Oracle",
+    "Flowergirl",
+    "Seamstress",
+    "Clockmaker"
+  ],
+  "timeline": [
+    {
+      "timing": "day_1",
+      "type": "execution",
+      "players": ["Sarah"]
+    },
+    {
+      "timing": "night_2",
+      "type": "nightDeath",
+      "players": ["Aoife"]
+    },
+    {
+      "timing": "day_2",
+      "type": "witchCurse",
+      "players": ["You"]
+    },
+    {
+      "timing": "day_2",
+      "type": "execution",
+      "players": ["Matt"]
+    },
+    {
+      "timing": "night_3",
+      "type": "nightDeath",
+      "players": ["Fraser"]
+    }
+  ],
+  "claims": [
+    {
+      "type": "Artist",
+      "name": "Aoife",
+      "timing": "day_1",
+      "info": [
+        {
+          "timing": "day_1",
+          "expression": "Aoife.initial_role != Artist"
+        }
+      ]
+    },
+    {
+      "type": "Juggler",
+      "name": "Anna",
+      "timing": "night_2",
+      "correctCount": 5,
+      "guesses": {
+        "You": "Flowergirl",
+        "Fraser": "Fang Gu",
+        "Aoife": "Fang Gu",
+        "Sarah": "Mathematician",
+        "Jasmine": "Oracle"
+      },
+      "possibleActualRoles": ["Juggler", "Fang Gu", "Vigormortis", "No Dashii", "Vortox", "Witch", "Mutant"]
+    },
+    {
+      "type": "Mathematician",
+      "name": "Sarah",
+      "malfunctions": [
+        {
+          "timing": "night_1",
+          "count": 0
+        }
+      ]
+    },
+    {
+      "type": "Oracle",
+      "name": "Jasmine",
+      "timing": "night_2",
+      "count": 1,
+      "possibleActualRoles": ["Oracle", "Fang Gu", "Vigormortis", "No Dashii", "Vortox", "Witch", "Mutant"]
+    },
+    {
+      "type": "Oracle",
+      "name": "Jasmine",
+      "timing": "night_3",
+      "count": 1,
+      "possibleActualRoles": ["Oracle", "Fang Gu", "Vigormortis", "No Dashii", "Vortox", "Witch", "Mutant"]
+    },
+    {
+      "type": "Flowergirl",
+      "name": "You",
+      "votes": [
+        {
+          "timing": "night_2",
+          "voters": ["You", "Fraser", "Steph", "Aoife", "Jasmine"],
+          "demonVoted": true
+        }
+      ],
+      "possibleActualRoles": ["Flowergirl"]
+    },
+    {
+      "type": "Seamstress",
+      "name": "Matt",
+      "timing": "night_2",
+      "among": ["Sarah", "Jasmine"],
+      "aligned": true
+    },
+    {
+      "type": "Clockmaker",
+      "name": "Fraser",
+      "distance": 4
+    },
+    {
+      "type": "Klutz",
+      "name": "Steph"
+    }
+  ]
+}

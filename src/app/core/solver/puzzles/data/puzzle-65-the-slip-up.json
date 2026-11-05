@@ -1,0 +1,142 @@
+{
+  "title": "Puzzle 65 - The Slip-Up",
+  "players": ["Fraser", "Oscar", "Dan", "Matt", "You", "Tom", "Anna", "Sarah"],
+  "script": [
+    "Fang Gu",
+    "No Dashii",
+    "Vortox",
+    "Witch",
+    "Mutant",
+    "Klutz",
+    "Artist",
+    "Snake Charmer",
+    "Juggler",
+    "Clockmaker",
+    "Oracle",
+    "Seamstress",
+    "Mathematician"
+  ],
+  "timeline": [
+    {
+      "timing": "day_1",
+      "type": "execution",
+      "players": ["You"]
+    },
+    {
+      "timing": "night_2",
+      "type": "nightDeath",
+      "players": ["Sarah"]
+    },
+    {
+      "timing": "day_2",
+      "type": "witchCurse",
+      "players": ["Anna"],
+      "caller": "Anna"
+    },
+    {
+      "timing": "day_2",
+      "type": "execution",
+      "players": ["Oscar"]
+    },
+    {
+      "timing": "night_3",
+      "type": "nightDeath",
+      "players": ["Tom"]
+    }
+  ],
+  "claims": [
+    {
+      "type": "Snake Charmer",
+      "name": "Fraser",
+      "checks": [
+        {
+          "timing": "night_1",
+          "player": "Matt",
+          "demon": false
+        },
+        {
+          "timing": "night_2",
+          "player": "Oscar",
+          "demon": false
+        },
+        {
+          "timing": "night_3",
+          "player": "Tom",
+          "demon": false
+        }
+      ],
+      "possibleActualRoles": ["Snake Charmer", "Fang Gu", "No Dashii", "Vortox", "Witch", "Mutant"]
+    },
+    {
+      "type": "Juggler",
+      "name": "Oscar",
+      "timing": "night_2",
+      "correctCount": 1,
+      "guesses": {
+        "Tom": "Seamstress",
+        "Fraser": "Snake Charmer",
+        "Matt": "Oracle"
+      }
+    },
+    {
+      "type": "Clockmaker",
+      "name": "Dan",
+      "distance": 4,
+      "possibleActualRoles": ["Clockmaker", "Fang Gu", "No Dashii", "Vortox", "Witch", "Mutant"]
+    },
+    {
+      "type": "Oracle",
+      "name": "Matt",
+      "timing": "night_2",
+      "count": 0,
+      "possibleActualRoles": ["Oracle", "Fang Gu", "No Dashii", "Vortox", "Witch", "Mutant"]
+    },
+    {
+      "type": "Oracle",
+      "name": "Matt",
+      "timing": "night_3",
+      "count": 1,
+      "possibleActualRoles": ["Oracle", "Fang Gu", "No Dashii", "Vortox", "Witch", "Mutant"]
+    },
+    {
+      "type": "Klutz",
+      "name": "You",
+      "timing": "day_1",
+      "chosen": "Dan",
+      "possibleActualRoles": ["Klutz"]
+    },
+    {
+      "type": "Seamstress",
+      "name": "Tom",
+      "timing": "night_2",
+      "among": ["Anna", "Dan"],
+      "aligned": false,
+      "possibleActualRoles": ["Seamstress", "Fang Gu", "No Dashii", "Vortox", "Witch", "Mutant"]
+    },
+    {
+      "type": "Mathematician",
+      "name": "Anna",
+      "malfunctions": [
+        {
+          "timing": "night_1",
+          "count": 0
+        },
+        {
+          "timing": "night_2",
+          "count": 0
+        }
+      ]
+    },
+    {
+      "type": "Artist",
+      "name": "Sarah",
+      "timing": "day_1",
+      "info": [
+        {
+          "timing": "day_1",
+          "expression": "Demon in {Tom, Matt}.initial_type"
+        }
+      ]
+    }
+  ]
+}

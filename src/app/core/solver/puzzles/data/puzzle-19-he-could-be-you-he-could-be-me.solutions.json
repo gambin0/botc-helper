@@ -1,0 +1,16 @@
+{
+  "solutions": [
+    {
+      "roles": {
+        "Aoife": "Empath",
+        "Fraser": "Spy",
+        "Jasmine": "Slayer",
+        "Matt": "Ravenkeeper",
+        "Olivia": "Imp",
+        "Oscar": "Recluse",
+        "Sula": "Washerwoman",
+        "You": "Librarian"
+      }
+    }
+  ]
+}

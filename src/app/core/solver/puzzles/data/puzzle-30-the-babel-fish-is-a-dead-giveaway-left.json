@@ -1,0 +1,51 @@
+{
+  "title": "Puzzle 30 - The Babel Fish Is A Dead Giveaway (left game)",
+  "players": ["Sarah", "Max", "Erika", "Lav", "Oli", "Callum"],
+  "script": ["Imp", "Spy", "Drunk", "Artist", "Atheist", "Clockmaker", "Knight", "Noble", "Seamstress"],
+  "setup": "atheist",
+  "claims": [
+    {
+      "type": "Seamstress",
+      "name": "Sarah",
+      "timing": "night_1",
+      "among": ["Oli", "Callum"],
+      "aligned": true,
+      "possibleActualRoles": ["Seamstress"]
+    },
+    {
+      "type": "Artist",
+      "name": "Max",
+      "timing": "day_1",
+      "info": [
+        {
+          "timing": "day_1",
+          "expression": "Erika.initial_role == Drunk"
+        }
+      ],
+      "possibleActualRoles": ["Artist"]
+    },
+    {
+      "type": "Noble",
+      "name": "Erika",
+      "oneEvilAmong": ["Lav", "Callum", "Sarah"],
+      "possibleActualRoles": ["Noble"]
+    },
+    {
+      "type": "Clockmaker",
+      "name": "Lav",
+      "distance": 3,
+      "possibleActualRoles": ["Clockmaker"]
+    },
+    {
+      "type": "Atheist",
+      "name": "Oli",
+      "possibleActualRoles": ["Atheist"]
+    },
+    {
+      "type": "Knight",
+      "name": "Callum",
+      "noDemonAmong": ["Lav", "Max"],
+      "possibleActualRoles": ["Knight"]
+    }
+  ]
+}

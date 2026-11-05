@@ -1,0 +1,90 @@
+{
+  "title": "Puzzle 10 - Dont Overcook It",
+  "players": ["Tom", "Sula", "Fraser", "Josh", "You", "Matthew", "Dan"],
+  "script": [
+    "Imp",
+    "Poisoner",
+    "Spy",
+    "Baron",
+    "Scarlet Woman",
+    "Drunk",
+    "Recluse",
+    "Chef",
+    "Fortune Teller",
+    "Ravenkeeper",
+    "Slayer",
+    "Undertaker",
+    "Washerwoman"
+  ],
+  "timeline": [
+    {
+      "timing": "day_1",
+      "type": "execution",
+      "players": ["Josh"]
+    },
+    {
+      "timing": "night_2",
+      "type": "nightDeath",
+      "players": ["Matthew"]
+    }
+  ],
+  "claims": [
+    {
+      "type": "FortuneTeller",
+      "name": "Tom",
+      "checks": [
+        {
+          "left": "Tom",
+          "right": "Sula",
+          "yes": false,
+          "timing": "night_1"
+        },
+        {
+          "left": "Tom",
+          "right": "Josh",
+          "yes": true,
+          "timing": "night_2"
+        }
+      ]
+    },
+    {
+      "type": "Chef",
+      "name": "Sula",
+      "timing": "night_1",
+      "count": 0
+    },
+    {
+      "type": "Recluse",
+      "name": "Fraser"
+    },
+    {
+      "type": "Washerwoman",
+      "name": "Josh",
+      "timing": "night_1",
+      "role": "Undertaker",
+      "among": ["Dan", "Sula"]
+    },
+    {
+      "type": "Slayer",
+      "name": "You",
+      "timing": "day_2",
+      "target": "Fraser",
+      "killed": false,
+      "possibleActualRoles": ["Slayer", "Drunk"]
+    },
+    {
+      "type": "Ravenkeeper",
+      "name": "Matthew",
+      "timing": "night_2",
+      "player": "Josh",
+      "role": "Imp"
+    },
+    {
+      "type": "Undertaker",
+      "name": "Dan",
+      "timing": "night_2",
+      "player": "Josh",
+      "role": "Poisoner"
+    }
+  ]
+}

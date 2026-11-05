@@ -72,7 +72,7 @@ The engine warns about these (`approximation` in `role-rules.ts`), but they matt
   - **A game-ending execution** must kill the living Demon (and no Scarlet Woman may be able to take over) or the Saint.
   - **New deductions** follow from this. A non-Imp Demon that died while the game went on is ruled out. "The game ended on the Imp's execution" proves the Scarlet Woman was dead or that 4 or fewer players were alive.
   - **Still lenient (never wrongly rules anything out):**
-    - the log doesn't record how someone died, so an Imp killed by a Slayer is still allowed to pass the star;
+    - the log doesn't record how someone died, so an Imp that died some other way by day is still allowed to pass the star (a Slayer kill no longer is: see section 3);
     - a Poisoner who becomes the Imp is still counted as able to poison.
   - **The Fang Gu jumping** is modelled the same way (`passesOnDeath: { to: 'outsider', once: true }`): when the Fang Gu dies other than by execution, a living Outsider may become the Fang Gu, once per game. A living Scarlet Woman may still catch it instead. Before this, a Fang Gu that jumped made the rest of the log read as "after the game ended", which wrongly ruled out the truth.
   - **Not modelled:** other ways the Demon moves (the Pit-Hag, the Barber, Snake Charmer swaps). These roles now carry a warning.
@@ -100,9 +100,19 @@ The reference solver shares `role-rules.ts` and `info-specs.ts` with the engine,
     - the Lleech's host, the Philosopher's drunk copy, the Sweetheart's drunk, the Puzzlemaster's drunk and the Courtier's character are each one player for the whole game, like the Widow (`corruptsOneForGame`). They were a new player each night. The Puzzlemaster had no corruption at all, which was too strict.
     - Ravenkeeper and Sage info needs the source to have died that night (`afterOwnDeath`, `diedThatNight`), like the Undertaker check: otherwise the source is not that character, with a note suggesting logging the missing death.
   - **Now warned about** (`approximation`): characters that change someone's alignment or character, or register falsely, which the engine does not track: Bounty Hunter, Cult Leader, Goon, Ogre, Mezepheles, Farmer, Pit-Hag, Snake Charmer, Riot, Zombuul, Revolutionary. Deductions in games with these can rule out the truth.
-  - **Still lenient, left as is:** an Imp or Fang Gu killed by a Slayer may still pass the Demon on (deaths have no cause); the No Dashii's poisoning is not tied to its Townsfolk neighbours; the Vortox rule "if no-one is executed, evil wins" is not used, since the log has no "no execution today" entry; the Minstrel, Sailor and Innkeeper are allowed on any night.
+  - **Still lenient, left as is:** an Imp or Fang Gu that died by day other than to a logged Slayer shot may still pass the Demon on (deaths have no cause); the No Dashii's poisoning is not tied to its Townsfolk neighbours; the Vortox rule "if no-one is executed, evil wins" is not used, since the log has no "no execution today" entry; the Minstrel, Sailor and Innkeeper are allowed on any night.
   - `rule-data.test.ts` and `demon-moves.test.ts` cover the fixes on both solvers; the new tests fail with the old rule data. A `fanggu` fuzz profile (forced Fang Gu and Scarlet Woman, 35% deaths) joins the campaign.
-- [ ] The strongest check would be a set of **real game logs with known final grimoires,** as regression tests.
+- [x] **Community logic puzzles with published solutions** (`solver/puzzles/`). Real game logs with final grimoires turned out not to be published anywhere searchable. The closest substitute is the 96 weekly r/BloodOnTheClocktower puzzles, encoded as JSON with their solutions in [jthemphill/botc-solvers](https://github.com/jthemphill/botc-solvers) (MIT), a SAT-based solver.
+  - **How it works:** `puzzle-import.ts` converts each puzzle into a log, dropping only what the app cannot record (Juggler, Savant, Artist info and so on), which can only leave more open. `puzzles.test.ts` requires every solution to stay possible, and `scripts/puzzle-check.ts` reports per puzzle.
+  - **Result:** 87 puzzles convert (9 use house rules or homebrew characters). Before the fixes below, 26 had their solution ruled out; now 81 are sound, and the 6 left need rules we don't model (Goon, Riot ×2, Barber, Zombuul, and the Chef question below). Precision: 207 of the players in sound puzzles are pinned to the solution; 12 puzzles are fully solved.
+  - **Rule bugs it found (all ruled out the truth), fixed in both solvers:**
+    - a **Mutant** must not claim to be an Outsider, so an honest good player claiming a Townsfolk can be the Mutant;
+    - the **Lunatic** believes they are the Demon and bluffs like one, so they can claim anything (not only a Demon);
+    - the **Hermit** has every Outsider ability on the script: with the Drunk's it thinks it is a Townsfolk, with the Lunatic's a Demon, with the Mutant's it claims a non-Outsider, and with the Recluse's it can register as evil, a Minion or a Demon.
+  - **A deduction it showed we were missing:** an Imp shot by the Slayer died by day, so it cannot pass the star (`killedBySlayer`). This closes the "Slayer kill" leniency noted in section 2.
+  - **Open question:** puzzle 31 assumes a Recluse sitting between two evil players can count as 1 Chef pair, registering separately for each pair. The engine uses one registration per Chef reading, so it rules that solution out.
+  - **Where the engine is weaker than the puzzles:** abilities we don't model (Soldier and Monk protection, the Xaan's night, Juggler, Savant, Artist and others), so many puzzles leave several characters open.
+- [ ] Real game logs with known final grimoires would still be the strongest check.
 
 ## 4. Test scenarios that random games miss
 

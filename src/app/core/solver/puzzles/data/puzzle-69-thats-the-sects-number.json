@@ -1,0 +1,154 @@
+{
+  "title": "Puzzle 69 - That's the Sects Number",
+  "players": ["Fraser", "Sarah", "Tom", "Oscar", "Dan", "You", "Hannah", "Matt", "Adam"],
+  "script": [
+    "Fang Gu",
+    "Vigormortis",
+    "No Dashii",
+    "Vortox",
+    "Witch",
+    "Mutant",
+    "Klutz",
+    "Sweetheart",
+    "Artist",
+    "Juggler",
+    "Mathematician",
+    "Seamstress",
+    "Sage",
+    "Snake Charmer",
+    "Oracle"
+  ],
+  "timeline": [
+    {
+      "timing": "day_1",
+      "type": "witchCurse",
+      "players": ["Oscar"],
+      "caller": "Oscar"
+    },
+    {
+      "timing": "day_1",
+      "type": "execution",
+      "players": ["Matt"]
+    },
+    {
+      "timing": "night_2",
+      "type": "nightDeath",
+      "players": ["Dan"]
+    },
+    {
+      "timing": "day_2",
+      "type": "witchCurse",
+      "players": ["Sarah"],
+      "caller": "Sarah"
+    },
+    {
+      "timing": "day_2",
+      "type": "execution",
+      "players": ["Hannah"]
+    },
+    {
+      "timing": "night_3",
+      "type": "nightDeath",
+      "players": ["You"]
+    }
+  ],
+  "claims": [
+    {
+      "type": "Artist",
+      "name": "Fraser",
+      "timing": "day_3",
+      "info": [
+        {
+          "timing": "day_3",
+          "expression": "Fraser.initial_role != Artist"
+        }
+      ],
+      "possibleActualRoles": ["Artist", "Fang Gu", "Vigormortis", "No Dashii", "Vortox", "Witch", "Mutant"]
+    },
+    {
+      "type": "Juggler",
+      "name": "Sarah",
+      "timing": "night_2",
+      "correctCount": 1,
+      "guesses": {
+        "You": "Witch",
+        "Hannah": "No Dashii",
+        "Matt": "Mutant",
+        "Fraser": "No Dashii"
+      }
+    },
+    {
+      "type": "Mathematician",
+      "name": "Tom",
+      "malfunctions": [
+        {
+          "timing": "night_1",
+          "count": 2
+        },
+        {
+          "timing": "night_2",
+          "count": 1
+        },
+        {
+          "timing": "night_3",
+          "count": 2
+        }
+      ],
+      "possibleActualRoles": ["Mathematician", "Fang Gu", "Vigormortis", "No Dashii", "Vortox", "Witch", "Mutant"]
+    },
+    {
+      "type": "Seamstress",
+      "name": "Oscar",
+      "timing": "night_1",
+      "among": ["Hannah", "Adam"],
+      "aligned": true
+    },
+    {
+      "type": "Klutz",
+      "name": "Dan",
+      "timing": "night_2",
+      "chosen": "Tom"
+    },
+    {
+      "type": "Sage",
+      "name": "You",
+      "timing": "night_3",
+      "demonAmong": ["Adam", "Tom"],
+      "possibleActualRoles": ["Sage"]
+    },
+    {
+      "type": "Snake Charmer",
+      "name": "Hannah",
+      "checks": [
+        {
+          "timing": "night_1",
+          "player": "Sarah",
+          "demon": false
+        },
+        {
+          "timing": "night_2",
+          "player": "Dan",
+          "demon": false
+        }
+      ]
+    },
+    {
+      "type": "Sweetheart",
+      "name": "Matt"
+    },
+    {
+      "type": "Oracle",
+      "name": "Adam",
+      "timing": "night_2",
+      "count": 1,
+      "possibleActualRoles": ["Oracle", "Fang Gu", "Vigormortis", "No Dashii", "Vortox", "Witch", "Mutant"]
+    },
+    {
+      "type": "Oracle",
+      "name": "Adam",
+      "timing": "night_3",
+      "count": 1,
+      "possibleActualRoles": ["Oracle", "Fang Gu", "Vigormortis", "No Dashii", "Vortox", "Witch", "Mutant"]
+    }
+  ]
+}

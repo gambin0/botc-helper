@@ -1,0 +1,119 @@
+{
+  "title": "Puzzle 29 - A Dreamer Im Not The Only One",
+  "players": ["Sula", "Steph", "Hannah", "Fraser", "You", "Jasmine", "Adam", "Sarah"],
+  "script": ["Imp", "Poisoner", "Drunk", "Dreamer"],
+  "uniqueCharacters": false,
+  "timeline": [
+    {
+      "timing": "day_1",
+      "type": "execution",
+      "players": ["Jasmine"]
+    },
+    {
+      "timing": "night_2",
+      "type": "nightDeath",
+      "players": ["You"]
+    }
+  ],
+  "claims": [
+    {
+      "type": "Dreamer",
+      "name": "Sula",
+      "timing": "night_1",
+      "player": "Jasmine",
+      "roles": ["Drunk", "Poisoner"]
+    },
+    {
+      "type": "Dreamer",
+      "name": "Sula",
+      "timing": "night_2",
+      "player": "Hannah",
+      "roles": ["Drunk", "Poisoner"]
+    },
+    {
+      "type": "Dreamer",
+      "name": "Steph",
+      "timing": "night_1",
+      "player": "Jasmine",
+      "roles": ["Drunk", "Imp"]
+    },
+    {
+      "type": "Dreamer",
+      "name": "Steph",
+      "timing": "night_2",
+      "player": "Sula",
+      "roles": ["Dreamer", "Poisoner"]
+    },
+    {
+      "type": "Dreamer",
+      "name": "Hannah",
+      "timing": "night_1",
+      "player": "Adam",
+      "roles": ["Drunk", "Poisoner"]
+    },
+    {
+      "type": "Dreamer",
+      "name": "Hannah",
+      "timing": "night_2",
+      "player": "Sula",
+      "roles": ["Drunk", "Imp"]
+    },
+    {
+      "type": "Dreamer",
+      "name": "Fraser",
+      "timing": "night_1",
+      "player": "Hannah",
+      "roles": ["Drunk", "Imp"]
+    },
+    {
+      "type": "Dreamer",
+      "name": "Fraser",
+      "timing": "night_2",
+      "player": "Jasmine",
+      "roles": ["Drunk", "Poisoner"]
+    },
+    {
+      "type": "Dreamer",
+      "name": "You",
+      "timing": "night_1",
+      "player": "Jasmine",
+      "roles": ["Dreamer", "Poisoner"],
+      "possibleActualRoles": ["Dreamer", "Drunk"]
+    },
+    {
+      "type": "Dreamer",
+      "name": "Jasmine",
+      "timing": "night_1",
+      "player": "Sula",
+      "roles": ["Drunk", "Imp"]
+    },
+    {
+      "type": "Dreamer",
+      "name": "Adam",
+      "timing": "night_1",
+      "player": "Jasmine",
+      "roles": ["Dreamer", "Imp"]
+    },
+    {
+      "type": "Dreamer",
+      "name": "Adam",
+      "timing": "night_2",
+      "player": "Fraser",
+      "roles": ["Dreamer", "Imp"]
+    },
+    {
+      "type": "Dreamer",
+      "name": "Sarah",
+      "timing": "night_1",
+      "player": "Jasmine",
+      "roles": ["Drunk", "Poisoner"]
+    },
+    {
+      "type": "Dreamer",
+      "name": "Sarah",
+      "timing": "night_2",
+      "player": "Adam",
+      "roles": ["Drunk", "Imp"]
+    }
+  ]
+}

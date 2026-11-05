@@ -1,0 +1,88 @@
+{
+  "title": "Puzzle 13 - Clockblocking",
+  "players": ["Tim", "Sarah", "Fraser", "Aoife", "You", "Jasmine", "Oscar"],
+  "script": [
+    "Imp",
+    "Poisoner",
+    "Spy",
+    "Baron",
+    "Scarlet Woman",
+    "Drunk",
+    "Recluse",
+    "Clockmaker",
+    "Fortune Teller",
+    "Investigator",
+    "Librarian",
+    "Ravenkeeper",
+    "Slayer"
+  ],
+  "timeline": [
+    {
+      "timing": "day_1",
+      "type": "execution",
+      "players": ["Aoife"]
+    },
+    {
+      "timing": "night_2",
+      "type": "nightDeath",
+      "players": ["Tim"]
+    }
+  ],
+  "claims": [
+    {
+      "type": "Ravenkeeper",
+      "name": "Tim",
+      "timing": "night_2",
+      "player": "Oscar",
+      "role": "Librarian"
+    },
+    {
+      "type": "FortuneTeller",
+      "name": "Sarah",
+      "checks": [
+        {
+          "left": "You",
+          "right": "Oscar",
+          "yes": false,
+          "timing": "night_1"
+        },
+        {
+          "left": "You",
+          "right": "Jasmine",
+          "yes": false,
+          "timing": "night_2"
+        }
+      ]
+    },
+    {
+      "type": "Slayer",
+      "name": "Fraser",
+      "timing": "day_2",
+      "target": "Oscar",
+      "killed": false
+    },
+    {
+      "type": "Recluse",
+      "name": "Aoife"
+    },
+    {
+      "type": "Investigator",
+      "name": "You",
+      "timing": "night_1",
+      "role": "Scarlet Woman",
+      "among": ["Sarah", "Aoife"],
+      "possibleActualRoles": ["Investigator", "Drunk"]
+    },
+    {
+      "type": "Clockmaker",
+      "name": "Jasmine",
+      "distance": 3
+    },
+    {
+      "type": "Librarian",
+      "name": "Oscar",
+      "timing": "night_1",
+      "among": []
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "solutions": [
+    {
+      "roles": {
+        "Chris": "Juggler",
+        "Edd": "Sweetheart",
+        "Goose": "Vortox",
+        "Louisa": "Witch",
+        "Marc": "Clockmaker",
+        "Marsh": "Mathematician",
+        "Seb": "Seamstress",
+        "You": "Savant"
+      },
+      "drunkByTiming": {
+        "night_2": ["Marsh"],
+        "day_2": ["Marsh"],
+        "night_3": ["Marsh"],
+        "day_3": ["Marsh"]
+      }
+    }
+  ]
+}

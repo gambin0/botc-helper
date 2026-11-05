@@ -1,0 +1,112 @@
+{
+  "title": "Puzzle 22 - One In The Chamber",
+  "players": ["Tim", "Fraser", "Oscar", "Steph", "You", "Anna", "Aoife", "Sarah"],
+  "script": [
+    "Imp",
+    "Baron",
+    "Poisoner",
+    "Scarlet Woman",
+    "Spy",
+    "Drunk",
+    "Recluse",
+    "Saint",
+    "Chambermaid",
+    "Investigator",
+    "Librarian",
+    "Ravenkeeper",
+    "Slayer",
+    "Washerwoman"
+  ],
+  "timeline": [
+    {
+      "timing": "day_1",
+      "type": "execution",
+      "players": ["Oscar"]
+    },
+    {
+      "timing": "night_2",
+      "type": "nightDeath",
+      "players": ["Sarah"]
+    },
+    {
+      "timing": "day_2",
+      "type": "execution",
+      "players": ["Fraser"]
+    },
+    {
+      "timing": "night_3",
+      "type": "nightDeath",
+      "players": ["Anna"]
+    }
+  ],
+  "claims": [
+    {
+      "type": "Saint",
+      "name": "Tim"
+    },
+    {
+      "type": "Recluse",
+      "name": "Fraser"
+    },
+    {
+      "type": "Librarian",
+      "name": "Oscar",
+      "timing": "night_1",
+      "role": "Drunk",
+      "among": ["You", "Sarah"]
+    },
+    {
+      "type": "Washerwoman",
+      "name": "Steph",
+      "timing": "night_1",
+      "role": "Chambermaid",
+      "among": ["You", "Aoife"]
+    },
+    {
+      "type": "Chambermaid",
+      "name": "You",
+      "checks": [
+        {
+          "left": "Anna",
+          "right": "Steph",
+          "count": 2,
+          "timing": "night_1"
+        },
+        {
+          "left": "Tim",
+          "right": "Steph",
+          "count": 0,
+          "timing": "night_2"
+        },
+        {
+          "left": "Tim",
+          "right": "Steph",
+          "count": 1,
+          "timing": "night_3"
+        }
+      ],
+      "possibleActualRoles": ["Chambermaid", "Drunk"]
+    },
+    {
+      "type": "Investigator",
+      "name": "Anna",
+      "timing": "night_1",
+      "role": "Baron",
+      "among": ["Aoife", "Steph"]
+    },
+    {
+      "type": "Slayer",
+      "name": "Aoife",
+      "timing": "day_3",
+      "target": "Tim",
+      "killed": false
+    },
+    {
+      "type": "Ravenkeeper",
+      "name": "Sarah",
+      "timing": "night_2",
+      "player": "Steph",
+      "role": "Washerwoman"
+    }
+  ]
+}

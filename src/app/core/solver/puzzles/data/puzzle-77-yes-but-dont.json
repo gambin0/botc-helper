@@ -1,0 +1,129 @@
+{
+  "title": "Puzzle 77 - Yes, But Don't",
+  "players": ["Tom", "Adam", "Dan", "Sarah", "Josh", "You", "Hannah", "Matt", "Fraser"],
+  "script": [
+    "Imp",
+    "Poisoner",
+    "Spy",
+    "Baron",
+    "Scarlet Woman",
+    "Drunk",
+    "Chef",
+    "Investigator",
+    "Butler",
+    "Saint",
+    "Empath",
+    "Ravenkeeper",
+    "Librarian",
+    "Recluse",
+    "Undertaker"
+  ],
+  "timeline": [
+    {
+      "timing": "day_1",
+      "type": "execution",
+      "players": ["Adam"]
+    },
+    {
+      "timing": "night_2",
+      "type": "nightDeath",
+      "players": ["You"]
+    },
+    {
+      "timing": "day_2",
+      "type": "execution",
+      "players": ["Tom"]
+    },
+    {
+      "timing": "night_3",
+      "type": "nightDeath",
+      "players": ["Josh"]
+    },
+    {
+      "timing": "day_3",
+      "type": "execution",
+      "players": ["Fraser"]
+    },
+    {
+      "timing": "night_4",
+      "type": "nightDeath",
+      "players": ["Dan"]
+    }
+  ],
+  "claims": [
+    {
+      "type": "Chef",
+      "name": "Tom",
+      "timing": "night_1",
+      "count": 0
+    },
+    {
+      "type": "Investigator",
+      "name": "Adam",
+      "timing": "night_1",
+      "minionRole": "Poisoner",
+      "among": ["Matt", "Josh"]
+    },
+    {
+      "type": "Butler",
+      "name": "Dan"
+    },
+    {
+      "type": "Saint",
+      "name": "Sarah"
+    },
+    {
+      "type": "Empath",
+      "name": "Josh",
+      "timing": "night_1",
+      "count": 0
+    },
+    {
+      "type": "Empath",
+      "name": "Josh",
+      "timing": "night_2",
+      "count": 1
+    },
+    {
+      "type": "Ravenkeeper",
+      "name": "You",
+      "timing": "night_2",
+      "player": "Sarah",
+      "role": "Baron",
+      "possibleActualRoles": ["Ravenkeeper", "Drunk"]
+    },
+    {
+      "type": "Librarian",
+      "name": "Hannah",
+      "timing": "night_1",
+      "role": "Drunk",
+      "among": ["Fraser", "Tom"]
+    },
+    {
+      "type": "Recluse",
+      "name": "Matt",
+      "timing": "night_1"
+    },
+    {
+      "type": "Imp",
+      "name": "Matt",
+      "timing": "night_4",
+      "alignment": "good",
+      "roleTiming": "night_4"
+    },
+    {
+      "type": "Undertaker",
+      "name": "Fraser",
+      "timing": "night_2",
+      "player": "Adam",
+      "role": "Drunk"
+    },
+    {
+      "type": "Undertaker",
+      "name": "Fraser",
+      "timing": "night_3",
+      "player": "Tom",
+      "role": "Spy"
+    }
+  ]
+}

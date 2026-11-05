@@ -1,0 +1,20 @@
+{
+  "solutions": [
+    {
+      "roles": {
+        "Adam": "Imp",
+        "Fraser": "Washerwoman",
+        "Josh": "Poisoner",
+        "Olivia": "Klutz",
+        "Oscar": "Librarian",
+        "Steph": "Fortune Teller",
+        "Sula": "Virgin",
+        "You": "Investigator"
+      },
+      "poisoned": {
+        "night_1": ["Steph"],
+        "night_2": ["Olivia"]
+      }
+    }
+  ]
+}

@@ -1,0 +1,102 @@
+{
+  "title": "Puzzle 24 - The Ultimate Blunder",
+  "players": ["Sula", "Oscar", "Adam", "Josh", "You", "Olivia", "Steph", "Fraser"],
+  "script": [
+    "Imp",
+    "Poisoner",
+    "Drunk",
+    "Klutz",
+    "Chef",
+    "Empath",
+    "Fortune Teller",
+    "Investigator",
+    "Librarian",
+    "Virgin",
+    "Washerwoman"
+  ],
+  "timeline": [
+    {
+      "timing": "day_1",
+      "type": "execution",
+      "players": ["You"]
+    },
+    {
+      "timing": "night_2",
+      "type": "nightDeath",
+      "players": ["Olivia"]
+    }
+  ],
+  "claims": [
+    {
+      "type": "Virgin",
+      "name": "Sula",
+      "timing": "day_1",
+      "nominator": "Adam",
+      "executed": false
+    },
+    {
+      "type": "Librarian",
+      "name": "Oscar",
+      "timing": "night_1",
+      "role": "Klutz",
+      "among": ["You", "Olivia"]
+    },
+    {
+      "type": "Chef",
+      "name": "Adam",
+      "timing": "night_1",
+      "count": 1
+    },
+    {
+      "type": "Empath",
+      "name": "Josh",
+      "timing": "night_1",
+      "count": 1
+    },
+    {
+      "type": "Empath",
+      "name": "Josh",
+      "timing": "night_2",
+      "count": 0
+    },
+    {
+      "type": "Investigator",
+      "name": "You",
+      "timing": "night_1",
+      "role": "Poisoner",
+      "among": ["Olivia", "Josh"],
+      "possibleActualRoles": ["Investigator", "Drunk"]
+    },
+    {
+      "type": "Klutz",
+      "name": "Olivia",
+      "timing": "night_2",
+      "chosen": "Adam"
+    },
+    {
+      "type": "FortuneTeller",
+      "name": "Steph",
+      "checks": [
+        {
+          "left": "Steph",
+          "right": "Adam",
+          "yes": false,
+          "timing": "night_1"
+        },
+        {
+          "left": "Steph",
+          "right": "Adam",
+          "yes": true,
+          "timing": "night_2"
+        }
+      ]
+    },
+    {
+      "type": "Washerwoman",
+      "name": "Fraser",
+      "timing": "night_1",
+      "role": "Virgin",
+      "among": ["Olivia", "Sula"]
+    }
+  ]
+}

@@ -1,0 +1,145 @@
+{
+  "title": "Puzzle 58 - Minus One, That's Three",
+  "players": ["Oscar", "Sula", "Matthew", "Steph", "Tom", "You", "Fraser", "Jasmine", "Adam"],
+  "script": [
+    "Riot",
+    "Spy",
+    "Xaan",
+    "Politician",
+    "Puzzlemaster",
+    "Noble",
+    "Nightwatchman",
+    "Shugenja",
+    "Juggler",
+    "Seamstress",
+    "Dreamer"
+  ],
+  "timeline": [
+    {
+      "timing": "day_1",
+      "type": "execution",
+      "players": ["Steph"]
+    },
+    {
+      "timing": "day_2",
+      "type": "execution",
+      "players": ["Oscar"]
+    },
+    {
+      "timing": "day_3",
+      "type": "nominationDeath",
+      "players": ["Sula"],
+      "caller": "Tom"
+    },
+    {
+      "timing": "day_3",
+      "type": "nominationDeath",
+      "players": ["Tom"],
+      "caller": "Sula"
+    },
+    {
+      "timing": "day_3",
+      "type": "nominationDeath",
+      "players": ["Jasmine"],
+      "caller": "Tom"
+    },
+    {
+      "timing": "day_3",
+      "type": "nominationDeath",
+      "players": ["You"],
+      "caller": "Jasmine"
+    }
+  ],
+  "claims": [
+    {
+      "type": "Nightwatchman",
+      "name": "Oscar",
+      "timing": "night_1",
+      "chosen": "Matthew",
+      "learned": false,
+      "possibleActualRoles": ["Nightwatchman", "Riot", "Spy", "Xaan", "Politician"]
+    },
+    {
+      "type": "Shugenja",
+      "name": "Sula",
+      "evilDirection": "anticlockwise",
+      "possibleActualRoles": ["Shugenja", "Riot", "Spy", "Xaan", "Politician"]
+    },
+    {
+      "type": "Juggler",
+      "name": "Matthew",
+      "guesses": {
+        "Fraser": "Riot",
+        "Jasmine": "Politician",
+        "Adam": "Noble",
+        "Steph": "Nightwatchman",
+        "Tom": "Xaan"
+      },
+      "correctCount": 2,
+      "possibleActualRoles": ["Juggler", "Riot", "Spy", "Xaan", "Politician"]
+    },
+    {
+      "type": "Nightwatchman",
+      "name": "Steph",
+      "timing": "night_1",
+      "chosen": "Sula",
+      "learned": false,
+      "possibleActualRoles": ["Nightwatchman", "Riot", "Spy", "Xaan", "Politician"]
+    },
+    {
+      "type": "Seamstress",
+      "name": "Tom",
+      "timing": "night_3",
+      "among": ["Adam", "Sula"],
+      "aligned": false,
+      "possibleActualRoles": ["Seamstress", "Riot", "Spy", "Xaan", "Politician"]
+    },
+    {
+      "type": "Dreamer",
+      "name": "You",
+      "timing": "night_1",
+      "player": "Oscar",
+      "roles": ["Nightwatchman", "Xaan"],
+      "possibleActualRoles": ["Dreamer"]
+    },
+    {
+      "type": "Dreamer",
+      "name": "You",
+      "timing": "night_2",
+      "player": "Adam",
+      "roles": ["Politician", "Riot"],
+      "possibleActualRoles": ["Dreamer"]
+    },
+    {
+      "type": "Dreamer",
+      "name": "You",
+      "timing": "night_3",
+      "player": "Sula",
+      "roles": ["Shugenja", "Spy"],
+      "possibleActualRoles": ["Dreamer"]
+    },
+    {
+      "type": "Politician",
+      "name": "Fraser"
+    },
+    {
+      "type": "Puzzlemaster",
+      "name": "Jasmine",
+      "timing": "day_3",
+      "guesses": [
+        {
+          "timing": "day_3",
+          "player": "Oscar",
+          "learnedDemon": "You"
+        }
+      ],
+      "possibleActualRoles": ["Puzzlemaster", "Riot", "Spy", "Xaan", "Politician"]
+    },
+    {
+      "type": "Noble",
+      "name": "Adam",
+      "oneEvilAmong": ["You", "Jasmine", "Matthew"],
+      "possibleActualRoles": ["Noble", "Riot", "Spy", "Xaan", "Politician"]
+    }
+  ]
+}

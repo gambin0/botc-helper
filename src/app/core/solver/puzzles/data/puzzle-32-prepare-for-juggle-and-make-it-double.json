@@ -1,0 +1,124 @@
+{
+  "title": "Puzzle 32 - Prepare For Juggle And Make It Double",
+  "players": ["Dan", "Fraser", "Jasmine", "Tim", "You", "Matthew", "Olivia", "Sula"],
+  "script": [
+    "Imp",
+    "Baron",
+    "Poisoner",
+    "Drunk",
+    "Dreamer",
+    "Empath",
+    "Fortune Teller",
+    "Juggler",
+    "Recluse",
+    "Saint",
+    "Undertaker"
+  ],
+  "timeline": [
+    {
+      "timing": "day_1",
+      "type": "execution",
+      "players": ["You"]
+    },
+    {
+      "timing": "night_2",
+      "type": "nightDeath",
+      "players": ["Tim"]
+    },
+    {
+      "timing": "day_2",
+      "type": "execution",
+      "players": ["Dan"]
+    },
+    {
+      "timing": "night_3",
+      "type": "nightDeath",
+      "players": ["Fraser"]
+    }
+  ],
+  "claims": [
+    {
+      "type": "Juggler",
+      "name": "Dan",
+      "timing": "night_2",
+      "guesses": {
+        "You": "Dreamer",
+        "Fraser": "Poisoner",
+        "Tim": "Baron"
+      },
+      "correctCount": 0
+    },
+    {
+      "type": "Saint",
+      "name": "Fraser"
+    },
+    {
+      "type": "Undertaker",
+      "name": "Jasmine",
+      "timing": "night_2",
+      "player": "You",
+      "role": "Dreamer"
+    },
+    {
+      "type": "Undertaker",
+      "name": "Jasmine",
+      "timing": "night_3",
+      "player": "Dan",
+      "role": "Juggler"
+    },
+    {
+      "type": "FortuneTeller",
+      "name": "Tim",
+      "checks": [
+        {
+          "left": "Matthew",
+          "right": "Fraser",
+          "yes": false,
+          "timing": "night_1"
+        }
+      ]
+    },
+    {
+      "type": "Dreamer",
+      "name": "You",
+      "timing": "night_1",
+      "player": "Sula",
+      "roles": ["Drunk", "Imp"],
+      "possibleActualRoles": ["Dreamer", "Drunk"]
+    },
+    {
+      "type": "Juggler",
+      "name": "Matthew",
+      "timing": "night_2",
+      "guesses": {
+        "You": "Imp",
+        "Dan": "Drunk",
+        "Jasmine": "Baron",
+        "Tim": "Fortune Teller"
+      },
+      "correctCount": 0
+    },
+    {
+      "type": "Recluse",
+      "name": "Olivia"
+    },
+    {
+      "type": "Empath",
+      "name": "Sula",
+      "timing": "night_1",
+      "count": 1
+    },
+    {
+      "type": "Empath",
+      "name": "Sula",
+      "timing": "night_2",
+      "count": 1
+    },
+    {
+      "type": "Empath",
+      "name": "Sula",
+      "timing": "night_3",
+      "count": 0
+    }
+  ]
+}

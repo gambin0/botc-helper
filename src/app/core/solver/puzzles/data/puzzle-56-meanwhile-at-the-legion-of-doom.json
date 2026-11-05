@@ -1,0 +1,135 @@
+{
+  "title": "Puzzle 56 - Meanwhile, at the Legion of Doom",
+  "players": ["Tom", "Fraser", "Sula", "Sarah", "You", "Aoife", "Hannah", "Matthew"],
+  "script": [
+    "Imp",
+    "Legion",
+    "Poisoner",
+    "Saint",
+    "Knight",
+    "Investigator",
+    "Washerwoman",
+    "Chambermaid",
+    "Oracle",
+    "Slayer",
+    "Empath"
+  ],
+  "setup": "none",
+  "constraints": [
+    {
+      "expression": "#Legion.~initial_role in {0, 5, 6}"
+    },
+    {
+      "expression": "no Legion.~initial_role => one Imp.~initial_role"
+    },
+    {
+      "expression": "no Legion.~initial_role => one Poisoner.~initial_role"
+    },
+    {
+      "expression": "some Legion.~initial_role => no Imp.~initial_role"
+    },
+    {
+      "expression": "some Legion.~initial_role => no Poisoner.~initial_role"
+    },
+    {
+      "expression": "some Legion.~initial_role => some ({Aoife, Hannah, Tom, Sula, Sarah} & Good.~alignment)"
+    },
+    {
+      "expression": "some Legion.~initial_role => some ({Aoife, Hannah, Tom, Fraser} & Good.~alignment)"
+    },
+    {
+      "expression": "some Legion.~initial_role => #({You, Aoife, Hannah, Fraser} & Good.~alignment) != 1"
+    }
+  ],
+  "timeline": [
+    {
+      "timing": "day_1",
+      "type": "execution",
+      "players": ["Matthew"]
+    },
+    {
+      "timing": "night_2",
+      "type": "nightDeath",
+      "players": ["Sula"]
+    },
+    {
+      "timing": "day_2",
+      "type": "execution",
+      "players": ["Sarah"]
+    },
+    {
+      "timing": "night_3",
+      "type": "nightDeath",
+      "players": ["Tom"]
+    }
+  ],
+  "claims": [
+    {
+      "type": "Knight",
+      "name": "Tom",
+      "noDemonAmong": ["Aoife", "Matthew"]
+    },
+    {
+      "type": "Investigator",
+      "name": "Fraser",
+      "timing": "night_1",
+      "role": "Poisoner",
+      "among": ["You", "Hannah"]
+    },
+    {
+      "type": "Washerwoman",
+      "name": "Sula",
+      "timing": "night_1",
+      "role": "Chambermaid",
+      "among": ["You", "Sarah"]
+    },
+    {
+      "type": "Chambermaid",
+      "name": "Sarah",
+      "checks": [
+        {
+          "timing": "night_1",
+          "left": "Aoife",
+          "right": "Tom",
+          "count": 2
+        },
+        {
+          "timing": "night_1",
+          "left": "Tom",
+          "right": "Fraser",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "type": "Saint",
+      "name": "You",
+      "possibleActualRoles": ["Saint"]
+    },
+    {
+      "type": "Oracle",
+      "name": "Aoife",
+      "timing": "night_2",
+      "count": 1
+    },
+    {
+      "type": "Oracle",
+      "name": "Aoife",
+      "timing": "night_3",
+      "count": 2
+    },
+    {
+      "type": "Slayer",
+      "name": "Hannah",
+      "timing": "day_3",
+      "target": "Fraser",
+      "killed": false
+    },
+    {
+      "type": "Empath",
+      "name": "Matthew",
+      "timing": "night_1",
+      "count": 2
+    }
+  ]
+}

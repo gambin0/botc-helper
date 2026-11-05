@@ -1,0 +1,97 @@
+{
+  "title": "Puzzle 26 - A Major Problem",
+  "players": ["Matthew", "Josh", "Sula", "Fraser", "You", "Olivia", "Dan", "Tom"],
+  "script": [
+    "Imp",
+    "Baron",
+    "Poisoner",
+    "Scarlet Woman",
+    "Spy",
+    "Drunk",
+    "Recluse",
+    "Saint",
+    "Chef",
+    "Empath",
+    "Librarian",
+    "Slayer",
+    "Soldier",
+    "Undertaker"
+  ],
+  "timeline": [
+    {
+      "timing": "day_1",
+      "type": "execution",
+      "players": ["You"]
+    },
+    {
+      "timing": "night_2",
+      "type": "nightDeath",
+      "players": ["Josh"]
+    },
+    {
+      "timing": "day_2",
+      "type": "execution",
+      "players": ["Dan"]
+    },
+    {
+      "timing": "night_3",
+      "type": "nightDeath",
+      "players": ["Olivia"]
+    }
+  ],
+  "claims": [
+    {
+      "type": "Librarian",
+      "name": "Matthew",
+      "timing": "night_1",
+      "role": "Drunk",
+      "among": ["You", "Josh"]
+    },
+    {
+      "type": "Soldier",
+      "name": "Josh"
+    },
+    {
+      "type": "Undertaker",
+      "name": "Sula",
+      "timing": "night_2",
+      "player": "You",
+      "role": "Empath"
+    },
+    {
+      "type": "Undertaker",
+      "name": "Sula",
+      "timing": "night_3",
+      "player": "Dan",
+      "role": "Slayer"
+    },
+    {
+      "type": "Chef",
+      "name": "Fraser",
+      "timing": "night_1",
+      "count": 2
+    },
+    {
+      "type": "Empath",
+      "name": "You",
+      "timing": "night_1",
+      "count": 0,
+      "possibleActualRoles": ["Empath", "Drunk"]
+    },
+    {
+      "type": "Saint",
+      "name": "Olivia"
+    },
+    {
+      "type": "Slayer",
+      "name": "Dan",
+      "timing": "day_2",
+      "target": "Matthew",
+      "killed": false
+    },
+    {
+      "type": "Recluse",
+      "name": "Tom"
+    }
+  ]
+}

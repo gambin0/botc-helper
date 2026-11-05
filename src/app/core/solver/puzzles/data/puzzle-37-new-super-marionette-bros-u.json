@@ -1,0 +1,126 @@
+{
+  "title": "Puzzle 37 - New Super Marionette Bros U",
+  "players": ["Sula", "Aoife", "Fraser", "Jasmine", "You", "Matt", "Steph", "Adam"],
+  "script": [
+    "Imp",
+    "Poisoner",
+    "Spy",
+    "Scarlet Woman",
+    "Marionette",
+    "Drunk",
+    "Chef",
+    "Empath",
+    "Fortune Teller",
+    "Librarian",
+    "Ravenkeeper",
+    "Undertaker",
+    "Washerwoman"
+  ],
+  "timeline": [
+    {
+      "timing": "day_1",
+      "type": "execution",
+      "players": ["Matt"]
+    },
+    {
+      "timing": "night_2",
+      "type": "nightDeath",
+      "players": ["Adam"]
+    },
+    {
+      "timing": "day_2",
+      "type": "execution",
+      "players": ["Aoife"]
+    },
+    {
+      "timing": "night_3",
+      "type": "nightDeath",
+      "players": ["Sula"]
+    }
+  ],
+  "claims": [
+    {
+      "type": "Librarian",
+      "name": "Sula",
+      "timing": "night_1",
+      "role": "Drunk",
+      "among": ["Jasmine", "Steph"]
+    },
+    {
+      "type": "FortuneTeller",
+      "name": "Aoife",
+      "checks": [
+        {
+          "left": "You",
+          "right": "Jasmine",
+          "yes": true,
+          "timing": "night_1"
+        },
+        {
+          "left": "Jasmine",
+          "right": "Sula",
+          "yes": false,
+          "timing": "night_2"
+        }
+      ]
+    },
+    {
+      "type": "Empath",
+      "name": "Fraser",
+      "timing": "night_1",
+      "count": 1
+    },
+    {
+      "type": "Empath",
+      "name": "Fraser",
+      "timing": "night_2",
+      "count": 1
+    },
+    {
+      "type": "Empath",
+      "name": "Fraser",
+      "timing": "night_3",
+      "count": 1
+    },
+    {
+      "type": "Imp",
+      "name": "Jasmine"
+    },
+    {
+      "type": "Undertaker",
+      "name": "You",
+      "timing": "night_2",
+      "player": "Matt",
+      "role": "Scarlet Woman",
+      "possibleActualRoles": ["Undertaker", "Marionette", "Drunk"]
+    },
+    {
+      "type": "Undertaker",
+      "name": "You",
+      "timing": "night_3",
+      "player": "Aoife",
+      "role": "Marionette",
+      "possibleActualRoles": ["Undertaker", "Marionette", "Drunk"]
+    },
+    {
+      "type": "Washerwoman",
+      "name": "Matt",
+      "timing": "night_1",
+      "role": "Undertaker",
+      "among": ["You", "Fraser"]
+    },
+    {
+      "type": "Chef",
+      "name": "Steph",
+      "timing": "night_1",
+      "count": 1
+    },
+    {
+      "type": "Ravenkeeper",
+      "name": "Adam",
+      "timing": "night_2",
+      "player": "Fraser",
+      "role": "Empath"
+    }
+  ]
+}

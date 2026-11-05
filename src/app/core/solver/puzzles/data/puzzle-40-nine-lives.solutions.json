@@ -1,0 +1,17 @@
+{
+  "solutions": [
+    {
+      "roles": {
+        "Adam": "Imp",
+        "Fraser": "Librarian",
+        "Hannah": "Saint",
+        "Jasmine": "Drunk",
+        "Josh": "Butler",
+        "Matthew": "Fortune Teller",
+        "Steph": "Recluse",
+        "Tim": "Baron",
+        "You": "Investigator"
+      }
+    }
+  ]
+}

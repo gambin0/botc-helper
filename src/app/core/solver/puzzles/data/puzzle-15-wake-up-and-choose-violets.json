@@ -1,0 +1,150 @@
+{
+  "title": "Puzzle 15 - Wake Up And Choose Violets",
+  "players": ["Fraser", "Aoife", "Adam", "Jasmine", "You", "Oscar", "Sarah", "Hannah"],
+  "script": [
+    "No Dashii",
+    "Vortox",
+    "Evil Twin",
+    "Mutant",
+    "Klutz",
+    "Artist",
+    "Clockmaker",
+    "Juggler",
+    "Savant",
+    "Seamstress",
+    "Snake Charmer"
+  ],
+  "claims": [
+    {
+      "type": "Clockmaker",
+      "name": "Fraser",
+      "distance": 3,
+      "possibleActualRoles": ["Clockmaker", "No Dashii", "Vortox", "Evil Twin", "Mutant"]
+    },
+    {
+      "type": "Seamstress",
+      "name": "Aoife",
+      "timing": "night_1",
+      "among": ["Oscar", "Hannah"],
+      "aligned": false,
+      "possibleActualRoles": ["Seamstress", "No Dashii", "Vortox", "Evil Twin", "Mutant"]
+    },
+    {
+      "type": "Artist",
+      "name": "Adam",
+      "timing": "day_1",
+      "info": [
+        {
+          "timing": "day_1",
+          "expression": "no p: {You, Oscar, Sarah} | p.initial_role == Vortox"
+        }
+      ],
+      "possibleActualRoles": ["Artist", "No Dashii", "Vortox", "Evil Twin", "Mutant"]
+    },
+    {
+      "type": "Snake Charmer",
+      "name": "Jasmine",
+      "checks": [
+        {
+          "player": "Fraser",
+          "demon": false,
+          "timing": "night_1"
+        }
+      ],
+      "knownEvilTwin": "Hannah",
+      "possibleActualRoles": ["Snake Charmer", "No Dashii", "Vortox", "Evil Twin", "Mutant"]
+    },
+    {
+      "type": "Snake Charmer",
+      "name": "Jasmine",
+      "checks": [
+        {
+          "player": "Aoife",
+          "demon": false,
+          "timing": "night_2"
+        }
+      ],
+      "possibleActualRoles": ["Snake Charmer", "No Dashii", "Vortox", "Evil Twin", "Mutant"]
+    },
+    {
+      "type": "Snake Charmer",
+      "name": "Jasmine",
+      "checks": [
+        {
+          "player": "Adam",
+          "demon": false,
+          "timing": "night_3"
+        }
+      ],
+      "possibleActualRoles": ["Snake Charmer", "No Dashii", "Vortox", "Evil Twin", "Mutant"]
+    },
+    {
+      "type": "Savant",
+      "name": "You",
+      "timing": "day_1",
+      "statements": [
+        {
+          "options": ["#({Clockmaker, Klutz, Juggler, Vortox} & players.initial_role) = 3", "townsfolk_chain_length(5)"]
+        }
+      ],
+      "possibleActualRoles": ["Savant"]
+    },
+    {
+      "type": "Klutz",
+      "name": "Oscar",
+      "timing": "day_2",
+      "chosen": "Sarah"
+    },
+    {
+      "type": "Juggler",
+      "name": "Sarah",
+      "timing": "night_2",
+      "guesses": {
+        "You": "Savant",
+        "Hannah": "Snake Charmer",
+        "Fraser": "Clockmaker",
+        "Aoife": "Seamstress",
+        "Jasmine": "Snake Charmer"
+      },
+      "correctCount": 3,
+      "possibleActualRoles": ["Juggler", "No Dashii", "Vortox", "Evil Twin", "Mutant"]
+    },
+    {
+      "type": "Snake Charmer",
+      "name": "Hannah",
+      "checks": [
+        {
+          "player": "Sarah",
+          "demon": false,
+          "timing": "night_1"
+        }
+      ],
+      "knownEvilTwin": "Jasmine",
+      "possibleActualRoles": ["Snake Charmer", "No Dashii", "Vortox", "Evil Twin", "Mutant"]
+    },
+    {
+      "type": "Snake Charmer",
+      "name": "Hannah",
+      "checks": [
+        {
+          "player": "Oscar",
+          "demon": false,
+          "timing": "night_2"
+        }
+      ],
+      "possibleActualRoles": ["Snake Charmer", "No Dashii", "Vortox", "Evil Twin", "Mutant"]
+    },
+    {
+      "type": "Snake Charmer",
+      "name": "Hannah",
+      "checks": [
+        {
+          "player": "Aoife",
+          "demon": false,
+          "timing": "night_3"
+        }
+      ],
+      "possibleActualRoles": ["Snake Charmer", "No Dashii", "Vortox", "Evil Twin", "Mutant"]
+    }
+  ]
+}

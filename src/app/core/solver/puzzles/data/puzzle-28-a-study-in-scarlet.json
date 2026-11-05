@@ -1,0 +1,139 @@
+{
+  "title": "Puzzle 28 - A Study In Scarlet",
+  "players": ["Adam", "Oscar", "Olivia", "Sarah", "You", "Matt", "Fraser", "Aoife"],
+  "script": [
+    "Pukka",
+    "No Dashii",
+    "Scarlet Woman",
+    "Drunk",
+    "Chambermaid",
+    "Clockmaker",
+    "Empath",
+    "Fortune Teller",
+    "Juggler",
+    "Librarian",
+    "Oracle",
+    "Undertaker"
+  ],
+  "timeline": [
+    {
+      "timing": "day_1",
+      "type": "execution",
+      "players": ["Adam"]
+    },
+    {
+      "timing": "night_2",
+      "type": "nightDeath",
+      "players": ["You"]
+    },
+    {
+      "timing": "day_2",
+      "type": "execution",
+      "players": ["Aoife"]
+    },
+    {
+      "timing": "night_3",
+      "type": "nightDeath",
+      "players": ["Sarah"]
+    }
+  ],
+  "claims": [
+    {
+      "type": "Clockmaker",
+      "name": "Adam",
+      "distance": 4
+    },
+    {
+      "type": "Empath",
+      "name": "Oscar",
+      "timing": "night_1",
+      "count": 1
+    },
+    {
+      "type": "Empath",
+      "name": "Oscar",
+      "timing": "night_2",
+      "count": 2
+    },
+    {
+      "type": "Empath",
+      "name": "Oscar",
+      "timing": "night_3",
+      "count": 1
+    },
+    {
+      "type": "FortuneTeller",
+      "name": "Olivia",
+      "checks": [
+        {
+          "left": "Olivia",
+          "right": "Sarah",
+          "yes": false,
+          "timing": "night_1"
+        },
+        {
+          "left": "Olivia",
+          "right": "Aoife",
+          "yes": false,
+          "timing": "night_2"
+        },
+        {
+          "left": "Matt",
+          "right": "Oscar",
+          "yes": false,
+          "timing": "night_3"
+        }
+      ]
+    },
+    {
+      "type": "Oracle",
+      "name": "Sarah",
+      "timing": "night_2",
+      "count": 1
+    },
+    {
+      "type": "Chambermaid",
+      "name": "You",
+      "checks": [
+        {
+          "left": "Adam",
+          "right": "Sarah",
+          "count": 1,
+          "timing": "night_1"
+        }
+      ],
+      "possibleActualRoles": ["Chambermaid", "Drunk"]
+    },
+    {
+      "type": "Juggler",
+      "name": "Matt",
+      "timing": "night_1",
+      "guesses": {
+        "Fraser": "Undertaker",
+        "Oscar": "No Dashii"
+      },
+      "correctCount": 2
+    },
+    {
+      "type": "Undertaker",
+      "name": "Fraser",
+      "timing": "night_2",
+      "player": "Adam",
+      "role": "Drunk"
+    },
+    {
+      "type": "Undertaker",
+      "name": "Fraser",
+      "timing": "night_3",
+      "player": "Aoife",
+      "role": "No Dashii"
+    },
+    {
+      "type": "Librarian",
+      "name": "Aoife",
+      "timing": "night_1",
+      "role": "Drunk",
+      "among": ["Matt", "Adam"]
+    }
+  ]
+}

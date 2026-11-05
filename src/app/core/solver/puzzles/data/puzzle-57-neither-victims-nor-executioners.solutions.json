@@ -1,0 +1,21 @@
+{
+  "solutions": [
+    {
+      "roles": {
+        "Adam": "Chef",
+        "Aoife": "Poisoner",
+        "Dan": "Slayer",
+        "Fraser": "Vigormortis",
+        "Matt": "Tea Lady",
+        "Sarah": "Seamstress",
+        "Steph": "Oracle",
+        "You": "Noble"
+      },
+      "poisoned": {
+        "night_1": ["Sarah"],
+        "night_3": ["Sarah"],
+        "night_4": ["Matt"]
+      }
+    }
+  ]
+}

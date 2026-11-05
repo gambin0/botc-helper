@@ -8,11 +8,12 @@ import {
   getRoleRule,
   normalizeRoleId,
   possibleTrueRolesForBelief,
+  possibleTrueRolesForHonestClaim,
   registrationsFor,
   teamAlignment
 } from '../../rules/role-rules';
 import { InfoPayload, InfoSpec, InfoView, getInfoSpec } from '../../rules/info-specs';
-import { claimRole, diedThatNight, executionEndedGame, infoPayload, namesYesterdaysExecution, targetPlayer } from '../../rules/events';
+import { claimRole, diedThatNight, killedBySlayer, executionEndedGame, infoPayload, namesYesterdaysExecution, targetPlayer } from '../../rules/events';
 import { baseComposition } from '../../rules/setup';
 import { chronologicalOrder } from '../../rules/timeline';
 import type { SolverInput } from '../solver';
@@ -84,7 +85,8 @@ type WorldRule = (world: readonly PoolRole[]) => boolean;
 /** Something that happens at a point in the game, in game order (rules/timeline.ts). */
 type Step =
   | { kind: 'item'; item: number }
-  | { kind: 'death' | 'resurrection'; seat: number; night: number }
+  /** `bySlayer`: a Slayer's shot, so the Demon cannot pass on (rules/events.ts `killedBySlayer`). */
+  | { kind: 'death' | 'resurrection'; seat: number; night: number; bySlayer?: boolean }
   | { kind: 'execution'; seat: number; ended: boolean; night: number };
 
 /** One possible history of the Demon for a grimoire. */
@@ -128,6 +130,7 @@ export class ReferenceGame {
   // --- Pool (design Decision 3) ---------------------------------------------
 
   private buildPool(): void {
+    const ids = new Set(this.input.characters.map(c => normalizeRoleId(c.id)));
     for (const c of this.input.characters) {
       const id = normalizeRoleId(c.id);
       if (this.seen.has(id)) continue;
@@ -144,7 +147,7 @@ export class ReferenceGame {
         id,
         team,
         alignment: teamAlignment(team),
-        regs: registrationsFor(id, team),
+        regs: registrationsFor(id, team, ids),
         rule,
         maxCopies: Math.max(1, c.maxCopies ?? rule.maxCopies ?? 1)
       };
@@ -187,7 +190,7 @@ export class ReferenceGame {
     if (self.certain) {
       this.seatFilters[seat].push(r => r.id === believed);
     } else {
-      const candidates = possibleTrueRolesForBelief(believed, team);
+      const candidates = possibleTrueRolesForBelief(believed, team, new Set(this.pool.map(r => r.id)));
       this.seatFilters[seat].push(r => candidates.includes(r.id));
       this.worldRules.push(this.drunkRule(seat, believed));
     }
@@ -223,7 +226,7 @@ export class ReferenceGame {
       const event = events[i];
       const seat = this.seatOf(targetPlayer(event));
       if ((event.kind === 'death' || event.kind === 'resurrection') && seat !== undefined) {
-        this.steps.push({ kind: event.kind, seat, night: event.night });
+        this.steps.push({ kind: event.kind, seat, night: event.night, bySlayer: event.kind === 'death' && killedBySlayer(event, this.input.events) });
       } else if (event.kind === 'execution' && seat !== undefined) {
         this.steps.push({ kind: 'execution', seat, ended: executionEndedGame(event), night: event.night });
       }
@@ -246,7 +249,7 @@ export class ReferenceGame {
         break;
       case 'asserted': {
         if (!this.honest) return;
-        const truthful = possibleTrueRolesForBelief(claimed, team);
+        const truthful = possibleTrueRolesForHonestClaim(claimed, team, new Set(this.pool.map(r => r.id)));
         this.seatFilters[seat].push(r => r.alignment === 'evil' || truthful.includes(r.id));
         this.worldRules.push(this.drunkRule(seat, claimed));
         break;
@@ -502,7 +505,7 @@ export class ReferenceGame {
         yield* walk(k + 1, roles, after, false, jumped);
         return;
       }
-      const pass = step.kind === 'death' ? roles[step.seat].rule.passesOnDeath : undefined;
+      const pass = step.kind === 'death' && !step.bySlayer ? roles[step.seat].rule.passesOnDeath : undefined;
       const usable = pass && !(pass.once && jumped) ? pass : undefined;
       // A Scarlet Woman must take over; the Fang Gu may still jump to an Outsider instead.
       if (sw >= 0) yield* walk(k + 1, becomes(roles, sw, roles[step.seat]), after, false, jumped);

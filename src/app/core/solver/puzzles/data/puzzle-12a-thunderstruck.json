@@ -1,0 +1,68 @@
+{
+  "title": "Puzzle 12a - Thunderstruck",
+  "players": ["Hannah", "Sarah", "Jasmine", "You", "Tim", "Fraser"],
+  "script": [
+    "Vortox",
+    "Spy",
+    "Scarlet Woman",
+    "Lunatic",
+    "Clockmaker",
+    "Courtier",
+    "Dreamer",
+    "Empath",
+    "Mayor",
+    "Slayer"
+  ],
+  "timeline": [
+    {
+      "timing": "day_1",
+      "type": "doomsayerDeath",
+      "caller": "Hannah",
+      "players": ["Tim"]
+    },
+    {
+      "timing": "day_1",
+      "type": "doomsayerDeath",
+      "caller": "You",
+      "players": ["Sarah"]
+    }
+  ],
+  "claims": [
+    {
+      "type": "Slayer",
+      "name": "Hannah",
+      "timing": "day_1",
+      "target": "Fraser",
+      "killed": false
+    },
+    {
+      "type": "Courtier",
+      "name": "Sarah",
+      "timing": "night_1",
+      "role": "Vortox",
+      "drunkTimings": ["night_1"]
+    },
+    {
+      "type": "Mayor",
+      "name": "Jasmine"
+    },
+    {
+      "type": "Dreamer",
+      "name": "You",
+      "player": "Sarah",
+      "roles": ["Lunatic", "Scarlet Woman"],
+      "possibleActualRoles": ["Dreamer"]
+    },
+    {
+      "type": "Clockmaker",
+      "name": "Tim",
+      "distance": 2
+    },
+    {
+      "type": "Empath",
+      "name": "Fraser",
+      "count": 0,
+      "possibleActualRoles": ["Empath", "Vortox", "Spy", "Scarlet Woman", "Lunatic"]
+    }
+  ]
+}

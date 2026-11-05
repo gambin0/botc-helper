@@ -1,0 +1,110 @@
+{
+  "title": "Puzzle 33 - Twice Is Coincidence Thrice Is Proof",
+  "players": ["Tom", "Oscar", "Sula", "Fraser", "You", "Olivia", "Jasmine", "Hannah"],
+  "script": [
+    "Imp",
+    "Baron",
+    "Poisoner",
+    "Spy",
+    "Scarlet Woman",
+    "Drunk",
+    "Empath",
+    "Fortune Teller",
+    "Investigator",
+    "Librarian",
+    "Ravenkeeper",
+    "Recluse",
+    "Saint",
+    "Washerwoman"
+  ],
+  "timeline": [
+    {
+      "timing": "day_1",
+      "type": "execution",
+      "players": ["You"]
+    },
+    {
+      "timing": "night_2",
+      "type": "nightDeath",
+      "players": ["Olivia"]
+    },
+    {
+      "timing": "day_2",
+      "type": "execution",
+      "players": ["Fraser"]
+    },
+    {
+      "timing": "night_3",
+      "type": "nightDeath",
+      "players": ["Jasmine"]
+    }
+  ],
+  "claims": [
+    {
+      "type": "Librarian",
+      "name": "Tom",
+      "timing": "night_1",
+      "role": "Saint",
+      "among": ["Olivia", "Sula"]
+    },
+    {
+      "type": "FortuneTeller",
+      "name": "Oscar",
+      "checks": [
+        {
+          "left": "Sula",
+          "right": "Fraser",
+          "yes": false,
+          "timing": "night_1"
+        },
+        {
+          "left": "Tom",
+          "right": "Sula",
+          "yes": false,
+          "timing": "night_2"
+        },
+        {
+          "left": "Hannah",
+          "right": "Tom",
+          "yes": false,
+          "timing": "night_3"
+        }
+      ]
+    },
+    {
+      "type": "Saint",
+      "name": "Sula"
+    },
+    {
+      "type": "Investigator",
+      "name": "Fraser",
+      "timing": "night_1",
+      "role": "Poisoner",
+      "among": ["You", "Jasmine"]
+    },
+    {
+      "type": "Empath",
+      "name": "You",
+      "timing": "night_1",
+      "count": 0
+    },
+    {
+      "type": "Recluse",
+      "name": "Olivia"
+    },
+    {
+      "type": "Ravenkeeper",
+      "name": "Jasmine",
+      "timing": "night_3",
+      "player": "Hannah",
+      "role": "Washerwoman"
+    },
+    {
+      "type": "Washerwoman",
+      "name": "Hannah",
+      "timing": "night_1",
+      "role": "Investigator",
+      "among": ["Sula", "Fraser"]
+    }
+  ]
+}

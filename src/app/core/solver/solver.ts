@@ -18,6 +18,7 @@ import {
   getRoleRule,
   normalizeRoleId,
   possibleTrueRolesForBelief,
+  possibleTrueRolesForHonestClaim,
   registrationsFor,
   teamAlignment
 } from '../rules/role-rules';
@@ -28,6 +29,7 @@ import {
   executionEndedGame,
   infoPayload,
   namesYesterdaysExecution,
+  killedBySlayer,
   diedThatNight,
   targetPlayer
 } from '../rules/events';
@@ -137,7 +139,8 @@ interface InfoConstraint {
 /** Deaths, executions and information in game order (rules/timeline.ts). */
 type Step =
   | { kind: 'info'; info: number }
-  | { kind: 'death' | 'resurrection'; seat: number; night: number }
+  /** `bySlayer`: a Slayer's shot, so the Demon cannot pass on (rules/events.ts `killedBySlayer`). */
+  | { kind: 'death' | 'resurrection'; seat: number; night: number; bySlayer?: boolean }
   | { kind: 'execution'; seat: number; ended: boolean; ev: number; night: number };
 
 /** One possible history of the Demon for a complete grimoire. */
@@ -196,6 +199,10 @@ export class DeductionEngine {
   private readonly playerNames = new Map<string, string>();
   private readonly roles: RoleInfo[] = [];
   private readonly roleIndex = new Map<string, number>();
+  /** IDs of the roles in the pool. */
+  private get poolIds(): ReadonlySet<string> {
+    return new Set(this.roleIndex.keys());
+  }
   private readonly composition: readonly [number, number, number, number];
   private readonly evidence: Evidence[] = [];
   private readonly unary: UnaryConstraint[] = [];
@@ -329,6 +336,7 @@ export class DeductionEngine {
   // ---------------------------------------------------------------------------
 
   private buildRoles(characters: readonly ScriptCharacter[]): void {
+    const pool = new Set(characters.map(c => normalizeRoleId(c.id)));
     for (const char of characters) {
       const id = normalizeRoleId(char.id);
       if (this.roleIndex.has(id)) continue;
@@ -343,7 +351,7 @@ export class DeductionEngine {
         team,
         teamIdx: TEAM_INDEX[team]!,
         alignment: teamAlignment(team),
-        regs: registrationsFor(id, team),
+        regs: registrationsFor(id, team, pool),
         rule: getRoleRule(id),
         maxCopies: Math.max(1, char.maxCopies ?? getRoleRule(id).maxCopies ?? 1)
       };
@@ -460,7 +468,7 @@ export class DeductionEngine {
           'self',
           `You were told you are the ${this.roleName(believed)}${self.certain ? ' (certain)' : ''}`
         );
-        const candidates = self.certain ? [believed] : possibleTrueRolesForBelief(believed, believedTeam);
+        const candidates = self.certain ? [believed] : possibleTrueRolesForBelief(believed, believedTeam, this.poolIds);
         this.addUnary(ev, seat, this.maskWhere(r => candidates.includes(r.id)), this.evidence[ev].label);
         if (!self.certain) this.addDrunkBeliefRule(ev, seat, believed);
       }
@@ -513,7 +521,7 @@ export class DeductionEngine {
       const event = events[i];
       const seat = seatOf(event);
       if ((event.kind === 'death' || event.kind === 'resurrection') && seat !== undefined) {
-        this.steps.push({ kind: event.kind, seat, night: event.night });
+        this.steps.push({ kind: event.kind, seat, night: event.night, bySlayer: event.kind === 'death' && killedBySlayer(event, events) });
         moved ||= event.kind === 'death';
       } else if (event.kind === 'execution' && seat !== undefined) {
         this.steps.push({
@@ -553,12 +561,16 @@ export class DeductionEngine {
       case 'asserted': {
         if (!this.options.assumeGoodPlayersHonest) return;
         const ev = this.addEvidence(event.id, `${label} — assuming good players claim honestly`);
-        const truthful = possibleTrueRolesForBelief(roleId, team);
+        const pool = this.poolIds;
+        const truthful = possibleTrueRolesForHonestClaim(roleId, team, pool);
+        // Name only the alternatives on this script (Drunk, Lunatic, Mutant, Hermit).
+        const others = truthful.filter(id => id !== roleId && pool.has(id)).map(id => this.roleName(id));
+        const alternatives = others.length ? ` (or ${others.join(' or ')})` : '';
         this.addUnary(
           ev,
           seat,
           this.maskWhere(r => r.alignment === 'evil' || truthful.includes(r.id)),
-          `Claimed ${this.roleName(roleId)}, so if good they would be the ${this.roleName(roleId)} (or Drunk)`
+          `Claimed ${this.roleName(roleId)}, so if good they would be the ${this.roleName(roleId)}${alternatives}`
         );
         this.addDrunkBeliefRule(ev, seat, roleId);
         break;
@@ -1491,7 +1503,7 @@ export class DeductionEngine {
         return;
       }
       if (!wasDemon) return walk(k + 1, roles, after, false, jumped);
-      const pass = step.kind === 'death' ? this.roles[dying].rule.passesOnDeath : undefined;
+      const pass = step.kind === 'death' && !step.bySlayer ? this.roles[dying].rule.passesOnDeath : undefined;
       const canPass = !!pass && !(pass.once && jumped);
       if (sw >= 0) {
         walk(k + 1, becomes(roles, sw, dying), after, false, jumped);

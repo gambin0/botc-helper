@@ -34,6 +34,7 @@ Anything left in `fuzz-runs/campaign/*/failures/` is not explained by a known bu
 | 2026-11-04 | 1500 (diff and truth) | 12 | F-002 ×624 (366 diff, 258 truth); F-001 ×0 | 0 | 4 games skipped (engine search limit). Slowest game 6 s. |
 | 2026-11-04 | 1500 (diff and truth) | 12 | none (filter empty) | 0 | After fixing F-001 and F-002. 4 games skipped (engine search limit). 7 minutes. |
 | 2026-11-05 | 1500 (diff and truth) | 14 | none | 1 | After the rule-data pass, with the new `fanggu` job. The one failure (fanggu, truth, game 1075) was an engine bug: the Chef-style pruning bound used starting alignments, so a Butler who became the Fang Gu still counted as good. Fixed (late alignments for info that may follow a Demon move), with a regression test in `demon-moves.test.ts`. Rerun clean: fanggu seeds 25 (1500) and 125 (3000), demonmoves seed 24. About 11 minutes. |
+| 2026-11-05 | 1500 (diff and truth) | 14 | none | 0 | After the puzzle-driven rule fixes (Mutant, Lunatic and Hermit claims, Hermit registering like the Recluse, no star-pass after a Slayer kill). |
 
 ### Does the campaign catch bugs?
 

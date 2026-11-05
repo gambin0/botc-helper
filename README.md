@@ -109,10 +109,13 @@ npm run test:components                   # Angular component tests (src/app/**/
 npm run typecheck:test                    # plus: npx tsc --noEmit -p tsconfig.app.json (and tsconfig.worker.json, tsconfig.component.json)
 npm run build && npm run test:a11y        # axe / WCAG AA scan of every page, light and dark
 npm run bench:solver                      # solver timings for 10–15 player games
+npx tsx scripts/puzzle-check.ts           # community logic puzzles: is each solution still possible?
 ```
 
-GitHub Actions runs all of these except the bench on every push and pull request (`.github/workflows/ci.yml`). The fuzz campaign runs weekly and on demand (`fuzz.yml`). Locally, the accessibility scan uses your installed Google Chrome; in CI it installs Chromium.
+`npm test` also runs the puzzle check, so CI does too. GitHub Actions runs all of these except the bench on every push and pull request (`.github/workflows/ci.yml`). The fuzz campaign runs weekly and on demand (`fuzz.yml`). Locally, the accessibility scan uses your installed Google Chrome; in CI it installs Chromium.
 
 ## License
 
 MIT
+
+The logic puzzles in `src/app/core/solver/puzzles/data/` come from [jthemphill/botc-solvers](https://github.com/jthemphill/botc-solvers) (MIT, © 2024 Jeff Hemphill); see the `LICENSE` and `README.md` there.

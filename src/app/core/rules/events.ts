@@ -46,6 +46,19 @@ export function diedThatNight(info: GameEvent, events: readonly GameEvent[]): bo
   );
 }
 
+/**
+ * Was this death a Slayer's shot? True when the log has Slayer info that
+ * killed the same player on the same day. The Demon then died by day, not by
+ * its own night kill, so an Imp cannot pass the star.
+ */
+export function killedBySlayer(death: GameEvent, events: readonly GameEvent[]): boolean {
+  const player = targetPlayer(death);
+  return events.some(e => {
+    const p = e.kind === 'info' ? infoPayload(e) : null;
+    return p?.type === 'slayer' && p.yes === true && p.player === player && e.night === death.night;
+  });
+}
+
 export function infoPayload(event: GameEvent): InfoPayload | null {
   const p = event.payload as InfoPayload | undefined;
   if (!p || typeof p.type !== 'string') return null;

@@ -1,0 +1,93 @@
+{
+  "title": "Puzzle 27 - Is This A Legion Game",
+  "players": ["Sarah", "Tom", "Aoife", "Hannah", "You", "Fraser", "Adam"],
+  "script": ["Imp", "Poisoner", "Empath", "Fortune Teller", "Investigator", "Legionary", "Washerwoman"],
+  "timeline": [
+    {
+      "timing": "day_1",
+      "type": "execution",
+      "players": ["Tom"]
+    },
+    {
+      "timing": "night_2",
+      "type": "nightDeath",
+      "players": ["You"]
+    }
+  ],
+  "claims": [
+    {
+      "type": "Legionary",
+      "name": "Sarah",
+      "counts": [
+        {
+          "count": 1
+        },
+        {
+          "count": 2
+        }
+      ]
+    },
+    {
+      "type": "FortuneTeller",
+      "name": "Tom",
+      "checks": [
+        {
+          "left": "You",
+          "right": "Fraser",
+          "yes": false,
+          "timing": "night_1"
+        }
+      ]
+    },
+    {
+      "type": "Empath",
+      "name": "Aoife",
+      "timing": "night_1",
+      "count": 0
+    },
+    {
+      "type": "Empath",
+      "name": "Aoife",
+      "timing": "night_2",
+      "count": 0
+    },
+    {
+      "type": "Legionary",
+      "name": "Hannah",
+      "counts": [
+        {
+          "count": 2
+        },
+        {
+          "count": 2
+        }
+      ]
+    },
+    {
+      "type": "Washerwoman",
+      "name": "You",
+      "role": "Legionary",
+      "among": ["Fraser", "Sarah"],
+      "possibleActualRoles": ["Washerwoman"]
+    },
+    {
+      "type": "Legionary",
+      "name": "Fraser",
+      "counts": [
+        {
+          "count": 2
+        },
+        {
+          "count": 1
+        }
+      ]
+    },
+    {
+      "type": "Investigator",
+      "name": "Adam",
+      "timing": "night_1",
+      "role": "Poisoner",
+      "among": ["Tom", "Aoife"]
+    }
+  ]
+}

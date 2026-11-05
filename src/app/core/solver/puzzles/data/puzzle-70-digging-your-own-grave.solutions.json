@@ -1,0 +1,23 @@
+{
+  "solutions": [
+    {
+      "roles": {
+        "Adam": "Recluse",
+        "Dan": "Fortune Teller",
+        "Fraser": "Investigator",
+        "Hannah": "Poisoner",
+        "Jasmine": "Ravenkeeper",
+        "Matthew": "Imp",
+        "Sarah": "Butler",
+        "Tom": "Undertaker",
+        "You": "Empath"
+      },
+      "poisoned": {
+        "night_1": ["Fraser"],
+        "night_2": ["Tom"],
+        "night_3": ["Tom"],
+        "night_4": ["Tom"]
+      }
+    }
+  ]
+}

@@ -1,0 +1,169 @@
+{
+  "title": "Puzzle 7 - The Savant Strikes Back",
+  "players": ["Anna", "Aoife", "Steph", "Tim", "You", "Fraser", "Sarah", "Oscar"],
+  "script": [
+    "Leviathan",
+    "Goblin",
+    "Mutant",
+    "Drunk",
+    "Dreamer",
+    "Fortune Teller",
+    "Investigator",
+    "Juggler",
+    "Savant",
+    "Shugenja",
+    "Village Idiot"
+  ],
+  "claims": [
+    {
+      "type": "Juggler",
+      "name": "Anna",
+      "timing": "night_2",
+      "guesses": {
+        "You": "Savant",
+        "Tim": "Village Idiot"
+      },
+      "correctCount": 1,
+      "possibleActualRoles": ["Juggler", "Leviathan", "Goblin"]
+    },
+    {
+      "type": "Shugenja",
+      "name": "Aoife",
+      "evilDirection": "anticlockwise",
+      "possibleActualRoles": ["Shugenja", "Leviathan", "Goblin"]
+    },
+    {
+      "type": "Dreamer",
+      "name": "Steph",
+      "timing": "night_1",
+      "player": "Sarah",
+      "roles": ["Fortune Teller", "Leviathan"],
+      "possibleActualRoles": ["Dreamer", "Leviathan", "Goblin", "Mutant"]
+    },
+    {
+      "type": "Dreamer",
+      "name": "Steph",
+      "timing": "night_2",
+      "player": "You",
+      "roles": ["Savant", "Goblin"],
+      "possibleActualRoles": ["Dreamer", "Leviathan", "Goblin", "Mutant"]
+    },
+    {
+      "type": "Dreamer",
+      "name": "Steph",
+      "timing": "night_3",
+      "player": "Fraser",
+      "roles": ["Mutant", "Goblin"],
+      "possibleActualRoles": ["Dreamer", "Leviathan", "Goblin", "Mutant"]
+    },
+    {
+      "type": "VillageIdiot",
+      "name": "Tim",
+      "checks": [
+        {
+          "player": "Anna",
+          "good": true
+        },
+        {
+          "player": "Sarah",
+          "good": true
+        },
+        {
+          "player": "You",
+          "good": true
+        }
+      ],
+      "possibleActualRoles": ["Village Idiot", "Leviathan", "Goblin"]
+    },
+    {
+      "type": "Savant",
+      "name": "You",
+      "timing": "day_1",
+      "statements": [
+        {
+          "options": ["one p: {Fraser, Anna, Steph} | p.alignment == Evil", "role_distance(3, Leviathan, Goblin)"]
+        }
+      ],
+      "possibleActualRoles": ["Savant"]
+    },
+    {
+      "type": "Savant",
+      "name": "You",
+      "timing": "day_2",
+      "statements": [
+        {
+          "options": [
+            "fortune_teller_red_herring(Sarah, Sarah)",
+            "Fraser.initial_role == `Village Idiot` && globally_drunk(Fraser)"
+          ]
+        }
+      ],
+      "possibleActualRoles": ["Savant"]
+    },
+    {
+      "type": "Savant",
+      "name": "You",
+      "timing": "day_3",
+      "statements": [
+        {
+          "options": [
+            "#({Juggler, Shugenja, `Village Idiot`} & players.initial_role) = 2",
+            "#{p : {Oscar, Anna, Tim} | p.initial_type == Townsfolk} == 2"
+          ]
+        }
+      ],
+      "possibleActualRoles": ["Savant"]
+    },
+    {
+      "type": "VillageIdiot",
+      "name": "Fraser",
+      "checks": [
+        {
+          "player": "Sarah",
+          "good": true
+        },
+        {
+          "player": "Aoife",
+          "good": true
+        },
+        {
+          "player": "You",
+          "good": true
+        }
+      ],
+      "possibleActualRoles": ["Village Idiot", "Leviathan", "Goblin"]
+    },
+    {
+      "type": "FortuneTeller",
+      "name": "Sarah",
+      "checks": [
+        {
+          "left": "Oscar",
+          "right": "Aoife",
+          "yes": false,
+          "timing": "night_1"
+        },
+        {
+          "left": "You",
+          "right": "Sarah",
+          "yes": true,
+          "timing": "night_2"
+        },
+        {
+          "left": "Fraser",
+          "right": "Tim",
+          "yes": false,
+          "timing": "night_3"
+        }
+      ],
+      "possibleActualRoles": ["Fortune Teller", "Leviathan", "Goblin"]
+    },
+    {
+      "type": "Investigator",
+      "name": "Oscar",
+      "role": "Goblin",
+      "among": ["Fraser", "Steph"],
+      "possibleActualRoles": ["Investigator", "Leviathan", "Goblin"]
+    }
+  ]
+}

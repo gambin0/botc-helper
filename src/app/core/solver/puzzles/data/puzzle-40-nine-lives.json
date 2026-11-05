@@ -1,0 +1,122 @@
+{
+  "title": "Puzzle 40 - Nine Lives",
+  "players": ["Hannah", "Fraser", "Tim", "Josh", "Adam", "You", "Matthew", "Steph", "Jasmine"],
+  "script": [
+    "Imp",
+    "Baron",
+    "Poisoner",
+    "Spy",
+    "Scarlet Woman",
+    "Butler",
+    "Drunk",
+    "Recluse",
+    "Saint",
+    "Empath",
+    "Fortune Teller",
+    "Investigator",
+    "Librarian",
+    "Slayer",
+    "Washerwoman"
+  ],
+  "timeline": [
+    {
+      "timing": "day_1",
+      "type": "execution",
+      "players": ["Josh"]
+    },
+    {
+      "timing": "night_2",
+      "type": "nightDeath",
+      "players": ["Fraser"]
+    },
+    {
+      "timing": "day_2",
+      "type": "execution",
+      "players": ["Jasmine"]
+    },
+    {
+      "timing": "night_3",
+      "type": "nightDeath",
+      "players": ["Tim"]
+    }
+  ],
+  "claims": [
+    {
+      "type": "Saint",
+      "name": "Hannah"
+    },
+    {
+      "type": "Librarian",
+      "name": "Fraser",
+      "timing": "night_1",
+      "role": "Drunk",
+      "among": ["Jasmine", "Hannah"]
+    },
+    {
+      "type": "Empath",
+      "name": "Tim",
+      "timing": "night_1",
+      "count": 2
+    },
+    {
+      "type": "Empath",
+      "name": "Tim",
+      "timing": "night_2",
+      "count": 1
+    },
+    {
+      "type": "Butler",
+      "name": "Josh"
+    },
+    {
+      "type": "Slayer",
+      "name": "Adam",
+      "timing": "day_3",
+      "target": "Matthew",
+      "killed": false
+    },
+    {
+      "type": "Investigator",
+      "name": "You",
+      "timing": "night_1",
+      "role": "Scarlet Woman",
+      "among": ["Steph", "Fraser"],
+      "possibleActualRoles": ["Investigator", "Drunk"]
+    },
+    {
+      "type": "FortuneTeller",
+      "name": "Matthew",
+      "checks": [
+        {
+          "left": "Tim",
+          "right": "Josh",
+          "yes": false,
+          "timing": "night_1"
+        },
+        {
+          "left": "Hannah",
+          "right": "Tim",
+          "yes": false,
+          "timing": "night_2"
+        },
+        {
+          "left": "You",
+          "right": "Matthew",
+          "yes": true,
+          "timing": "night_3"
+        }
+      ]
+    },
+    {
+      "type": "Recluse",
+      "name": "Steph"
+    },
+    {
+      "type": "Washerwoman",
+      "name": "Jasmine",
+      "timing": "night_1",
+      "role": "Empath",
+      "among": ["Tim", "Adam"]
+    }
+  ]
+}

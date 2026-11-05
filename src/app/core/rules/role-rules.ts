@@ -188,10 +188,21 @@ export function teamAlignment(team: Team): Alignment {
   return team === 'minion' || team === 'demon' ? 'evil' : 'good';
 }
 
-export function registrationsFor(roleId: string, team: Team): readonly Registration[] {
-  return (
-    getRoleRule(roleId).registersAs ?? [{ alignment: teamAlignment(team), team, roleId }]
-  );
+/**
+ * How a character may register. With `pool`, a Hermit (which has every
+ * Outsider ability on the script) also gets the Recluse's misregistration.
+ */
+export function registrationsFor(roleId: string, team: Team, pool?: ReadonlySet<string>): readonly Registration[] {
+  const own = getRoleRule(roleId).registersAs ?? [{ alignment: teamAlignment(team), team, roleId }];
+  if (roleId === 'hermit' && pool?.has('recluse')) {
+    return [
+      ...own,
+      { alignment: 'evil', team: 'outsider', roleId: 'hermit' },
+      { alignment: 'evil', team: 'minion', roleId: '*' },
+      { alignment: 'evil', team: 'demon', roleId: '*' }
+    ];
+  }
+  return own;
 }
 
 /**
@@ -200,12 +211,37 @@ export function registrationsFor(roleId: string, team: Team): readonly Registrat
  *  - Drunk thinks they are a Townsfolk.
  *  - Lunatic thinks they are a Demon.
  *  - Marionette thinks they are a good character.
+ *  - Hermit, which has every Outsider ability on the script: with the Drunk's,
+ *    it thinks it is a Townsfolk; with the Lunatic's, a Demon. Pass the role
+ *    pool (`pool`) for this.
  */
-export function possibleTrueRolesForBelief(believedRoleId: string, believedTeam: Team): string[] {
+export function possibleTrueRolesForBelief(believedRoleId: string, believedTeam: Team, pool?: ReadonlySet<string>): string[] {
   const result = [believedRoleId];
   if (believedTeam === 'townsfolk') result.push('drunk');
   if (believedTeam === 'demon') result.push('lunatic');
   if (believedTeam === 'townsfolk' || believedTeam === 'outsider') result.push('marionette');
+  if (pool?.has('hermit')) {
+    if ((believedTeam === 'townsfolk' && pool.has('drunk')) || (believedTeam === 'demon' && pool.has('lunatic'))) {
+      result.push('hermit');
+    }
+  }
+  return result;
+}
+
+/**
+ * Characters a good player who claims honestly might be when they claim
+ * `claimedRoleId`: what they believe (see above); the Mutant, who must not
+ * admit to being an Outsider and so claims something else; the Lunatic, who
+ * believes they are the Demon and so bluffs like one; or a Hermit with
+ * either of those abilities.
+ */
+export function possibleTrueRolesForHonestClaim(claimedRoleId: string, claimedTeam: Team, pool?: ReadonlySet<string>): string[] {
+  const result = possibleTrueRolesForBelief(claimedRoleId, claimedTeam, pool);
+  if (claimedTeam !== 'outsider') result.push('mutant');
+  if (!result.includes('lunatic')) result.push('lunatic');
+  if (pool?.has('hermit') && !result.includes('hermit')) {
+    if (pool.has('lunatic') || (pool.has('mutant') && claimedTeam !== 'outsider')) result.push('hermit');
+  }
   return result;
 }
 

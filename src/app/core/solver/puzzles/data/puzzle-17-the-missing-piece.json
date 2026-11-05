@@ -1,0 +1,107 @@
+{
+  "title": "Puzzle 17 - The Missing Piece",
+  "players": ["Sarah", "Sula", "Hannah", "Tom", "You", "Adam", "Steph", "Fraser"],
+  "script": [
+    "Imp",
+    "Scarlet Woman",
+    "Puzzlemaster",
+    "Chef",
+    "Empath",
+    "Fortune Teller",
+    "Investigator",
+    "Slayer",
+    "Undertaker",
+    "Washerwoman"
+  ],
+  "timeline": [
+    {
+      "timing": "day_1",
+      "type": "execution",
+      "players": ["Steph"]
+    },
+    {
+      "timing": "night_2",
+      "type": "nightDeath",
+      "players": ["Adam"]
+    },
+    {
+      "timing": "day_2",
+      "type": "execution",
+      "players": ["Sula"]
+    },
+    {
+      "timing": "night_3",
+      "type": "nightDeath",
+      "players": ["Hannah"]
+    }
+  ],
+  "claims": [
+    {
+      "type": "Undertaker",
+      "name": "Sarah",
+      "timing": "night_2",
+      "player": "Steph",
+      "role": "Empath"
+    },
+    {
+      "type": "Washerwoman",
+      "name": "Sula",
+      "role": "Undertaker",
+      "among": ["Sarah", "Hannah"]
+    },
+    {
+      "type": "Investigator",
+      "name": "Hannah",
+      "timing": "night_1",
+      "role": "Scarlet Woman",
+      "among": ["Fraser", "Sarah"]
+    },
+    {
+      "type": "Slayer",
+      "name": "Tom",
+      "timing": "day_3",
+      "target": "Sarah",
+      "killed": false
+    },
+    {
+      "type": "Puzzlemaster",
+      "name": "You",
+      "possibleActualRoles": ["Puzzlemaster"]
+    },
+    {
+      "type": "Chef",
+      "name": "Adam",
+      "count": 0
+    },
+    {
+      "type": "Empath",
+      "name": "Steph",
+      "timing": "night_1",
+      "count": 0
+    },
+    {
+      "type": "FortuneTeller",
+      "name": "Fraser",
+      "checks": [
+        {
+          "left": "Hannah",
+          "right": "Tom",
+          "yes": false,
+          "timing": "night_1"
+        },
+        {
+          "left": "Tom",
+          "right": "Fraser",
+          "yes": true,
+          "timing": "night_2"
+        },
+        {
+          "left": "You",
+          "right": "Sarah",
+          "yes": true,
+          "timing": "night_3"
+        }
+      ]
+    }
+  ]
+}

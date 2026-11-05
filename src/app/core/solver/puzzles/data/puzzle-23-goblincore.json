@@ -1,0 +1,86 @@
+{
+  "title": "Puzzle 23 - Goblincore",
+  "players": ["Aoife", "Fraser", "Tom", "Sula", "You", "Hannah", "Matt", "Tim"],
+  "script": [
+    "Imp",
+    "Goblin",
+    "Lunatic",
+    "Chef",
+    "Fortune Teller",
+    "Investigator",
+    "Librarian",
+    "Ravenkeeper",
+    "Slayer",
+    "Washerwoman"
+  ],
+  "timeline": [
+    {
+      "timing": "night_2",
+      "type": "nightDeath",
+      "players": ["Aoife"]
+    }
+  ],
+  "claims": [
+    {
+      "type": "Ravenkeeper",
+      "name": "Aoife",
+      "timing": "night_2",
+      "player": "Matt",
+      "role": "Investigator"
+    },
+    {
+      "type": "Goblin",
+      "name": "Fraser",
+      "possibleActualRoles": ["Imp", "Lunatic"]
+    },
+    {
+      "type": "Librarian",
+      "name": "Tom",
+      "role": "Lunatic",
+      "among": ["Matt", "Fraser"]
+    },
+    {
+      "type": "Slayer",
+      "name": "Sula",
+      "timing": "day_2",
+      "target": "Matt",
+      "killed": false
+    },
+    {
+      "type": "Chef",
+      "name": "You",
+      "count": 0,
+      "possibleActualRoles": ["Chef"]
+    },
+    {
+      "type": "Washerwoman",
+      "name": "Hannah",
+      "role": "Librarian",
+      "among": ["Tom", "Sula"]
+    },
+    {
+      "type": "Investigator",
+      "name": "Matt",
+      "role": "Goblin",
+      "among": ["Aoife", "Fraser"]
+    },
+    {
+      "type": "FortuneTeller",
+      "name": "Tim",
+      "checks": [
+        {
+          "left": "Hannah",
+          "right": "Tim",
+          "yes": false,
+          "timing": "night_1"
+        },
+        {
+          "left": "Fraser",
+          "right": "Sula",
+          "yes": true,
+          "timing": "night_2"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,161 @@
+{
+  "title": "Puzzle 61 - Thus With a Kiss I Die",
+  "players": ["Josh", "Anna", "Tim", "Oscar", "You", "Matthew", "Fraser", "Steph"],
+  "script": [
+    "Fang Gu",
+    "Vigormortis",
+    "No Dashii",
+    "Vortox",
+    "Witch",
+    "Mutant",
+    "Sweetheart",
+    "Savant",
+    "Seamstress",
+    "Mathematician",
+    "Juggler",
+    "Oracle",
+    "Dreamer",
+    "Snake Charmer"
+  ],
+  "timeline": [
+    {
+      "timing": "day_1",
+      "type": "witchCurse",
+      "players": ["Oscar"]
+    },
+    {
+      "timing": "day_1",
+      "type": "execution",
+      "players": ["Matthew"]
+    },
+    {
+      "timing": "night_2",
+      "type": "nightDeath",
+      "players": ["Steph"]
+    },
+    {
+      "timing": "day_2",
+      "type": "execution",
+      "players": ["You"]
+    },
+    {
+      "timing": "night_3",
+      "type": "nightDeath",
+      "players": ["Tim"]
+    }
+  ],
+  "claims": [
+    {
+      "type": "Juggler",
+      "name": "Josh",
+      "timing": "night_2",
+      "correctCount": 0,
+      "guesses": {
+        "You": "Savant",
+        "Matthew": "Vigormortis",
+        "Fraser": "Mathematician",
+        "Steph": "Witch",
+        "Tim": "Fang Gu"
+      },
+      "possibleActualRoles": ["Juggler", "Fang Gu", "Vigormortis", "No Dashii", "Vortox", "Witch", "Mutant"]
+    },
+    {
+      "type": "Oracle",
+      "name": "Anna",
+      "timing": "night_2",
+      "count": 0,
+      "possibleActualRoles": ["Oracle", "Fang Gu", "Vigormortis", "No Dashii", "Vortox", "Witch", "Mutant"]
+    },
+    {
+      "type": "Oracle",
+      "name": "Anna",
+      "timing": "night_3",
+      "count": 0,
+      "possibleActualRoles": ["Oracle", "Fang Gu", "Vigormortis", "No Dashii", "Vortox", "Witch", "Mutant"]
+    },
+    {
+      "type": "Dreamer",
+      "name": "Tim",
+      "timing": "night_1",
+      "player": "Fraser",
+      "roles": ["Mathematician", "Witch"],
+      "possibleActualRoles": ["Dreamer", "Fang Gu", "Vigormortis", "No Dashii", "Vortox", "Witch", "Mutant"]
+    },
+    {
+      "type": "Dreamer",
+      "name": "Tim",
+      "timing": "night_2",
+      "player": "Josh",
+      "roles": ["Mutant", "Fang Gu"],
+      "possibleActualRoles": ["Dreamer", "Fang Gu", "Vigormortis", "No Dashii", "Vortox", "Witch", "Mutant"]
+    },
+    {
+      "type": "Snake Charmer",
+      "name": "Oscar",
+      "checks": [
+        {
+          "timing": "night_1",
+          "player": "Fraser",
+          "demon": false
+        }
+      ],
+      "possibleActualRoles": ["Snake Charmer", "Fang Gu", "Vigormortis", "No Dashii", "Vortox", "Witch", "Mutant"]
+    },
+    {
+      "type": "Savant",
+      "name": "You",
+      "timing": "day_1",
+      "statements": [
+        {
+          "options": ["townsfolk_chain_length(3)", "role_distance(3, `No Dashii`, Witch)"]
+        }
+      ],
+      "possibleActualRoles": ["Savant"]
+    },
+    {
+      "type": "Savant",
+      "name": "You",
+      "timing": "day_2",
+      "statements": [
+        {
+          "options": [
+            "#{p : {Steph, Josh, Oscar} | p.initial_type == Townsfolk} == 2",
+            "#({Matthew, Steph, Josh, Tim}.initial_type) = 2"
+          ]
+        }
+      ],
+      "possibleActualRoles": ["Savant"]
+    },
+    {
+      "type": "Seamstress",
+      "name": "Matthew",
+      "timing": "night_1",
+      "among": ["Fraser", "Anna"],
+      "aligned": true,
+      "possibleActualRoles": ["Seamstress", "Fang Gu", "Vigormortis", "No Dashii", "Vortox", "Witch", "Mutant"]
+    },
+    {
+      "type": "Mathematician",
+      "name": "Fraser",
+      "malfunctions": [
+        {
+          "timing": "night_1",
+          "count": 2
+        },
+        {
+          "timing": "night_2",
+          "count": 2
+        },
+        {
+          "timing": "night_3",
+          "count": 2
+        }
+      ],
+      "possibleActualRoles": ["Mathematician", "Fang Gu", "Vigormortis", "No Dashii", "Vortox", "Witch", "Mutant"]
+    },
+    {
+      "type": "Sweetheart",
+      "name": "Steph"
+    }
+  ]
+}

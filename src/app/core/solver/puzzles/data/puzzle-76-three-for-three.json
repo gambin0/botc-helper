@@ -1,0 +1,138 @@
+{
+  "title": "Puzzle 76 - Three for Three",
+  "players": [
+    "Sarah",
+    "Tom",
+    "Steph",
+    "Sula",
+    "Dan",
+    "Aoife",
+    "Jasmine",
+    "You",
+    "Anna",
+    "Matthew",
+    "Oscar",
+    "Fraser",
+    "Tim",
+    "Olivia",
+    "Adam"
+  ],
+  "script": [
+    "Imp",
+    "Poisoner",
+    "Scarlet Woman",
+    "Godfather",
+    "Washerwoman",
+    "Undertaker",
+    "Butler",
+    "Investigator",
+    "Empath",
+    "Slayer",
+    "Chef",
+    "Recluse",
+    "Saint",
+    "Librarian",
+    "Mayor",
+    "Fortune Teller",
+    "Monk",
+    "Ravenkeeper"
+  ],
+  "setup": "none",
+  "constraints": [
+    {
+      "expression": "#Townsfolk.~initial_type = 8"
+    },
+    {
+      "expression": "#Outsider.~initial_type = 3"
+    },
+    {
+      "expression": "#Minion.~initial_type = 3"
+    },
+    {
+      "expression": "#Demon.~initial_type = 1"
+    },
+    {
+      "expression": "no Slayer.~initial_role"
+    },
+    {
+      "expression": "no Ravenkeeper.~initial_role"
+    },
+    {
+      "expression": "no Mayor.~initial_role"
+    },
+    {
+      "expression": "poisoned(Sarah, night_1)"
+    },
+    {
+      "expression": "Adam.initial_role == Poisoner"
+    },
+    {
+      "expression": "Sarah.initial_role in {Washerwoman, Undertaker, Butler}"
+    },
+    {
+      "expression": "Sula.initial_role == Godfather"
+    },
+    {
+      "expression": "Aoife.initial_role in {Librarian, Saint, Mayor}"
+    },
+    {
+      "expression": "Jasmine.initial_role in {Investigator, `Fortune Teller`, Butler}"
+    },
+    {
+      "expression": "You.initial_role == Imp"
+    },
+    {
+      "expression": "Anna.initial_role in {`Fortune Teller`, Monk, Recluse}"
+    },
+    {
+      "expression": "Oscar.initial_role == `Scarlet Woman`"
+    },
+    {
+      "expression": "Olivia.initial_role in {Washerwoman, Monk, Recluse}"
+    }
+  ],
+  "claims": [
+    {
+      "type": "Empath",
+      "name": "Tom",
+      "timing": "night_1",
+      "count": 1,
+      "possibleActualRoles": ["Empath", "Investigator", "Slayer"]
+    },
+    {
+      "type": "Chef",
+      "name": "Steph",
+      "timing": "night_1",
+      "count": 1,
+      "possibleActualRoles": ["Chef", "Recluse", "Saint"]
+    },
+    {
+      "type": "Empath",
+      "name": "Dan",
+      "timing": "night_1",
+      "count": 0,
+      "possibleActualRoles": ["Empath", "Librarian", "Investigator"]
+    },
+    {
+      "type": "Chef",
+      "name": "Matthew",
+      "timing": "night_1",
+      "count": 1,
+      "possibleActualRoles": ["Chef", "Librarian", "Saint"]
+    },
+    {
+      "type": "Empath",
+      "name": "Fraser",
+      "timing": "night_1",
+      "count": 0,
+      "possibleActualRoles": ["Empath", "Monk", "Recluse"]
+    },
+    {
+      "type": "Empath",
+      "name": "Tim",
+      "timing": "night_1",
+      "count": 1,
+      "possibleActualRoles": ["Empath", "Undertaker", "Recluse"]
+    }
+  ]
+}

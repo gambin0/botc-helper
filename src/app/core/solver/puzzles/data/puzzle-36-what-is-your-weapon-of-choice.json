@@ -1,0 +1,104 @@
+{
+  "title": "Puzzle 36 - What Is Your Weapon Of Choice",
+  "players": ["Sula", "Olivia", "Fraser", "Oscar", "You", "Steph", "Adam", "Josh"],
+  "script": [
+    "Imp",
+    "Baron",
+    "Poisoner",
+    "Spy",
+    "Scarlet Woman",
+    "Drunk",
+    "Recluse",
+    "Saint",
+    "Empath",
+    "Fortune Teller",
+    "Investigator",
+    "Ravenkeeper",
+    "Slayer"
+  ],
+  "timeline": [
+    {
+      "timing": "day_1",
+      "type": "execution",
+      "players": ["You"]
+    },
+    {
+      "timing": "night_2",
+      "type": "nightDeath",
+      "players": ["Josh"]
+    },
+    {
+      "timing": "day_2",
+      "type": "execution",
+      "players": ["Oscar"]
+    },
+    {
+      "timing": "night_3",
+      "type": "nightDeath",
+      "players": ["Olivia"]
+    }
+  ],
+  "claims": [
+    {
+      "type": "Investigator",
+      "name": "Sula",
+      "timing": "night_1",
+      "role": "Spy",
+      "among": ["Steph", "Josh"]
+    },
+    {
+      "type": "FortuneTeller",
+      "name": "Olivia",
+      "checks": [
+        {
+          "left": "Josh",
+          "right": "Oscar",
+          "yes": false,
+          "timing": "night_1"
+        },
+        {
+          "left": "Adam",
+          "right": "Oscar",
+          "yes": false,
+          "timing": "night_2"
+        }
+      ]
+    },
+    {
+      "type": "Recluse",
+      "name": "Fraser"
+    },
+    {
+      "type": "Slayer",
+      "name": "Oscar",
+      "timing": "day_2",
+      "target": "Steph",
+      "killed": false
+    },
+    {
+      "type": "Empath",
+      "name": "You",
+      "timing": "night_1",
+      "count": 1,
+      "possibleActualRoles": ["Empath", "Drunk"]
+    },
+    {
+      "type": "Saint",
+      "name": "Steph"
+    },
+    {
+      "type": "Slayer",
+      "name": "Adam",
+      "timing": "day_3",
+      "target": "Sula",
+      "killed": false
+    },
+    {
+      "type": "Ravenkeeper",
+      "name": "Josh",
+      "timing": "night_2",
+      "player": "Adam",
+      "role": "Scarlet Woman"
+    }
+  ]
+}

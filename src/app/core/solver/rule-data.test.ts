@@ -106,6 +106,39 @@ describe.each([0, 1])('info that comes with dying (%s = engine, reference)', whi
   });
 });
 
+describe.each([0, 1])('who an honest good player can be (%s = engine, reference)', which => {
+  const run = (pool: string[], events: GameEvent[]) => both(pool, events)[which];
+  // With a Baron: 3 Townsfolk and 2 Outsiders.
+  const chefClaim = [claim('p1', 'chef', 'asserted')];
+
+  it('the Lunatic thinks they are the Demon, so they bluff a good character', () => {
+    expect(run([...TOWN, 'lunatic', 'baron', 'imp'], chefClaim).can('p1', 'lunatic')).toBe(true);
+  });
+
+  it('the Mutant must not claim to be an Outsider', () => {
+    const pool = [...TOWN, 'mutant', 'baron', 'imp'];
+    expect(run(pool, chefClaim).can('p1', 'mutant')).toBe(true);
+    expect(run(pool, [claim('p1', 'butler', 'asserted')]).can('p1', 'mutant')).toBe(false);
+  });
+
+  it('the Hermit has the Drunk ability when the Drunk is on the script', () => {
+    expect(run([...TOWN, 'hermit', 'drunk', 'baron', 'imp'], chefClaim).can('p1', 'hermit')).toBe(true);
+    expect(run([...TOWN, 'hermit', 'baron', 'imp'], chefClaim).can('p1', 'hermit')).toBe(false);
+  });
+
+  it('the Hermit can register like the Recluse when the Recluse is on the script', () => {
+    const events = [
+      claim('p1', 'investigator'),
+      claim('p2', 'chef'),
+      claim('p3', 'hermit'),
+      info('p1', { type: 'investigator', players: ['p2', 'p3'], roleId: 'baron' }, 1)
+    ];
+    const pool = [...TOWN, 'investigator', 'hermit', 'baron', 'imp'];
+    expect(run([...pool, 'recluse'], events).consistent).toBe(true);
+    expect(run(pool, events).consistent).toBe(false);
+  });
+});
+
 describe('rule data warnings', () => {
   it('warns when Ravenkeeper info comes from someone who did not die', () => {
     const r = solve({

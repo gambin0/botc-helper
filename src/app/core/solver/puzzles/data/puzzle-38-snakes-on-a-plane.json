@@ -1,0 +1,168 @@
+{
+  "title": "Puzzle 38 - Snakes On A Plane",
+  "players": ["Tim", "Fraser", "Sula", "Matt", "You", "Hannah", "Dan", "Adam"],
+  "script": [
+    "Imp",
+    "Baron",
+    "Poisoner",
+    "Spy",
+    "Scarlet Woman",
+    "Drunk",
+    "Recluse",
+    "Saint",
+    "Empath",
+    "Fortune Teller",
+    "Investigator",
+    "Ravenkeeper",
+    "Snake Charmer"
+  ],
+  "timeline": [
+    {
+      "timing": "day_1",
+      "type": "execution",
+      "players": ["You"]
+    },
+    {
+      "timing": "night_2",
+      "type": "nightDeath",
+      "players": ["Dan"]
+    },
+    {
+      "timing": "day_2",
+      "type": "execution",
+      "players": ["Sula"]
+    },
+    {
+      "timing": "night_3",
+      "type": "nightDeath",
+      "players": ["Matt"]
+    }
+  ],
+  "claims": [
+    {
+      "type": "Snake Charmer",
+      "name": "Tim",
+      "checks": [
+        {
+          "player": "Matt",
+          "demon": false,
+          "timing": "night_1"
+        }
+      ]
+    },
+    {
+      "type": "Snake Charmer",
+      "name": "Tim",
+      "checks": [
+        {
+          "player": "Sula",
+          "demon": false,
+          "timing": "night_2"
+        }
+      ]
+    },
+    {
+      "type": "Snake Charmer",
+      "name": "Tim",
+      "checks": [
+        {
+          "player": "Hannah",
+          "demon": false,
+          "timing": "night_3"
+        }
+      ]
+    },
+    {
+      "type": "Snake Charmer",
+      "name": "Fraser",
+      "checks": [
+        {
+          "player": "Sula",
+          "demon": false,
+          "timing": "night_1"
+        }
+      ]
+    },
+    {
+      "type": "Snake Charmer",
+      "name": "Fraser",
+      "checks": [
+        {
+          "player": "Hannah",
+          "demon": false,
+          "timing": "night_2"
+        }
+      ]
+    },
+    {
+      "type": "Snake Charmer",
+      "name": "Fraser",
+      "checks": [
+        {
+          "player": "Adam",
+          "demon": false,
+          "timing": "night_3"
+        }
+      ]
+    },
+    {
+      "type": "FortuneTeller",
+      "name": "Sula",
+      "checks": [
+        {
+          "left": "You",
+          "right": "Tim",
+          "yes": false,
+          "timing": "night_1"
+        },
+        {
+          "left": "Fraser",
+          "right": "Matt",
+          "yes": false,
+          "timing": "night_2"
+        }
+      ]
+    },
+    {
+      "type": "Saint",
+      "name": "Matt"
+    },
+    {
+      "type": "Recluse",
+      "name": "You",
+      "possibleActualRoles": ["Recluse"]
+    },
+    {
+      "type": "Empath",
+      "name": "Hannah",
+      "timing": "night_1",
+      "count": 0
+    },
+    {
+      "type": "Empath",
+      "name": "Hannah",
+      "timing": "night_2",
+      "count": 1
+    },
+    {
+      "type": "Empath",
+      "name": "Hannah",
+      "timing": "night_3",
+      "count": 1
+    },
+    {
+      "type": "Ravenkeeper",
+      "name": "Dan",
+      "timing": "night_2",
+      "player": "Fraser",
+      "role": "Poisoner"
+    },
+    {
+      "type": "Investigator",
+      "name": "Adam",
+      "timing": "night_1",
+      "role": "Baron",
+      "among": ["Tim", "Sula"]
+    }
+  ]
+}
